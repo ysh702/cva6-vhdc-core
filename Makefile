@@ -67,7 +67,7 @@ endif
 # Spike tandem mode: default to environment setting (DISABLED if envariable SPIKE_TANDEM is not set).
 spike-tandem ?= $(SPIKE_TANDEM)
 
-SPIKE_INSTALL_DIR     ?= $(root-dir)/tools/spike
+SPIKE_INSTALL_DIR     ?= /home/ysh/cva6_gcc13_toolchain
 
 # setting additional xilinx board parameters for the selected board
 ifeq ($(BOARD), genesys2)
@@ -674,7 +674,7 @@ verilate_command := $(verilator) --no-timing verilator_config.vlt               
                     --threads-dpi none                                                                           \
                     --Mdir $(ver-library) -O3                                                                    \
                     --exe corev_apu/tb/ariane_tb.cpp corev_apu/tb/dpi/SimDTM.cc corev_apu/tb/dpi/SimJTAG.cc      \
-                    corev_apu/tb/dpi/remote_bitbang.cc corev_apu/tb/dpi/msim_helper.cc
+                    corev_apu/tb/dpi/remote_bitbang.cc corev_apu/tb/dpi/msim_helper.cc verif/core-v-verif/vendor/riscv/riscv-isa-sim/fesvr/fesvr_dpi.cc verif/core-v-verif/vendor/riscv/riscv-isa-sim/fesvr/elfloader.cc
 
 # User Verilator, at some point in the future this will be auto-generated
 verilate:
