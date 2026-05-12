@@ -60,17 +60,20 @@ module hdec_lane (
     logic [63:0] s1_xor_result;
     hdec_op      s1_op_mode;
     logic        s1_valid;
+    logic        s1_ecc_mode_q;  // ecc_mode tracked per pipeline stage
 
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             s1_valid   <= 1'b0;
             s1_op_mode <= HDEC_BIND;
             s1_xor_result <= 64'b0;
+            s1_ecc_mode_q <= 1'b0;
         end else begin
             s1_valid <= i_valid;
             if (i_valid) begin
                 s1_op_mode <= i_op_mode;
                 s1_xor_result <= i_rs1_data ^ i_rs2_data;
+                s1_ecc_mode_q <= i_ecc_mode;
             end
         end
     end
@@ -113,21 +116,21 @@ module hdec_lane (
     logic [1:0] lvl1_out [31:0];
     genvar g1;
     generate for (g1 = 0; g1 < 32; g1++) begin : L1
-        poly_adder #(1) u1 (.i_ecc_mode(i_ecc_mode), .a(s1_xor_result[g1*2]), .b(s1_xor_result[g1*2+1]), .sum(lvl1_out[g1]));
+        poly_adder #(1) u1 (.i_ecc_mode(s1_ecc_mode_q), .a(s1_xor_result[g1*2]), .b(s1_xor_result[g1*2+1]), .sum(lvl1_out[g1]));
     end endgenerate
 
     // Level 2: 32 → 16 (3-bit)
     logic [2:0] lvl2_out [15:0];
     genvar g2;
     generate for (g2 = 0; g2 < 16; g2++) begin : L2
-        poly_adder #(2) u2 (.i_ecc_mode(i_ecc_mode), .a(lvl1_out[g2*2]), .b(lvl1_out[g2*2+1]), .sum(lvl2_out[g2]));
+        poly_adder #(2) u2 (.i_ecc_mode(s1_ecc_mode_q), .a(lvl1_out[g2*2]), .b(lvl1_out[g2*2+1]), .sum(lvl2_out[g2]));
     end endgenerate
 
     // Level 3: 16 → 8 (4-bit)
     logic [3:0] lvl3_out [7:0];
     genvar g3;
     generate for (g3 = 0; g3 < 8; g3++) begin : L3
-        poly_adder #(3) u3 (.i_ecc_mode(i_ecc_mode), .a(lvl2_out[g3*2]), .b(lvl2_out[g3*2+1]), .sum(lvl3_out[g3]));
+        poly_adder #(3) u3 (.i_ecc_mode(s1_ecc_mode_q), .a(lvl2_out[g3*2]), .b(lvl2_out[g3*2+1]), .sum(lvl3_out[g3]));
     end endgenerate
 
     // Mid-Pipe (L3→L4 equator cut, ecc_mode travels with data)
@@ -139,7 +142,7 @@ module hdec_lane (
             mid_ecc_mode_q <= 1'b0;
         end else begin
             for (int i = 0; i < 8; i++) lvl3_out_mid[i] <= lvl3_out[i];
-            mid_ecc_mode_q <= i_ecc_mode;
+            mid_ecc_mode_q <= s1_ecc_mode_q;
         end
     end
 
@@ -175,6 +178,8 @@ module hdec_lane (
     logic        s2_valid;
     logic        mid_valid;
     logic [1:0]  s1_owner_q, mid_owner_q, s2_owner_q;
+    hdec_op      mid_op_mode_q;     // op_mode follows pipeline
+    logic [63:0] mid_xor_result_q;  // data follows pipeline
 
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
@@ -182,17 +187,19 @@ module hdec_lane (
             s2_popcnt_val <= '0; s2_lane_data  <= '0;
             s1_owner_q <= 2'd0; mid_owner_q <= 2'd0; s2_owner_q <= 2'd0;
         end else begin
-            // Owner tag tracking: s1 → mid → s2 (rigid 2-cycle, no bypass)
+            // Owner + op_mode tag tracking: s1 → mid → s2
             if (i_valid) s1_owner_q <= i_owner;
             mid_owner_q <= s1_owner_q;
             s2_owner_q <= mid_owner_q;
+            mid_op_mode_q    <= s1_op_mode;
+            mid_xor_result_q <= s1_xor_result;  // data follows pipeline
 
             mid_valid <= s1_valid;
             s2_valid <= mid_valid;
             if (mid_valid) begin
                 s2_popcnt_val <= tree_final_out;
-                if (s1_op_mode == HDEC_BIND) s2_lane_data <= s1_xor_result;
-                else if (s1_op_mode == HDEC_BUNDLE) s2_lane_data <= updated_binarized;
+                if (mid_op_mode_q == HDEC_BIND) s2_lane_data <= mid_xor_result_q;
+                else if (mid_op_mode_q == HDEC_BUNDLE) s2_lane_data <= updated_binarized;
                 else s2_lane_data <= 64'b0;
             end
         end

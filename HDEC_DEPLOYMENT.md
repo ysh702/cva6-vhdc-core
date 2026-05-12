@@ -1,200 +1,217 @@
-# HDEC 协处理器部署指南
+# HDEC-v1 协处理器 — 完整部署与验证指南
 
-本文档用于在另一台机器上由 Claude Code + DeepSeek V4 Pro 自动完成部署。
+本文档面向另一台机器上的 Claude Code Agent，描述如何从零部署 CVA6 + HDEC 工具链并运行完整验证。
 
----
-
-## 前提条件
-
-目标机器上需要已经存在以下内容：
-
-1. **CVA6 v5.2.0**：`git clone https://github.com/openhwgroup/cva6.git` 并 checkout `v5.2.0` tag
-2. **RISC-V GCC 工具链**：`riscv64-unknown-elf-gcc` 在 PATH 中
-3. **Verilator**：`verilator` 在 PATH 中（5.x 版本）
-4. **Spike/fesvr 已编译**：包含 `libfesvr.a`, `libriscv.so`, `libdisasm.a` 和 fesvr 头文件（`fesvr/dtm.h` 等）
-
----
-
-## 第一步：复制 HDEC 源文件到 CVA6 仓库
-
-将以下 **5 个新增文件** 放入 CVA6 仓库的 `core/` 目录：
-
-| 文件 | 说明 |
-|---|---|
-| `core/hdec_xif_pkg.sv` | 指令定义包 + OWNER 常量 |
-| `core/ecc_full_adder.sv` | ECC模式可切换 1-bit 全加器 |
-| `core/hdec_lane.sv` | 64-bit Lane + 多态加法树 (含 poly_adder) |
-| `core/hdec_top.sv` | HDC+ECC 融合协处理器顶层 |
-| `core/hdec_xif_coprocessor.sv` | CV-X-IF 协议包装器 |
-
-将以下 **2 个测试文件** 放入 `verif/tests/custom/cv_xif/` 目录：
-
-| 文件 | 说明 |
-|---|---|
-| `verif/tests/custom/cv_xif/hdec_test_macros.h` | HDEC 汇编宏（`.insn r` 格式） |
-| `verif/tests/custom/cv_xif/hdec_full_test.S` | HDC+ECC 完整测试 |
-
----
-
-## 第二步：修改已有文件
-
-### 2.1 `Makefile`
-
-**修改 1**：`SPIKE_INSTALL_DIR` 默认值（约第 70 行）：
-```makefile
-# 原始:
-SPIKE_INSTALL_DIR     ?= $(root-dir)/tools/spike
-# 改为实际 spike 路径:
-SPIKE_INSTALL_DIR     ?= /path/to/your/spike/install
-```
-
-**修改 2**：verilate `--exe` 列表（约第 676 行）：
-```makefile
-# 原始:
---exe ... corev_apu/tb/dpi/elfloader.cc
-# 改为:
---exe ... verif/core-v-verif/vendor/riscv/riscv-isa-sim/fesvr/fesvr_dpi.cc verif/core-v-verif/vendor/riscv/riscv-isa-sim/fesvr/elfloader.cc
-```
-
-### 2.2 `corev_apu/src/ariane.sv`
-
-搜索 `cvxif_example_coprocessor`，替换为 `hdec_xif_coprocessor`：
-
-```systemverilog
-// 原始:
-cvxif_example_coprocessor #( ...
-) i_cvxif_coprocessor ( ...
-// 改为:
-hdec_xif_coprocessor #( ...
-) i_hdec_coprocessor ( ...
-```
-
-同时将 `gen_example_coprocessor` 改为 `gen_hdec_coprocessor`。
-
-### 2.3 `core/Flist.cva6`
-
-在文件末尾（`// end of manifest` 之后）添加：
+## 仓库地址
 
 ```
-// HDEC Co-Processor (HDC + ECC) via CV-X-IF
-${CVA6_REPO_DIR}/core/hdec_xif_pkg.sv
-${CVA6_REPO_DIR}/core/ecc_full_adder.sv
-${CVA6_REPO_DIR}/core/hdec_lane.sv
-${CVA6_REPO_DIR}/core/hdec_top.sv
-${CVA6_REPO_DIR}/core/hdec_xif_coprocessor.sv
+git clone https://github.com/ysh702/cva6.git
+cd cva6
+git checkout hdec-coprocessor
 ```
 
 ---
 
-## 第三步：补环境依赖
+## 一、前提条件
 
-### 3.1 libyaml-cpp
-
-如果 spike 安装目录的 `lib/` 下没有 `libyaml-cpp.a`：
-```bash
-ln -sf /usr/lib/x86_64-linux-gnu/libyaml-cpp.a /path/to/spike/lib/libyaml-cpp.a
-```
-
-### 3.2 config.h
-
-如果 `verif/core-v-verif/vendor/riscv/riscv-isa-sim/fesvr/` 下没有 `config.h`：
-```bash
-cp /path/to/spike/include/fesvr/config.h verif/core-v-verif/vendor/riscv/riscv-isa-sim/fesvr/config.h
-```
+| 工具 | 版本要求 | 检查命令 |
+|------|---------|---------|
+| RISC-V GCC | 13.x+ | `riscv64-unknown-elf-gcc --version` |
+| Verilator | 5.x | `verilator --version` |
+| Python 3 | 3.8+ | `python3 --version` |
+| GNU Make | any | `make --version` |
+| Spike/fesvr | 预编译 | 需 `libfesvr.a`, `libriscv.so`, `fesvr/dtm.h` |
 
 ---
 
-## 第四步：编译
+## 二、HDEC 源文件清单
 
+### RTL 文件 (1784 行 SystemVerilog 总计)
+
+| 文件 | 行数 | 功能 |
+|------|------|------|
+| `core/hdec_xif_pkg.sv` | 147 | 10 条自定义指令编码 + OWNER 常量 |
+| `core/ecc_full_adder.sv` | 24 | 1-bit 进位可切断全加器 |
+| `core/hdec_lane.sv` | 217 | 64-bit Lane 流水线 + 6 级多态加法树 |
+| `core/hdec_top.sv` | 1129 | HDC+ECC 融合协处理器顶层 (VRF + FSM + ITA) |
+| `core/hdec_xif_coprocessor.sv` | 267 | CV-X-IF 协议包装器 |
+
+### 测试与验证文件
+
+| 文件 | 功能 |
+|------|------|
+| `verif/tests/custom/cv_xif/hdec_test_macros.h` | HDEC 汇编宏 (`.insn r` 格式) |
+| `verif/tests/custom/cv_xif/hdec_full_test.S` | HDC+ECC 完整集成测试 |
+| `verif/tests/custom/cv_xif/hdec_steal_test.S` | Cycle-Stealing 验证测试 |
+| `verif/tests/custom/cv_xif/bench.c` | 5 模式基准测试 (M0-M4) |
+| `verif/tests/custom/cv_xif/ecc_ref.py` | ECC GF(2^256) Python 参考模型 |
+
+---
+
+## 三、CVA6 集成修改清单
+
+部署 HDEC 需要对 CVA6 v5.2.0 做以下修改（本仓库已在 `hdec-coprocessor` 分支完成）：
+
+### 3.1 `corev_apu/src/ariane.sv`
+将 `cvxif_example_coprocessor` 替换为 `hdec_xif_coprocessor`。
+
+### 3.2 `core/Flist.cva6`
+在文件末尾添加 5 个 HDEC 源文件路径。
+
+### 3.3 `Makefile`
+- 设置 `SPIKE_INSTALL_DIR` 指向 Spike 安装目录
+- 修改 `--exe` elfloader 路径指向 `verif/core-v-verif/vendor/riscv/riscv-isa-sim/fesvr/`
+
+### 3.4 环境依赖
+- `libyaml-cpp.a` symlink 到 Spike lib 目录
+- `config.h` 从 Spike include 复制到 verif 目录
+
+---
+
+## 四、编译与运行
+
+### 4.1 Verilator 编译
 ```bash
 cd /path/to/cva6
 make verilate
 ```
+生成 `work-ver/Variane_testharness`。
 
-成功后生成 `work-ver/Variane_testharness`。
-
----
-
-## 第五步：编译测试
-
+### 4.2 编译测试 ELF
 ```bash
-cd verif/tests
-riscv64-unknown-elf-gcc -mabi=lp64 -march=rv64imafdc -static -mcmodel=medany \
-    -nostdlib -nostartfiles \
-    -I./custom/cv_xif -I./custom/env \
-    -T /path/to/config/gen_from_riscv_config/linker/link.ld \
-    ./custom/common/crt.S \
-    ./custom/cv_xif/hdec_full_test.S \
+# 链接脚本
+cat > /tmp/hdec_link.ld << 'EOF'
+OUTPUT_ARCH("riscv")
+ENTRY(_start)
+SECTIONS {
+  . = 0x80000000;
+  .text.init : { *(.text.init) }
+  . = ALIGN(0x1000);
+  .tohost : { *(.tohost) }
+  . = ALIGN(0x1000);
+  .text : { *(.text) }
+  .data : { *(.data) }
+  .sdata : { __global_pointer$ = . + 0x800; *(.srodata*) *(.sdata*) }
+  .bss : { *(.bss) }
+  _end = .;
+}
+EOF
+
+# 集成测试
+riscv64-unknown-elf-gcc -march=rv64gc_zifencei -mabi=lp64d \
+    -nostartfiles -nostdlib \
+    -I verif/tests/custom/env -I verif/tests/custom/cv_xif \
+    -T /tmp/hdec_link.ld \
+    verif/tests/custom/common/crt.S \
+    verif/tests/custom/cv_xif/hdec_full_test.S \
     -o /tmp/hdec_full_test.elf
+
+# 基准测试 (5 modes: MODE=0..4)
+for m in 0 1 2 3 4; do
+  riscv64-unknown-elf-gcc -march=rv64gc_zifencei -mabi=lp64d \
+      -nostartfiles -nostdlib -DMODE=$m -mcmodel=medany \
+      -I verif/tests/custom/env -I verif/tests/custom/cv_xif \
+      -T /tmp/hdec_link.ld \
+      verif/tests/custom/common/crt.S \
+      verif/tests/custom/cv_xif/bench.c \
+      -o /tmp/bench_m$m.elf
+done
 ```
 
----
-
-## 第六步：运行仿真
-
+### 4.3 运行仿真
 ```bash
-/path/to/cva6/work-ver/Variane_testharness /tmp/hdec_full_test.elf
-```
+# 集成测试
+./work-ver/Variane_testharness /tmp/hdec_full_test.elf
 
-预期输出：`*** SUCCESS *** (tohost = 0) after 35771 cycles`
+# 基准测试
+./work-ver/Variane_testharness /tmp/bench_m3.elf  # HW_ECC-only
+./work-ver/Variane_testharness /tmp/bench_m4.elf  # HW_HDC+ECC fused
+```
 
 ---
 
-## 自动化脚本
+## 五、基准测试模式定义
 
-上述步骤 2-3 可以使用仓库根目录下的 `setup_verilate.sh` 脚本自动完成：
-```bash
-chmod +x setup_verilate.sh
-./setup_verilate.sh /path/to/spike /path/to/cva6
-```
-
-脚本幂等执行，已完成的步骤自动跳过。
-
----
-
-## 更简单的部署方案：Git 仓库
-
-如果你想在另一台电脑上让 Claude 一键部署，推荐：
-
-**方案 A：Fork CVA6 + 提交所有改动**
-
-```bash
-cd cva6
-git checkout -b hdec-coprocessor
-git add core/hdec_*.sv core/ecc_full_adder.sv
-git add corev_apu/src/ariane.sv core/Flist.cva6 Makefile
-git add verif/tests/custom/cv_xif/hdec_*
-git add setup_verilate.sh
-git commit -m "Add HDEC (HDC+ECC) coprocessor via CV-X-IF"
-git push origin hdec-coprocessor
-```
-
-部署时：`git clone` + 运行 `./setup_verilate.sh`。
-
-**方案 B：单独的 HDEC patch 仓库**
-
-将 5 个 SV 文件 + 2 个测试文件 + `setup_verilate.sh` + patch 文件放入一个新仓库 `hdec-cva6-patch`。部署时：
-1. Clone CVA6 v5.2.0
-2. Clone hdec-cva6-patch
-3. 复制文件 + 运行 setup_verilate.sh
+| MODE | 名称 | 说明 |
+|------|------|------|
+| 0 | SW_HDC | 纯 C 软件 HDC (1024-bit vectors) |
+| 1 | SW_ECC | 纯 C 软件 GF(2^256) 乘法 |
+| 2 | HW_HDC | 硬件 HDC-only, 4 features × 4 prototypes |
+| 3 | HW_ECC | 硬件 ECC-only, 255-step Ladder + ITA + 256-bit FETCH |
+| 4 | HW_FUSED | HDC+ECC 融合, ECC 后台执行, HDC 优先 |
 
 ---
 
-## Claude Code 指令（给另一台机器上的 Claude）
+## 六、HDEC-v1 关键架构特性
 
-将此指令粘贴给另一台机器上的 Claude Code：
+### 6.1 指令集 (10 条自定义指令, opcode=0x0B)
 
-```
-你将部署 CVA6 v5.2.0 的 HDEC 协处理器。请按顺序执行：
+| 指令 | funct3 | 说明 |
+|------|--------|------|
+| HDEC_BIND | 0 | VRF XOR |
+| HDEC_BUNDLE | 1 | 累加+二值化 |
+| HDEC_MATCH | 2 | popcnt 汉明距离 |
+| HDEC_INGEST | 3 | 写入 VRF |
+| HDEC_BINARIZE | 4 | 阈值二值化 |
+| HDEC_PERMUTE | 5 | 循环移位 |
+| HDEC_ECC_START | 6 | 启动 ECC (K=rs1) |
+| HDEC_ECC_FETCH | 7 | 读取 ECC 结果 (256-bit, word-indexed) |
+| HDEC_CLEAR_CNT | 1+ | 清零累加器 (funct7=1) |
+| HDEC_BUNDLE_ACCUM | 4+ | 累加 vs2=0 (funct7=1) |
 
-1. 确认环境：which riscv64-unknown-elf-gcc && which verilator
-2. 确认 CVA6 仓库在 ~/cva6 且已在 v5.2.0 tag
-3. 确认 HDEC 源文件已放置在 ~/cva6/core/ 下（hdec_*.sv + ecc_full_adder.sv）
-4. 确认测试文件在 ~/cva6/verif/tests/custom/cv_xif/ 下
-5. 读取 ~/cva6/HDEC_DEPLOYMENT.md 中的修改清单
-6. 执行所有文件修改（Makefile、ariane.sv、Flist.cva6）
-7. 补环境依赖（libyaml-cpp symlink、config.h）
-8. cd ~/cva6 && make verilate
-9. 编译并运行 hdec_full_test.S，验证 SUCCESS
-10. 如果任何步骤失败，读取相关文件排查并修复
-```
+### 6.2 VRF 分区
+
+| 寄存器 | 用途 | Owner |
+|--------|------|-------|
+| 0-3 | Feature vectors | HDC |
+| 4-7 | Prototype vectors | HDC |
+| 8-12 | BIND/BUNDLE/MATCH work regs | HDC |
+| 14 | X1/Z1/X2/Z2 | ECC |
+| 15 | xG/T1/T2/scratch | ECC |
+
+### 6.3 Lane 流水线
+
+3 级流水线 (S1→mid→S2)，每级独立追踪 owner/ecc_mode/op_mode/data。
+
+6 级多态加法树：L1(64→32)→L2(32→16)→L3(16→8)→mid-pipe→L4(8→4)→L5(4→2)→L6(2→1)。
+
+ecc_mode=0: 正常进位 (HDC popcnt); ecc_mode=1: 进位切断 (ECC GF(2) XOR)。
+
+### 6.4 ECC 算法
+
+- Montgomery Ladder: 255 steps × 13 sub-steps, GF(2^256)
+- ITA Itoh-Tsujii inversion chain: 1→2→3→6→12→15→30→60→120→240→255
+- 256-bit ECC_FETCH: word-indexed (operand_a_i[1:0])
+- Z1 × ZINV = 1 hardware self-check
+
+### 6.5 调度原则
+
+- HDC 优先：Lane S1 仲裁 HDC send phase 最高优先级
+- ECC 填空隙：GF_MUL 仅在 Lane 空闲时注入 (cycle-stealing)
+- HDC 不被阻塞：ready_o 不受 ECC 全局状态压制
+- ECC VRF 读仅在 `state_q == ST_IDLE` 时启动
+
+---
+
+## 七、验证检查清单
+
+部署后按此顺序验证：
+
+1. `hdec_full_test.S` → `*** SUCCESS *** (tohost = 0)`
+2. `bench_m3.elf` → `[ITA] DONE | XAFF = 3f57b8a5470cc4a2...`
+3. `bench_m4.elf` → XAFF 同 M3
+4. `python3 verif/tests/custom/cv_xif/ecc_ref.py` → `ALL PASS`
+
+---
+
+## 八、修复记录
+
+| # | Bug | 根因 | 修复 |
+|---|-----|------|------|
+| 1 | INIT K 值错误 | `operand_a_i` 在 INIT uPC=1/2 时已变化 | `saved_ecc_k_q` 快照 |
+| 2 | Early FETCH 阻塞 | ready_o=0 造成组合环 | pending-based 延迟 |
+| 3 | Lane ecc_mode 共享 | L1-L3 用组合 `i_ecc_mode` | `s1_ecc_mode_q` 寄存器 |
+| 4 | Lane op_mode 共享 | S2 用当前 S1 的 `s1_op_mode` | `mid_op_mode_q` 传播 |
+| 5 | Lane data 共享 | S2 用当前 S1 的 `s1_xor_result` | `mid_xor_result_q` 传播 |
+| 6 | ECC 用错 op_mode | `current_lane_op` 依赖 `hdc_active` | 改为 `lane_owner_in` 判定 |
+| 7 | GF_MUL 提前推进 | 无 result 确认 | `gf_wait_result_q` handshake |
