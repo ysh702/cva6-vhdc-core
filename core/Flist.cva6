@@ -198,9 +198,11 @@ ${CVA6_REPO_DIR}/core/cva6_mmu/cva6_shared_tlb.sv
 
 // end of manifest
 
-// HDEC Co-Processor (HDC + ECC) via CV-X-IF
-${CVA6_REPO_DIR}/core/hdec_xif_pkg.sv
-${CVA6_REPO_DIR}/core/ecc_full_adder.sv
-${CVA6_REPO_DIR}/core/hdec_lane.sv
-${CVA6_REPO_DIR}/core/hdec_top.sv
-${CVA6_REPO_DIR}/core/hdec_xif_coprocessor.sv
+// HDEC Phase 1
++incdir+${CVA6_REPO_DIR}/core/hdec/rtl/
+${CVA6_REPO_DIR}/core/hdec/rtl/hdec_pkg.sv
+${CVA6_REPO_DIR}/core/hdec/rtl/hdec_resource_pkg.sv
+${CVA6_REPO_DIR}/core/hdec/rtl/hdec_vrf_64x256.sv
+${CVA6_REPO_DIR}/core/hdec/rtl/hdec_lane_4x64.sv
+${CVA6_REPO_DIR}/core/hdec/rtl/hdec_top.sv
+${CVA6_REPO_DIR}/core/hdec/rtl/hdec_cvxif_wrapper.sv

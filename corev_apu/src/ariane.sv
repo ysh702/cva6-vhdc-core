@@ -109,7 +109,7 @@ module ariane import ariane_pkg::*; #(
   );
 
   if (CVA6Cfg.CvxifEn) begin : gen_hdec_coprocessor
-    hdec_xif_coprocessor #(
+    hdec_cvxif_wrapper #(
       .NrRgprPorts (CVA6Cfg.NrRgprPorts),
       .XLEN (CVA6Cfg.XLEN),
       .readregflags_t (readregflags_t),
@@ -126,10 +126,10 @@ module ariane import ariane_pkg::*; #(
       .cvxif_req_t (cvxif_req_t),
       .cvxif_resp_t (cvxif_resp_t)
     ) i_hdec_coprocessor (
-      .clk_i                ( clk_i                          ),
-      .rst_ni               ( rst_ni                         ),
-      .cvxif_req_i          ( cvxif_req                      ),
-      .cvxif_resp_o         ( cvxif_resp                     )
+      .clk_i,
+      .rst_ni,
+      .cvxif_req_i  ( cvxif_req  ),
+      .cvxif_resp_o ( cvxif_resp )
     );
   end else begin
     always_comb begin
