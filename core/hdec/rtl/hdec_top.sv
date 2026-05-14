@@ -10,7 +10,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
     logic [VRF_BNK_W-1:0] vaddr_bank_q,vaddr_bank_n; logic [VRF_IDX_W-1:0] vaddr_idx_q,vaddr_idx_n;
     typedef enum logic [2:0] { S_IDLE, S_EXEC, S_RD_WAIT, S_RESULT, S_CLR } st_t; st_t st_q,st_n;
     logic [63:0] res_q,res_n; hdec_op_t op_q,op_n; logic [63:0] a_q,a_n,b_q,b_n; logic [VRF_BNK_W-1:0] bk_q,bk_n;
-    logic [1:0] clr_cnt_q,clr_cnt_n; logic [VRF_IDX_W-1:0] clr_base_q,clr_base_n;
+    logic [3:0] clr_cnt_q,clr_cnt_n; logic [VRF_IDX_W-1:0] clr_base_q,clr_base_n;
     always_comb begin
         st_n=st_q; ready_o=(st_q==S_IDLE); valid_o=(st_q==S_RESULT); result_o=res_q;
         res_n=res_q; op_n=op_q; a_n=a_q; b_n=b_q; bk_n=bk_q; vaddr_bank_n=vaddr_bank_q; vaddr_idx_n=vaddr_idx_q;
@@ -22,7 +22,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             HDEC_VADDR: begin vaddr_bank_n=a_q[7:6];vaddr_idx_n=a_q[5:0];res_n='0;st_n=S_RESULT;end
             HDEC_VWR64: begin vrf_we[vaddr_bank_q]=1'b1;vrf_wa[vaddr_bank_q]=vaddr_idx_q;vrf_wd[vaddr_bank_q]=a_q;res_n='0;st_n=S_RESULT;end
             HDEC_VRD64: begin vrf_ra[vaddr_bank_q]=vaddr_idx_q;bk_n=vaddr_bank_q;st_n=S_RD_WAIT;end
-            HDEC_HCLR: begin clr_base_n={a_q[3:0],2'b00};clr_cnt_n=2'd0;st_n=S_CLR;end
+            HDEC_HCLR: begin clr_base_n={a_q[3:0],2'b00};clr_cnt_n=4'd0;st_n=S_CLR;end
+            HDEC_BCLR: begin clr_base_n=a_q[0]?6'd48:6'd32;clr_cnt_n=4'd0;st_n=S_CLR;end
             default: begin res_n={62'b0,STATUS_NOT_IMPLEMENTED};st_n=S_RESULT;end
         endcase
         S_RD_WAIT: begin res_n=vrf_rd[bk_q];st_n=S_RESULT;end
@@ -31,8 +32,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             vrf_wa[0]=clr_base_q+clr_cnt_q; vrf_wa[1]=clr_base_q+clr_cnt_q;
             vrf_wa[2]=clr_base_q+clr_cnt_q; vrf_wa[3]=clr_base_q+clr_cnt_q;
             vrf_wd='0;
-            if(clr_cnt_q==2'd3)begin res_n='0;st_n=S_RESULT;end
-            else clr_cnt_n=clr_cnt_q+2'd1;
+            if((op_q==HDEC_HCLR&&clr_cnt_q==4'd3)||(op_q==HDEC_BCLR&&clr_cnt_q==4'd15))begin res_n='0;st_n=S_RESULT;end
+            else clr_cnt_n=clr_cnt_q+4'd1;
         end
         S_RESULT: st_n=S_IDLE;
         default: st_n=S_IDLE;
