@@ -1,4 +1,6 @@
-// hdec_top.sv — Phase1 baseline: vaddr+vwr64+vrd64, NO hclr/bclr
+// hdec_top.sv — Phase1: VRF mgmt + transitional hbind control
+// TRANSITIONAL: hbind FSM lives in hdec_top.  Will migrate to hdec_hdc_engine
+// + scheduler + tag routing when hsim/hperm/badd are added.
 module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
     input logic clk_i, rst_ni, valid_i, output logic ready_o,
     input hdec_op_t operator_i, input logic [63:0] operand_a_i, operand_b_i,
@@ -8,13 +10,44 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
     logic [LANE_NUM-1:0] vrf_we; logic [LANE_NUM-1:0][VRF_IDX_W-1:0] vrf_wa; logic [LANE_NUM-1:0][LANE_WIDTH-1:0] vrf_wd;
     hdec_vrf_64x256 i_vrf(.clk_i,.rst_ni,.bank_ra_addr_i(vrf_ra),.bank_ra_data_o(vrf_rd),.bank_we_i(vrf_we),.bank_wa_addr_i(vrf_wa),.bank_wdata_i(vrf_wd),.vrf_ready_o());
     logic [VRF_BNK_W-1:0] vaddr_bank_q,vaddr_bank_n; logic [VRF_IDX_W-1:0] vaddr_idx_q,vaddr_idx_n;
-    typedef enum logic [2:0] { S_IDLE, S_EXEC, S_RD_WAIT, S_RESULT, S_CLR } st_t; st_t st_q,st_n;
+    typedef enum logic [3:0] { S_IDLE, S_EXEC, S_RD_WAIT, S_RESULT, S_CLR, S_HBIND_RD0, S_HBIND_RD1, S_HBIND_XOR_WR } st_t; st_t st_q,st_n;
     logic [63:0] res_q,res_n; hdec_op_t op_q,op_n; logic [63:0] a_q,a_n,b_q,b_n; logic [VRF_BNK_W-1:0] bk_q,bk_n;
     logic [3:0] clr_cnt_q,clr_cnt_n; logic [VRF_IDX_W-1:0] clr_base_q,clr_base_n;
+    // hbind registers
+    logic [LANE_NUM-1:0][LANE_WIDTH-1:0] src0_q,src0_n;
+    logic [1:0] chunk_cnt_q,chunk_cnt_n;
+    logic [VRF_IDX_W-1:0] hb_dst_base_q,hb_dst_base_n, hb_src0_base_q,hb_src0_base_n, hb_src1_base_q,hb_src1_base_n;
+    // Lane bool wires
+    logic [LANE_NUM-1:0]                lane_bool_valid;
+    logic [LANE_NUM-1:0][LANE_WIDTH-1:0] lane_bool_result;
+    // 4× Lane instances (transitional: VRF managed by top, Lane does bool compute only)
+    for (genvar lid = 0; lid < LANE_NUM; lid++) begin : gen_lane
+        hdec_lane_4x64 #(.LANE_ID(lid)) i_lane (
+            .clk_i, .rst_ni,
+            .vrf_ra_addr_o(), .vrf_ra_data_i('0),
+            .vrf_we_o(), .vrf_wa_addr_o(), .vrf_wdata_o(),
+            .ctrl_valid_i('0), .ctrl_ready_o(), .ctrl_owner_i('0), .ctrl_op_i(HDEC_VWR64),
+            .ctrl_rd_reg_i('0), .ctrl_wr_reg_i('0), .ctrl_wr_data_i('0),
+            .ctrl_is_write_i('0), .ctrl_is_read_i('0),
+            .res_valid_o(), .res_ready_i('0), .res_data_o(), .res_owner_o(),
+            .neighbor_in_i('0), .neighbor_out_o(), .carry_in_i('0), .carry_out_o(),
+            .borrow_in_i('0), .borrow_out_o(), .count_in_i('0), .count_out_o(),
+            .flag_in_i('0), .flag_out_o(), .local_wb_data_o(), .local_wb_addr_o(), .local_wb_we_o(),
+            .bool_valid_i(lane_bool_valid[lid]),
+            .bool_src_a_i(src0_q[lid]),
+            .bool_src_b_i(vrf_rd[lid]),
+            .bool_mask_i('0),
+            .bool_mode_i(2'b00),
+            .bool_result_o(lane_bool_result[lid])
+        );
+    end
     always_comb begin
         st_n=st_q; ready_o=(st_q==S_IDLE); valid_o=(st_q==S_RESULT); result_o=res_q;
         res_n=res_q; op_n=op_q; a_n=a_q; b_n=b_q; bk_n=bk_q; vaddr_bank_n=vaddr_bank_q; vaddr_idx_n=vaddr_idx_q;
         clr_cnt_n=clr_cnt_q; clr_base_n=clr_base_q;
+        src0_n=src0_q; chunk_cnt_n=chunk_cnt_q;
+        hb_dst_base_n=hb_dst_base_q; hb_src0_base_n=hb_src0_base_q; hb_src1_base_n=hb_src1_base_q;
+        lane_bool_valid='0;
         vrf_ra='0; vrf_we='0; vrf_wa='0; vrf_wd='0;
         case(st_q)
         S_IDLE: if(valid_i&&ready_o)begin op_n=operator_i;a_n=operand_a_i;b_n=operand_b_i;st_n=S_EXEC;end
@@ -24,6 +57,12 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             HDEC_VRD64: begin vrf_ra[vaddr_bank_q]=vaddr_idx_q;bk_n=vaddr_bank_q;st_n=S_RD_WAIT;end
             HDEC_HCLR: begin clr_base_n={a_q[3:0],2'b00};clr_cnt_n=4'd0;st_n=S_CLR;end
             HDEC_BCLR: begin clr_base_n=a_q[0]?6'd48:6'd32;clr_cnt_n=4'd0;st_n=S_CLR;end
+            HDEC_HBIND: begin
+                hb_dst_base_n ={a_q[3:0], 2'b00};
+                hb_src0_base_n={a_q[7:4], 2'b00};
+                hb_src1_base_n={a_q[11:8],2'b00};
+                chunk_cnt_n=2'd0; st_n=S_HBIND_RD0;
+            end
             default: begin res_n={62'b0,STATUS_NOT_IMPLEMENTED};st_n=S_RESULT;end
         endcase
         S_RD_WAIT: begin res_n=vrf_rd[bk_q];st_n=S_RESULT;end
@@ -35,12 +74,32 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             if((op_q==HDEC_HCLR&&clr_cnt_q==4'd3)||(op_q==HDEC_BCLR&&clr_cnt_q==4'd15))begin res_n='0;st_n=S_RESULT;end
             else clr_cnt_n=clr_cnt_q+4'd1;
         end
+        S_HBIND_RD0: begin
+            vrf_ra[0]=hb_src0_base_q+chunk_cnt_q; vrf_ra[1]=hb_src0_base_q+chunk_cnt_q;
+            vrf_ra[2]=hb_src0_base_q+chunk_cnt_q; vrf_ra[3]=hb_src0_base_q+chunk_cnt_q;
+            st_n=S_HBIND_RD1;
+        end
+        S_HBIND_RD1: begin
+            src0_n=vrf_rd;
+            vrf_ra[0]=hb_src1_base_q+chunk_cnt_q; vrf_ra[1]=hb_src1_base_q+chunk_cnt_q;
+            vrf_ra[2]=hb_src1_base_q+chunk_cnt_q; vrf_ra[3]=hb_src1_base_q+chunk_cnt_q;
+            st_n=S_HBIND_XOR_WR;
+        end
+        S_HBIND_XOR_WR: begin
+            lane_bool_valid='1;
+            vrf_we='1;
+            vrf_wa[0]=hb_dst_base_q+chunk_cnt_q; vrf_wa[1]=hb_dst_base_q+chunk_cnt_q;
+            vrf_wa[2]=hb_dst_base_q+chunk_cnt_q; vrf_wa[3]=hb_dst_base_q+chunk_cnt_q;
+            vrf_wd=lane_bool_result;
+            if(chunk_cnt_q==2'd3)begin res_n='0;st_n=S_RESULT;end
+            else begin chunk_cnt_n=chunk_cnt_q+2'd1;st_n=S_HBIND_RD0;end
+        end
         S_RESULT: st_n=S_IDLE;
         default: st_n=S_IDLE;
         endcase
     end
     always_ff @(posedge clk_i or negedge rst_ni) begin
-        if(!rst_ni)begin st_q<=S_IDLE;res_q<='0;op_q<=HDEC_VWR64;a_q<='0;b_q<='0;bk_q<='0;vaddr_bank_q<='0;vaddr_idx_q<='0;clr_cnt_q<='0;clr_base_q<='0;end
-        else begin st_q<=st_n;res_q<=res_n;op_q<=op_n;a_q<=a_n;b_q<=b_n;bk_q<=bk_n;vaddr_bank_q<=vaddr_bank_n;vaddr_idx_q<=vaddr_idx_n;clr_cnt_q<=clr_cnt_n;clr_base_q<=clr_base_n;end
+        if(!rst_ni)begin st_q<=S_IDLE;res_q<='0;op_q<=HDEC_VWR64;a_q<='0;b_q<='0;bk_q<='0;vaddr_bank_q<='0;vaddr_idx_q<='0;clr_cnt_q<='0;clr_base_q<='0;src0_q<='0;chunk_cnt_q<='0;hb_dst_base_q<='0;hb_src0_base_q<='0;hb_src1_base_q<='0;end
+        else begin st_q<=st_n;res_q<=res_n;op_q<=op_n;a_q<=a_n;b_q<=b_n;bk_q<=bk_n;vaddr_bank_q<=vaddr_bank_n;vaddr_idx_q<=vaddr_idx_n;clr_cnt_q<=clr_cnt_n;clr_base_q<=clr_base_n;src0_q<=src0_n;chunk_cnt_q<=chunk_cnt_n;hb_dst_base_q<=hb_dst_base_n;hb_src0_base_q<=hb_src0_base_n;hb_src1_base_q<=hb_src1_base_n;end
     end
 endmodule

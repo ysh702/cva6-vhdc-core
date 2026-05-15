@@ -57,8 +57,36 @@ module hdec_lane_4x64
     // ── Local Writeback (P3, future) ────────────────────────────────────────
     output logic [LANE_WIDTH-1:0]             local_wb_data_o,
     output logic [VRF_IDX_W-1:0]              local_wb_addr_o,
-    output logic                              local_wb_we_o
+    output logic                              local_wb_we_o,
+
+    // ── Boolean/Mask Compute Path (transitional: will be unified under engine) ─
+    input  logic                              bool_valid_i,
+    input  logic [LANE_WIDTH-1:0]             bool_src_a_i,
+    input  logic [LANE_WIDTH-1:0]             bool_src_b_i,
+    input  logic [LANE_WIDTH-1:0]             bool_mask_i,
+    input  logic [1:0]                        bool_mode_i,
+    output logic [LANE_WIDTH-1:0]             bool_result_o
 );
+
+    // ── Operand Isolation: gate all bool inputs to 0 when inactive ─────────
+    // Prevents dynamic power from spurious toggling on unused bool path.
+    logic [LANE_WIDTH-1:0] bool_src_a, bool_src_b, bool_mask;
+    logic [1:0]            bool_mode;
+    assign bool_src_a = bool_valid_i ? bool_src_a_i : '0;
+    assign bool_src_b = bool_valid_i ? bool_src_b_i : '0;
+    assign bool_mask  = bool_valid_i ? bool_mask_i  : '0;
+    assign bool_mode  = bool_valid_i ? bool_mode_i  : 2'b0;
+
+    // ── Boolean/Mask Core (combinational, no pipeline delay) ───────────────
+    // Transitional: bool path sits alongside ctrl path.  Final target is
+    // engine-level arbiter + unified Lane compute request.
+    hdec_lane_boolean_mask i_boolean_mask (
+        .src_a_i (bool_src_a),
+        .src_b_i (bool_src_b),
+        .mask_i  (bool_mask),
+        .mode_i  (bool_mode),
+        .result_o(bool_result_o)
+    );
 
     // ── Pipeline Stage Registers ────────────────────────────────────────────
     typedef enum logic [2:0] { LS_IDLE, LS_P0, LS_P1, LS_P2, LS_P3 } lane_state_t;
