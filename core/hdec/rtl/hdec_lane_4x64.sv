@@ -1,10 +1,10 @@
 // =============================================================================
-// hdec_lane_4x64.sv — 64-bit Lane Shell, 4-Stage Pipeline, Zero Datapath Compute
+// hdec_lane_4x64.sv — 64-bit Lane Shell with Lane-Local Static Function Blocks
 // =============================================================================
-// Phase 1: P0(read/decode)→P1(bool/shift)→P2(count/add)→P3(compare/writeback)
-//          Every stage is a simple register passthrough. No compute.
-// Future:  P1 gets XOR/rotate/shift; P2 gets popcount/adder/counter;
-//          P3 gets comparator/threshold.
+// Phase 1: transitional control ports plus independent combinational Boolean/Mask
+//          and Popcount/Compressor blocks. Complex operators can later add local
+//          thin register shells around these blocks without changing top-level
+//          CV-X-IF or VRF protocols.
 // =============================================================================
 
 module hdec_lane_4x64
@@ -40,11 +40,11 @@ module hdec_lane_4x64
     output logic [LANE_WIDTH-1:0]             res_data_o,
     output logic [1:0]                        res_owner_o,
 
-    // ── Neighbor Lane Interface (P1 permute/shift, future) ──────────────────
+    // ── Neighbor Lane Interface (reserved for future lane-local operators) ──
     input  logic [LANE_WIDTH-1:0]             neighbor_in_i,
     output logic [LANE_WIDTH-1:0]             neighbor_out_o,
 
-    // ── Carry / Borrow / Count / Flag (P2, future) ──────────────────────────
+    // ── Carry / Borrow / Count / Flag (reserved for future local operators) ─
     input  logic                              carry_in_i,
     output logic                              carry_out_o,
     input  logic                              borrow_in_i,
@@ -54,7 +54,7 @@ module hdec_lane_4x64
     input  logic                              flag_in_i,
     output logic                              flag_out_o,
 
-    // ── Local Writeback (P3, future) ────────────────────────────────────────
+    // ── Local Writeback (reserved for future local operators) ───────────────
     output logic [LANE_WIDTH-1:0]             local_wb_data_o,
     output logic [VRF_IDX_W-1:0]              local_wb_addr_o,
     output logic                              local_wb_we_o,
@@ -65,7 +65,8 @@ module hdec_lane_4x64
     input  logic [LANE_WIDTH-1:0]             bool_src_b_i,
     input  logic [LANE_WIDTH-1:0]             bool_mask_i,
     input  logic [1:0]                        bool_mode_i,
-    output logic [LANE_WIDTH-1:0]             bool_result_o
+    output logic [LANE_WIDTH-1:0]             bool_result_o,
+    output logic [6:0]                        popcount_count_o
 );
 
     // ── Operand Isolation: gate all bool inputs to 0 when inactive ─────────
@@ -80,34 +81,54 @@ module hdec_lane_4x64
     // ── Boolean/Mask Core (combinational, no pipeline delay) ───────────────
     // Transitional: bool path sits alongside ctrl path.  Final target is
     // engine-level arbiter + unified Lane compute request.
+    logic [LANE_WIDTH-1:0] bool_result;
+
     hdec_lane_boolean_mask i_boolean_mask (
         .src_a_i (bool_src_a),
         .src_b_i (bool_src_b),
         .mask_i  (bool_mask),
         .mode_i  (bool_mode),
-        .result_o(bool_result_o)
+        .result_o(bool_result)
     );
 
-    // ── Pipeline Stage Registers ────────────────────────────────────────────
+    assign bool_result_o = bool_result;
+
+    // ── Popcount/Compressor Core (combinational static block) ──────────────
+    // HDC hsim uses the popcount path over the Boolean/Mask XOR diff.  The ECC
+    // compressor path is structurally present but intentionally unconnected to
+    // any ECC controller in this phase.
+    hdec_lane_popcount_compressor i_popcount_compressor (
+        .mode_i     (1'b0),
+        .diff_i     (bool_result),
+        .a_i        ('0),
+        .b_i        ('0),
+        .c_i        ('0),
+        .count_o    (popcount_count_o),
+        .csa_sum_o  (),
+        .csa_carry_o(),
+        .csa_cout_o ()
+    );
+
+    // ── Legacy Passthrough Shell Registers ──────────────────────────────────
     typedef enum logic [2:0] { LS_IDLE, LS_P0, LS_P1, LS_P2, LS_P3 } lane_state_t;
     lane_state_t lane_state_q, lane_state_n;
 
-    // P0: read/decode
+    // Passthrough slot 0
     logic [LANE_WIDTH-1:0] p0_data_q, p0_data_d;
     hdec_op_t              p0_op_q,   p0_op_d;
     logic [1:0]            p0_owner_q, p0_owner_d;
 
-    // P1: bool/shift
+    // Passthrough slot 1
     logic [LANE_WIDTH-1:0] p1_data_q, p1_data_d;
     hdec_op_t              p1_op_q,   p1_op_d;
     logic [1:0]            p1_owner_q, p1_owner_d;
 
-    // P2: count/add
+    // Passthrough slot 2
     logic [LANE_WIDTH-1:0] p2_data_q, p2_data_d;
     hdec_op_t              p2_op_q,   p2_op_d;
     logic [1:0]            p2_owner_q, p2_owner_d;
 
-    // P3: compare/writeback
+    // Passthrough slot 3
     logic [LANE_WIDTH-1:0] p3_data_q, p3_data_d;
     logic [1:0]            p3_owner_q, p3_owner_d;
 
