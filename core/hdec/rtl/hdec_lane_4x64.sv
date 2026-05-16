@@ -66,7 +66,14 @@ module hdec_lane_4x64
     input  logic [LANE_WIDTH-1:0]             bool_mask_i,
     input  logic [1:0]                        bool_mode_i,
     output logic [LANE_WIDTH-1:0]             bool_result_o,
-    output logic [6:0]                        popcount_count_o
+    output logic [6:0]                        popcount_count_o,
+
+    // ── Shift-Align Compute Path (4-bit granular, lane-local) ───────────────
+    input  logic                              shift_valid_i,
+    input  logic [LANE_WIDTH-1:0]             shift_src_a_i,
+    input  logic [LANE_WIDTH-1:0]             shift_src_b_i,
+    input  logic [3:0]                        shift_nibble_i,
+    output logic [LANE_WIDTH-1:0]             shift_result_o
 );
 
     // ── Operand Isolation: gate all bool inputs to 0 when inactive ─────────
@@ -107,6 +114,21 @@ module hdec_lane_4x64
         .csa_sum_o  (),
         .csa_carry_o(),
         .csa_cout_o ()
+    );
+
+    // ── Shift-Align Core (combinational static block) ──────────────────────
+    // Gate all shift inputs to 0 when inactive to avoid unused-path toggling.
+    logic [LANE_WIDTH-1:0] shift_src_a, shift_src_b;
+    logic [3:0]            shift_nibble;
+    assign shift_src_a  = shift_valid_i ? shift_src_a_i  : '0;
+    assign shift_src_b  = shift_valid_i ? shift_src_b_i  : '0;
+    assign shift_nibble = shift_valid_i ? shift_nibble_i : '0;
+
+    hdec_lane_shift_align i_shift_align (
+        .src_a_i       (shift_src_a),
+        .src_b_i       (shift_src_b),
+        .nibble_shift_i(shift_nibble),
+        .result_o      (shift_result_o)
     );
 
     // ── Legacy Passthrough Shell Registers ──────────────────────────────────

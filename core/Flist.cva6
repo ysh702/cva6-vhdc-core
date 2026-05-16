@@ -205,6 +205,7 @@ ${CVA6_REPO_DIR}/core/hdec/rtl/hdec_resource_pkg.sv
 ${CVA6_REPO_DIR}/core/hdec/rtl/hdec_vrf_64x256.sv
 ${CVA6_REPO_DIR}/core/hdec/rtl/hdec_lane_boolean_mask.sv
 ${CVA6_REPO_DIR}/core/hdec/rtl/hdec_lane_popcount_compressor.sv
+${CVA6_REPO_DIR}/core/hdec/rtl/hdec_lane_shift_align.sv
 ${CVA6_REPO_DIR}/core/hdec/rtl/hdec_lane_4x64.sv
 ${CVA6_REPO_DIR}/core/hdec/rtl/hdec_top.sv
 ${CVA6_REPO_DIR}/core/hdec/rtl/hdec_cvxif_wrapper.sv
