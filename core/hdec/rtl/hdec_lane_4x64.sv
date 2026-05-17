@@ -73,7 +73,13 @@ module hdec_lane_4x64
     input  logic [LANE_WIDTH-1:0]             shift_src_a_i,
     input  logic [LANE_WIDTH-1:0]             shift_src_b_i,
     input  logic [3:0]                        shift_nibble_i,
-    output logic [LANE_WIDTH-1:0]             shift_result_o
+    output logic [LANE_WIDTH-1:0]             shift_result_o,
+
+    // -- Add/Sub/Counter Compute Path (HDC badd system path) ---------------
+    input  logic                              addsub_valid_i,
+    input  logic [LANE_WIDTH-1:0]             addsub_old_counter_i,
+    input  logic [15:0]                       addsub_hv_bits_i,
+    output logic [LANE_WIDTH-1:0]             addsub_result_o
 );
 
     // ── Operand Isolation: gate all bool inputs to 0 when inactive ─────────
@@ -129,6 +135,27 @@ module hdec_lane_4x64
         .src_b_i       (shift_src_b),
         .nibble_shift_i(shift_nibble),
         .result_o      (shift_result_o)
+    );
+
+    // -- Add/Sub/Counter Core (combinational static block) ------------------
+    // Current system path uses HDC_BUNDLE ADD only. Future ECC_FULL control is
+    // intentionally not routed through hdec_top in this phase.
+    logic [LANE_WIDTH-1:0] addsub_old_counter, addsub_hv_addend;
+    logic [15:0]           addsub_hv_bits;
+    assign addsub_old_counter = addsub_valid_i ? addsub_old_counter_i : '0;
+    assign addsub_hv_bits     = addsub_valid_i ? addsub_hv_bits_i     : '0;
+
+    for (genvar addsub_bit = 0; addsub_bit < 16; addsub_bit++) begin : gen_addsub_hv_expand
+        assign addsub_hv_addend[4*addsub_bit +: 4] = addsub_hv_bits[addsub_bit] ? 4'b0001 : 4'b0000;
+    end
+
+    hdec_lane_addsub_counter i_addsub_counter (
+        .src_a_i (addsub_old_counter),
+        .src_b_i (addsub_hv_addend),
+        .mode_i  (1'b0),
+        .op_i    (1'b0),
+        .result_o(addsub_result_o),
+        .carry_o ()
     );
 
     // ── Legacy Passthrough Shell Registers ──────────────────────────────────
