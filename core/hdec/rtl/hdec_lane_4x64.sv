@@ -1,7 +1,7 @@
 // =============================================================================
 // hdec_lane_4x64.sv — 64-bit Lane Shell with Lane-Local Static Function Blocks
 // =============================================================================
-// Phase 1: transitional control ports plus independent combinational Boolean/Mask
+// Phase 1: transitional control ports plus independent combinational XOR Front-End
 //          and Popcount/Compressor blocks. Complex operators can later add local
 //          thin register shells around these blocks without changing top-level
 //          CV-X-IF or VRF protocols.
@@ -59,12 +59,10 @@ module hdec_lane_4x64
     output logic [VRF_IDX_W-1:0]              local_wb_addr_o,
     output logic                              local_wb_we_o,
 
-    // ── Boolean/Mask Compute Path (transitional: will be unified under engine) ─
+    // ── XOR Front-End Compute Path (transitional: will be unified under engine) ─
     input  logic                              bool_valid_i,
     input  logic [LANE_WIDTH-1:0]             bool_src_a_i,
     input  logic [LANE_WIDTH-1:0]             bool_src_b_i,
-    input  logic [LANE_WIDTH-1:0]             bool_mask_i,
-    input  logic [1:0]                        bool_mode_i,
     output logic [LANE_WIDTH-1:0]             bool_result_o,
     output logic [6:0]                        popcount_count_o,
 
@@ -82,16 +80,13 @@ module hdec_lane_4x64
     output logic [LANE_WIDTH-1:0]             addsub_result_o
 );
 
-    // ── Operand Isolation: gate all bool inputs to 0 when inactive ─────────
-    // Prevents dynamic power from spurious toggling on unused bool path.
-    logic [LANE_WIDTH-1:0] bool_src_a, bool_src_b, bool_mask;
-    logic [1:0]            bool_mode;
+    // ── Operand Isolation: gate all XOR inputs to 0 when inactive ──────────
+    // Prevents dynamic power from spurious toggling on unused XOR path.
+    logic [LANE_WIDTH-1:0] bool_src_a, bool_src_b;
     assign bool_src_a = bool_valid_i ? bool_src_a_i : '0;
     assign bool_src_b = bool_valid_i ? bool_src_b_i : '0;
-    assign bool_mask  = bool_valid_i ? bool_mask_i  : '0;
-    assign bool_mode  = bool_valid_i ? bool_mode_i  : 2'b0;
 
-    // ── Boolean/Mask Core (combinational, no pipeline delay) ───────────────
+    // ── XOR Front-End Core (combinational, no pipeline delay) ──────────────
     // Transitional: bool path sits alongside ctrl path.  Final target is
     // engine-level arbiter + unified Lane compute request.
     logic [LANE_WIDTH-1:0] bool_result;
@@ -99,15 +94,13 @@ module hdec_lane_4x64
     hdec_lane_boolean_mask i_boolean_mask (
         .src_a_i (bool_src_a),
         .src_b_i (bool_src_b),
-        .mask_i  (bool_mask),
-        .mode_i  (bool_mode),
         .result_o(bool_result)
     );
 
     assign bool_result_o = bool_result;
 
     // ── Popcount/Compressor Core (combinational static block) ──────────────
-    // HDC hsim uses the popcount path over the Boolean/Mask XOR diff.  The ECC
+    // HDC hsim uses the popcount path over the XOR Front-End diff.  The ECC
     // compressor path is structurally present but intentionally unconnected to
     // any ECC controller in this phase.
     hdec_lane_popcount_compressor i_popcount_compressor (

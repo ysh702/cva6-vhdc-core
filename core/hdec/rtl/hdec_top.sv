@@ -78,8 +78,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             .bool_valid_i(lane_bool_valid[lid]),
             .bool_src_a_i(src0_q[lid]),
             .bool_src_b_i(vrf_rd[lid]),
-            .bool_mask_i('0),
-            .bool_mode_i(2'b00),
             .bool_result_o(lane_bool_result[lid]),
             .popcount_count_o(lane_popcount_count[lid]),
             .shift_valid_i(lane_shift_valid[lid]),

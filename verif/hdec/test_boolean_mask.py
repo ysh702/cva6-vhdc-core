@@ -1,39 +1,40 @@
 #!/usr/bin/env python3
-"""Golden model for hdec_lane_boolean_mask — verifies XOR_ONLY, MASK_XOR_DELTA, MASK_SELECT."""
+"""Golden model for hdec_lane_boolean_mask XOR-only front-end."""
 import random
 
-def boolean_mask(src_a, src_b, mask, mode):
-    if mode == 0:        # XOR_ONLY
-        return src_a ^ src_b
-    elif mode == 1:      # MASK_XOR_DELTA
-        return (src_a ^ src_b) & mask
-    elif mode == 2:      # MASK_SELECT
-        return (src_a & ~mask) | (src_b & mask)
-    else:
-        return 0
+MASK64 = (1 << 64) - 1
 
-def test(mode, name, n=1000):
+
+def xor_frontend(src_a, src_b):
+    return (src_a ^ src_b) & MASK64
+
+
+def test_xor_frontend(n=10000):
+    directed = [
+        (0, 0),
+        (MASK64, 0),
+        (MASK64, MASK64),
+        (0xAAAAAAAAAAAAAAAA, 0x5555555555555555),
+        (0x0123456789ABCDEF, 0xFEDCBA9876543210),
+    ]
+
+    for a, b in directed:
+        assert xor_frontend(a, b) == ((a ^ b) & MASK64)
+
     for _ in range(n):
         a = random.getrandbits(64)
         b = random.getrandbits(64)
-        m = random.getrandbits(64)
-        r = boolean_mask(a, b, m, mode)
-        if mode == 0:
-            assert r == (a ^ b), f"XOR_ONLY: {a:#x} ^ {b:#x} = {r:#x}, expected {(a^b):#x}"
-        elif mode == 1:
-            assert r == ((a ^ b) & m), f"MASK_XOR_DELTA: ({a:#x} ^ {b:#x}) & {m:#x} = {r:#x}"
-        elif mode == 2:
-            assert r == ((a & ~m) | (b & m)), f"MASK_SELECT: ({a:#x} & ~{m:#x}) | ({b:#x} & {m:#x}) = {r:#x}"
-    print(f"  {name}: {n} vectors PASS")
+        assert xor_frontend(a, b) == ((a ^ b) & MASK64)
+
+    print(f"  XOR_ONLY: {n + len(directed)} vectors PASS")
+
 
 def main():
-    print("Boolean/Mask Golden Model Tests:")
+    print("XOR Front-End Golden Model Tests:")
     random.seed(42)
-    test(0, "XOR_ONLY")
-    test(1, "MASK_XOR_DELTA")
-    test(2, "MASK_SELECT")
-    test(3, "default (0)")
+    test_xor_frontend()
     print("All tests PASSED")
+
 
 if __name__ == "__main__":
     main()
