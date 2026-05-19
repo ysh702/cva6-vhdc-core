@@ -10,7 +10,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
     logic [LANE_NUM-1:0] vrf_we; logic [LANE_NUM-1:0][VRF_IDX_W-1:0] vrf_wa; logic [LANE_NUM-1:0][LANE_WIDTH-1:0] vrf_wd;
     hdec_vrf_64x256 i_vrf(.clk_i,.rst_ni,.bank_ra_addr_i(vrf_ra),.bank_ra_data_o(vrf_rd),.bank_we_i(vrf_we),.bank_wa_addr_i(vrf_wa),.bank_wdata_i(vrf_wd),.vrf_ready_o());
     logic [VRF_BNK_W-1:0] vaddr_bank_q,vaddr_bank_n; logic [VRF_IDX_W-1:0] vaddr_idx_q,vaddr_idx_n;
-    typedef enum logic [4:0] { S_IDLE, S_EXEC, S_RD_WAIT, S_RESULT, S_CLR, S_HBIND_RD0, S_HBIND_RD1, S_HBIND_XOR_WR, S_HSIM_RD0, S_HSIM_RD1, S_HSIM_ACCUM, S_HPERM_RD_A, S_HPERM_RD_B, S_HPERM_SHIFT_WR, S_BADD_RD_HV, S_BADD_RD_ACC, S_BADD_ACCUM_WR } st_t; st_t st_q,st_n;
+    typedef enum logic [4:0] { S_IDLE, S_EXEC, S_RD_WAIT, S_RESULT, S_CLR, S_HBIND_RD0, S_HBIND_RD1, S_HBIND_XOR_WR, S_HSIM_CLEAR, S_HSIM_RD0, S_HSIM_RD1, S_HSIM_LOAD, S_HSIM_COMPRESS, S_HSIM_ACCUM, S_HPERM_RD_A, S_HPERM_RD_B, S_HPERM_SHIFT_WR, S_BADD_RD_HV, S_BADD_RD_ACC, S_BADD_ACCUM_WR } st_t; st_t st_q,st_n;
     logic [63:0] res_q,res_n; hdec_op_t op_q,op_n; logic [63:0] a_q,a_n,b_q,b_n; logic [VRF_BNK_W-1:0] bk_q,bk_n;
     logic [3:0] clr_cnt_q,clr_cnt_n; logic [VRF_IDX_W-1:0] clr_base_q,clr_base_n;
     // hbind registers
@@ -18,7 +18,9 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
     logic [1:0] chunk_cnt_q,chunk_cnt_n;
     logic [VRF_IDX_W-1:0] hb_dst_base_q,hb_dst_base_n, hb_src0_base_q,hb_src0_base_n, hb_src1_base_q,hb_src1_base_n;
     logic [VRF_IDX_W-1:0] hsim_src0_base_q,hsim_src0_base_n, hsim_src1_base_q,hsim_src1_base_n;
-    logic [10:0] hsim_total_q,hsim_total_n, hsim_chunk_distance;
+    logic [10:0] hsim_total_q,hsim_total_n;
+    logic [9:0] hsim_group_distance;
+    logic [1:0] hsim_row_q,hsim_row_n;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] hperm_a_q,hperm_a_n;
     logic [VRF_IDX_W-1:0] hperm_dst_base_q,hperm_dst_base_n, hperm_src_base_q,hperm_src_base_n;
     logic [3:0] hperm_word_off_q,hperm_word_off_n, hperm_nibble_q,hperm_nibble_n;
@@ -34,13 +36,19 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
     logic [LANE_NUM-1:0]                lane_bool_valid;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] lane_bool_result;
     logic [LANE_NUM-1:0][6:0]            lane_popcount_count;
+    logic                                lane_bmca_row_clear;
+    logic                                lane_bmca_row_load_valid;
+    logic [1:0]                          lane_bmca_row_load_sel;
+    logic                                lane_bmca_compress_valid;
+    logic [LANE_NUM-1:0][7:0]            lane_bmca_count3;
+    logic [LANE_NUM-1:0]                 lane_bmca_count_valid;
     logic [LANE_NUM-1:0]                  lane_shift_valid;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] lane_shift_a,lane_shift_b,lane_shift_result;
     logic [3:0]                           lane_shift_nibble;
     logic [LANE_NUM-1:0]                  lane_addsub_valid;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] lane_addsub_result;
     logic [LANE_NUM-1:0][15:0]            lane_addsub_hv_bits;
-    assign hsim_chunk_distance = {4'b0,lane_popcount_count[0]} + {4'b0,lane_popcount_count[1]} + {4'b0,lane_popcount_count[2]} + {4'b0,lane_popcount_count[3]};
+    assign hsim_group_distance = {2'b0,lane_bmca_count3[0]} + {2'b0,lane_bmca_count3[1]} + {2'b0,lane_bmca_count3[2]} + {2'b0,lane_bmca_count3[3]};
     assign hperm_word0 = {1'b0,chunk_cnt_q,2'b00} + {1'b0,hperm_word_off_q};
     // Intentional 2-bit add: hperm source chunk B wraps modulo 4.
     assign hperm_next_chunk = hperm_word0[3:2] + 2'd1;
@@ -80,6 +88,14 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             .bool_src_b_i(vrf_rd[lid]),
             .bool_result_o(lane_bool_result[lid]),
             .popcount_count_o(lane_popcount_count[lid]),
+            .bmca_row_clear_i(lane_bmca_row_clear),
+            .bmca_row_load_valid_i(lane_bmca_row_load_valid),
+            .bmca_row_load_sel_i(lane_bmca_row_load_sel),
+            .bmca_compress_valid_i(lane_bmca_compress_valid),
+            .bmca_lo_o(),
+            .bmca_hi_o(),
+            .bmca_count3_o(lane_bmca_count3[lid]),
+            .bmca_count_valid_o(lane_bmca_count_valid[lid]),
             .shift_valid_i(lane_shift_valid[lid]),
             .shift_src_a_i(lane_shift_a[lid]),
             .shift_src_b_i(lane_shift_b[lid]),
@@ -97,11 +113,12 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
         clr_cnt_n=clr_cnt_q; clr_base_n=clr_base_q;
         src0_n=src0_q; chunk_cnt_n=chunk_cnt_q;
         hb_dst_base_n=hb_dst_base_q; hb_src0_base_n=hb_src0_base_q; hb_src1_base_n=hb_src1_base_q;
-        hsim_src0_base_n=hsim_src0_base_q; hsim_src1_base_n=hsim_src1_base_q; hsim_total_n=hsim_total_q;
+        hsim_src0_base_n=hsim_src0_base_q; hsim_src1_base_n=hsim_src1_base_q; hsim_total_n=hsim_total_q; hsim_row_n=hsim_row_q;
         hperm_a_n=hperm_a_q; hperm_dst_base_n=hperm_dst_base_q; hperm_src_base_n=hperm_src_base_q;
         hperm_word_off_n=hperm_word_off_q; hperm_nibble_n=hperm_nibble_q; hperm_lane_base_n=hperm_lane_base_q;
         badd_hv_n=badd_hv_q; badd_hv_slot_n=badd_hv_slot_q; badd_chunk_n=badd_chunk_q; badd_subgroup_n=badd_subgroup_q; badd_acc_sel_n=badd_acc_sel_q;
         lane_bool_valid='0;
+        lane_bmca_row_clear=1'b0; lane_bmca_row_load_valid=1'b0; lane_bmca_row_load_sel=hsim_row_q; lane_bmca_compress_valid=1'b0;
         lane_shift_valid='0;
         lane_shift_a='0; lane_shift_b='0; lane_shift_nibble=hperm_nibble_q;
         lane_addsub_valid='0; lane_addsub_hv_bits='0;
@@ -133,7 +150,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             HDEC_HSIM: begin
                 hsim_src0_base_n={a_q[3:0],2'b00};
                 hsim_src1_base_n={a_q[7:4],2'b00};
-                hsim_total_n='0; chunk_cnt_n=2'd0; st_n=S_HSIM_RD0;
+                hsim_total_n='0; chunk_cnt_n=2'd0; hsim_row_n=2'd0; st_n=S_HSIM_CLEAR;
             end
             HDEC_HPERM: begin
                 if((a_q[9:8] != 2'b00) || (a_q[3:0] == a_q[7:4]))begin res_n={62'b0,STATUS_ERROR};st_n=S_RESULT;end
@@ -176,6 +193,11 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             if(chunk_cnt_q==2'd3)begin res_n='0;st_n=S_RESULT;end
             else begin chunk_cnt_n=chunk_cnt_q+2'd1;st_n=S_HBIND_RD0;end
         end
+        S_HSIM_CLEAR: begin
+            lane_bmca_row_clear=1'b1;
+            hsim_row_n=2'd0;
+            st_n=S_HSIM_RD0;
+        end
         S_HSIM_RD0: begin
             vrf_ra[0]=hsim_src0_base_q+chunk_cnt_q; vrf_ra[1]=hsim_src0_base_q+chunk_cnt_q;
             vrf_ra[2]=hsim_src0_base_q+chunk_cnt_q; vrf_ra[3]=hsim_src0_base_q+chunk_cnt_q;
@@ -185,12 +207,29 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             src0_n=vrf_rd;
             vrf_ra[0]=hsim_src1_base_q+chunk_cnt_q; vrf_ra[1]=hsim_src1_base_q+chunk_cnt_q;
             vrf_ra[2]=hsim_src1_base_q+chunk_cnt_q; vrf_ra[3]=hsim_src1_base_q+chunk_cnt_q;
+            st_n=S_HSIM_LOAD;
+        end
+        S_HSIM_LOAD: begin
+            lane_bool_valid='1;
+            lane_bmca_row_load_valid=1'b1;
+            lane_bmca_row_load_sel=hsim_row_q;
+            if((chunk_cnt_q==2'd3)||(hsim_row_q==2'd2))begin
+                st_n=S_HSIM_COMPRESS;
+            end else begin
+                chunk_cnt_n=chunk_cnt_q+2'd1;
+                hsim_row_n=hsim_row_q+2'd1;
+                st_n=S_HSIM_RD0;
+            end
+        end
+        S_HSIM_COMPRESS: begin
+            lane_bmca_compress_valid=1'b1;
             st_n=S_HSIM_ACCUM;
         end
         S_HSIM_ACCUM: begin
-            lane_bool_valid='1;
-            if(chunk_cnt_q==2'd3)begin res_n={53'b0,(hsim_total_q+hsim_chunk_distance)};st_n=S_RESULT;end
-            else begin hsim_total_n=hsim_total_q+hsim_chunk_distance;chunk_cnt_n=chunk_cnt_q+2'd1;st_n=S_HSIM_RD0;end
+            if(&lane_bmca_count_valid)begin
+                if(chunk_cnt_q==2'd3)begin res_n={53'b0,(hsim_total_q+{1'b0,hsim_group_distance})};st_n=S_RESULT;end
+                else begin hsim_total_n=hsim_total_q+{1'b0,hsim_group_distance};chunk_cnt_n=chunk_cnt_q+2'd1;st_n=S_HSIM_CLEAR;end
+            end
         end
         S_HPERM_RD_A: begin
             vrf_ra[0]=hperm_src_base_q+hperm_word0[3:2]; vrf_ra[1]=hperm_src_base_q+hperm_word0[3:2];
@@ -259,7 +298,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
         endcase
     end
     always_ff @(posedge clk_i or negedge rst_ni) begin
-        if(!rst_ni)begin st_q<=S_IDLE;res_q<='0;op_q<=HDEC_VWR64;a_q<='0;b_q<='0;bk_q<='0;vaddr_bank_q<='0;vaddr_idx_q<='0;clr_cnt_q<='0;clr_base_q<='0;src0_q<='0;chunk_cnt_q<='0;hb_dst_base_q<='0;hb_src0_base_q<='0;hb_src1_base_q<='0;hsim_src0_base_q<='0;hsim_src1_base_q<='0;hsim_total_q<='0;hperm_a_q<='0;hperm_dst_base_q<='0;hperm_src_base_q<='0;hperm_word_off_q<='0;hperm_nibble_q<='0;hperm_lane_base_q<='0;badd_hv_q<='0;badd_hv_slot_q<='0;badd_chunk_q<='0;badd_subgroup_q<='0;badd_acc_sel_q<='0;end
-        else begin st_q<=st_n;res_q<=res_n;op_q<=op_n;a_q<=a_n;b_q<=b_n;bk_q<=bk_n;vaddr_bank_q<=vaddr_bank_n;vaddr_idx_q<=vaddr_idx_n;clr_cnt_q<=clr_cnt_n;clr_base_q<=clr_base_n;src0_q<=src0_n;chunk_cnt_q<=chunk_cnt_n;hb_dst_base_q<=hb_dst_base_n;hb_src0_base_q<=hb_src0_base_n;hb_src1_base_q<=hb_src1_base_n;hsim_src0_base_q<=hsim_src0_base_n;hsim_src1_base_q<=hsim_src1_base_n;hsim_total_q<=hsim_total_n;hperm_a_q<=hperm_a_n;hperm_dst_base_q<=hperm_dst_base_n;hperm_src_base_q<=hperm_src_base_n;hperm_word_off_q<=hperm_word_off_n;hperm_nibble_q<=hperm_nibble_n;hperm_lane_base_q<=hperm_lane_base_n;badd_hv_q<=badd_hv_n;badd_hv_slot_q<=badd_hv_slot_n;badd_chunk_q<=badd_chunk_n;badd_subgroup_q<=badd_subgroup_n;badd_acc_sel_q<=badd_acc_sel_n;end
+        if(!rst_ni)begin st_q<=S_IDLE;res_q<='0;op_q<=HDEC_VWR64;a_q<='0;b_q<='0;bk_q<='0;vaddr_bank_q<='0;vaddr_idx_q<='0;clr_cnt_q<='0;clr_base_q<='0;src0_q<='0;chunk_cnt_q<='0;hb_dst_base_q<='0;hb_src0_base_q<='0;hb_src1_base_q<='0;hsim_src0_base_q<='0;hsim_src1_base_q<='0;hsim_total_q<='0;hsim_row_q<='0;hperm_a_q<='0;hperm_dst_base_q<='0;hperm_src_base_q<='0;hperm_word_off_q<='0;hperm_nibble_q<='0;hperm_lane_base_q<='0;badd_hv_q<='0;badd_hv_slot_q<='0;badd_chunk_q<='0;badd_subgroup_q<='0;badd_acc_sel_q<='0;end
+        else begin st_q<=st_n;res_q<=res_n;op_q<=op_n;a_q<=a_n;b_q<=b_n;bk_q<=bk_n;vaddr_bank_q<=vaddr_bank_n;vaddr_idx_q<=vaddr_idx_n;clr_cnt_q<=clr_cnt_n;clr_base_q<=clr_base_n;src0_q<=src0_n;chunk_cnt_q<=chunk_cnt_n;hb_dst_base_q<=hb_dst_base_n;hb_src0_base_q<=hb_src0_base_n;hb_src1_base_q<=hb_src1_base_n;hsim_src0_base_q<=hsim_src0_base_n;hsim_src1_base_q<=hsim_src1_base_n;hsim_total_q<=hsim_total_n;hsim_row_q<=hsim_row_n;hperm_a_q<=hperm_a_n;hperm_dst_base_q<=hperm_dst_base_n;hperm_src_base_q<=hperm_src_base_n;hperm_word_off_q<=hperm_word_off_n;hperm_nibble_q<=hperm_nibble_n;hperm_lane_base_q<=hperm_lane_base_n;badd_hv_q<=badd_hv_n;badd_hv_slot_q<=badd_hv_slot_n;badd_chunk_q<=badd_chunk_n;badd_subgroup_q<=badd_subgroup_n;badd_acc_sel_q<=badd_acc_sel_n;end
     end
 endmodule

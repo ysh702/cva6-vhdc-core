@@ -66,6 +66,16 @@ module hdec_lane_4x64
     output logic [LANE_WIDTH-1:0]             bool_result_o,
     output logic [6:0]                        popcount_count_o,
 
+    // -- BMCA hvsim batch path --------------------------------------------
+    input  logic                              bmca_row_clear_i,
+    input  logic                              bmca_row_load_valid_i,
+    input  logic [1:0]                        bmca_row_load_sel_i,
+    input  logic                              bmca_compress_valid_i,
+    output logic [LANE_WIDTH-1:0]             bmca_lo_o,
+    output logic [LANE_WIDTH-1:0]             bmca_hi_o,
+    output logic [7:0]                        bmca_count3_o,
+    output logic                              bmca_count_valid_o,
+
     // ── Shift-Align Compute Path (4-bit granular, lane-local) ───────────────
     input  logic                              shift_valid_i,
     input  logic [LANE_WIDTH-1:0]             shift_src_a_i,
@@ -113,6 +123,21 @@ module hdec_lane_4x64
         .csa_sum_o  (),
         .csa_carry_o(),
         .csa_cout_o ()
+    );
+
+    // -- BMCA hvsim batch compressor --------------------------------------
+    hdec_lane_bmca i_bmca (
+        .clk_i,
+        .rst_ni,
+        .row_clear_i      (bmca_row_clear_i),
+        .row_load_valid_i (bmca_row_load_valid_i),
+        .row_load_sel_i   (bmca_row_load_sel_i),
+        .row_load_data_i  (bool_result),
+        .compress_valid_i (bmca_compress_valid_i),
+        .lo_o             (bmca_lo_o),
+        .hi_o             (bmca_hi_o),
+        .count3_o         (bmca_count3_o),
+        .count_valid_o    (bmca_count_valid_o)
     );
 
     // ── Shift-Align Core (combinational static block) ──────────────────────
