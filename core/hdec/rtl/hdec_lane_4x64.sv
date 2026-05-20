@@ -64,17 +64,25 @@ module hdec_lane_4x64
     input  logic [LANE_WIDTH-1:0]             bool_src_a_i,
     input  logic [LANE_WIDTH-1:0]             bool_src_b_i,
     output logic [LANE_WIDTH-1:0]             bool_result_o,
-    output logic [6:0]                        popcount_count_o,
 
     // -- BMCA hvsim batch path --------------------------------------------
     input  logic                              bmca_row_clear_i,
     input  logic                              bmca_row_load_valid_i,
     input  logic [1:0]                        bmca_row_load_sel_i,
+    input  logic                              bmca_row_use_direct_i,
+    input  logic [LANE_WIDTH-1:0]             bmca_row_direct_i,
     input  logic                              bmca_compress_valid_i,
     output logic [LANE_WIDTH-1:0]             bmca_lo_o,
     output logic [LANE_WIDTH-1:0]             bmca_hi_o,
     output logic [7:0]                        bmca_count3_o,
     output logic                              bmca_count_valid_o,
+
+    // -- BMCA Bundle packed-counter tail -----------------------------------
+    input  logic                              bundle_valid_i,
+    input  logic [LANE_WIDTH-1:0]             bundle_old_counter_i,
+    input  logic [15:0]                       bundle_lo_bits_i,
+    input  logic [15:0]                       bundle_hi_bits_i,
+    output logic [LANE_WIDTH-1:0]             bundle_counter_result_o,
 
     // ── Shift-Align Compute Path (4-bit granular, lane-local) ───────────────
     input  logic                              shift_valid_i,
@@ -109,36 +117,39 @@ module hdec_lane_4x64
 
     assign bool_result_o = bool_result;
 
-    // ── Popcount/Compressor Core (combinational static block) ──────────────
-    // HDC hsim uses the popcount path over the XOR Front-End diff.  The ECC
-    // compressor path is structurally present but intentionally unconnected to
-    // any ECC controller in this phase.
-    hdec_lane_popcount_compressor i_popcount_compressor (
-        .mode_i     (1'b0),
-        .diff_i     (bool_result),
-        .a_i        ('0),
-        .b_i        ('0),
-        .c_i        ('0),
-        .count_o    (popcount_count_o),
-        .csa_sum_o  (),
-        .csa_carry_o(),
-        .csa_cout_o ()
-    );
+    // -- BMCA hvsim/hbundle3 batch compressor ------------------------------
+    logic [LANE_WIDTH-1:0] bmca_row_data;
+    assign bmca_row_data = bmca_row_use_direct_i ? bmca_row_direct_i : bool_result;
 
-    // -- BMCA hvsim batch compressor --------------------------------------
     hdec_lane_bmca i_bmca (
         .clk_i,
         .rst_ni,
         .row_clear_i      (bmca_row_clear_i),
         .row_load_valid_i (bmca_row_load_valid_i),
         .row_load_sel_i   (bmca_row_load_sel_i),
-        .row_load_data_i  (bool_result),
+        .row_load_data_i  (bmca_row_data),
         .compress_valid_i (bmca_compress_valid_i),
         .lo_o             (bmca_lo_o),
         .hi_o             (bmca_hi_o),
         .count3_o         (bmca_count3_o),
         .count_valid_o    (bmca_count_valid_o)
     );
+
+    // -- BMCA Bundle tail: packed 4-bit saturating counter update -----------
+    logic [LANE_WIDTH-1:0] bundle_old_counter;
+    logic [15:0]           bundle_lo_bits, bundle_hi_bits;
+    assign bundle_old_counter = bundle_valid_i ? bundle_old_counter_i : '0;
+    assign bundle_lo_bits     = bundle_valid_i ? bundle_lo_bits_i     : '0;
+    assign bundle_hi_bits     = bundle_valid_i ? bundle_hi_bits_i     : '0;
+
+    for (genvar bundle_bit = 0; bundle_bit < 16; bundle_bit++) begin : gen_bundle_tail
+        logic [1:0] inc;
+        logic [4:0] sum;
+
+        assign inc = {bundle_hi_bits[bundle_bit], bundle_lo_bits[bundle_bit]};
+        assign sum = {1'b0, bundle_old_counter[4*bundle_bit +: 4]} + {3'b000, inc};
+        assign bundle_counter_result_o[4*bundle_bit +: 4] = sum[4] ? 4'hF : sum[3:0];
+    end
 
     // ── Shift-Align Core (combinational static block) ──────────────────────
     // Gate all shift inputs to 0 when inactive to avoid unused-path toggling.

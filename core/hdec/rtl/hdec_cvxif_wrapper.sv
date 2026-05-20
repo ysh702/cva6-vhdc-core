@@ -32,6 +32,7 @@ module hdec_cvxif_wrapper import hdec_pkg::*; #(
         else if (instr[31:25]==7'b0000011 && instr[14:12]==3'b000) decoded_op = HDEC_CLIP;
         else if (instr[31:25]==7'b0000011 && instr[14:12]==3'b001) decoded_op = HDEC_HSEARCH;
         else if (instr[31:25]==7'b0000011 && instr[14:12]==3'b010) decoded_op = HDEC_VADDR;
+        else if (instr[31:25]==7'b0000011 && instr[14:12]==3'b011) decoded_op = HDEC_HBUNDLE3;
     end
     assign matched = (instr[6:0]==OPCODE_HDEC) && ((instr[31:25]==F7_PHASE1_BASE)||(instr[31:25]==F7_PHASE1_EXT));
 
