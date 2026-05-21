@@ -41,8 +41,9 @@ package hdec_pkg;
         HDEC_HSIM    = 4'd7,
         HDEC_CLIP    = 4'd8,
         HDEC_HSEARCH = 4'd9,
-        HDEC_VADDR   = 4'd10,
-        HDEC_HBUNDLE3 = 4'd11
+        HDEC_VADDR    = 4'd10,
+        HDEC_HBUNDLE3 = 4'd11,
+        HDEC_HBUNDLE4 = 4'd12
     } hdec_op_t;
 
     // ── RISC-V Custom-0 Opcode ──────────────────────────────────────────────
@@ -65,6 +66,7 @@ package hdec_pkg;
     localparam logic [2:0] F3_HSEARCH = 3'b001;   // funct7=000_0011
     localparam logic [2:0] F3_VADDR   = 3'b010;   // funct7=000_0011
     localparam logic [2:0] F3_HBUNDLE3 = 3'b011;  // funct7=000_0011
+    localparam logic [2:0] F3_HBUNDLE4 = 3'b100;  // funct7=000_0011
 
     // ── CV-X-IF Issue Response Struct ───────────────────────────────────────
     typedef struct packed {
@@ -82,7 +84,7 @@ package hdec_pkg;
     } hdec_instr_entry_t;
 
     // ── Number of Instructions in Table ─────────────────────────────────────
-    localparam int HDEC_NB_INSTR = 12;
+    localparam int HDEC_NB_INSTR = 13;
 
     // ── Instruction Table Generator ─────────────────────────────────────────
     function automatic hdec_instr_entry_t [HDEC_NB_INSTR-1:0] get_hdec_instr_table();
@@ -161,6 +163,12 @@ package hdec_pkg;
         tbl[11].instr  = base | (F7_PHASE1_EXT << 25) | (F3_HBUNDLE3 << 12);
         tbl[11].resp   = '{accept:1'b1, writeback:1'b1, register_read:2'b01};
         tbl[11].opcode = HDEC_HBUNDLE3;
+
+        // 12: hdec_hbundle4 (funct7=000_0011, funct3=100, rs1)
+        tbl[12].mask   = mask;
+        tbl[12].instr  = base | (F7_PHASE1_EXT << 25) | (F3_HBUNDLE4 << 12);
+        tbl[12].resp   = '{accept:1'b1, writeback:1'b1, register_read:2'b01};
+        tbl[12].opcode = HDEC_HBUNDLE4;
 
         return tbl;
     endfunction

@@ -73,15 +73,17 @@ module hdec_lane_4x64
     input  logic [LANE_WIDTH-1:0]             bmca_row_direct_i,
     input  logic                              bmca_compress_valid_i,
     output logic [LANE_WIDTH-1:0]             bmca_lo_o,
-    output logic [LANE_WIDTH-1:0]             bmca_hi_o,
-    output logic [7:0]                        bmca_count3_o,
+    output logic [LANE_WIDTH-1:0]             bmca_hi_a_o,
+    output logic [LANE_WIDTH-1:0]             bmca_hi_b_o,
+    output logic [8:0]                        bmca_count_o,
     output logic                              bmca_count_valid_o,
 
     // -- BMCA Bundle packed-counter tail -----------------------------------
     input  logic                              bundle_valid_i,
     input  logic [LANE_WIDTH-1:0]             bundle_old_counter_i,
     input  logic [15:0]                       bundle_lo_bits_i,
-    input  logic [15:0]                       bundle_hi_bits_i,
+    input  logic [15:0]                       bundle_hi_a_bits_i,
+    input  logic [15:0]                       bundle_hi_b_bits_i,
     output logic [LANE_WIDTH-1:0]             bundle_counter_result_o,
 
     // ── Shift-Align Compute Path (4-bit granular, lane-local) ───────────────
@@ -130,24 +132,26 @@ module hdec_lane_4x64
         .row_load_data_i  (bmca_row_data),
         .compress_valid_i (bmca_compress_valid_i),
         .lo_o             (bmca_lo_o),
-        .hi_o             (bmca_hi_o),
-        .count3_o         (bmca_count3_o),
+        .hi_a_o           (bmca_hi_a_o),
+        .hi_b_o           (bmca_hi_b_o),
+        .count_o          (bmca_count_o),
         .count_valid_o    (bmca_count_valid_o)
     );
 
     // -- BMCA Bundle tail: packed 4-bit saturating counter update -----------
     logic [LANE_WIDTH-1:0] bundle_old_counter;
-    logic [15:0]           bundle_lo_bits, bundle_hi_bits;
+    logic [15:0]           bundle_lo_bits, bundle_hi_a_bits, bundle_hi_b_bits;
     assign bundle_old_counter = bundle_valid_i ? bundle_old_counter_i : '0;
-    assign bundle_lo_bits     = bundle_valid_i ? bundle_lo_bits_i     : '0;
-    assign bundle_hi_bits     = bundle_valid_i ? bundle_hi_bits_i     : '0;
+    assign bundle_lo_bits     = bundle_valid_i ? bundle_lo_bits_i      : '0;
+    assign bundle_hi_a_bits   = bundle_valid_i ? bundle_hi_a_bits_i    : '0;
+    assign bundle_hi_b_bits   = bundle_valid_i ? bundle_hi_b_bits_i    : '0;
 
     for (genvar bundle_bit = 0; bundle_bit < 16; bundle_bit++) begin : gen_bundle_tail
-        logic [1:0] inc;
+        logic [2:0] inc;
         logic [4:0] sum;
 
-        assign inc = {bundle_hi_bits[bundle_bit], bundle_lo_bits[bundle_bit]};
-        assign sum = {1'b0, bundle_old_counter[4*bundle_bit +: 4]} + {3'b000, inc};
+        assign inc = {2'b00, bundle_lo_bits[bundle_bit]} + {1'b0, bundle_hi_a_bits[bundle_bit], 1'b0} + {1'b0, bundle_hi_b_bits[bundle_bit], 1'b0};
+        assign sum = {1'b0, bundle_old_counter[4*bundle_bit +: 4]} + {2'b00, inc};
         assign bundle_counter_result_o[4*bundle_bit +: 4] = sum[4] ? 4'hF : sum[3:0];
     end
 
