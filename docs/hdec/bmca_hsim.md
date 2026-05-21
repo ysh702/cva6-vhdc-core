@@ -98,10 +98,15 @@ Coverage:
 - BMCA Python golden checks four-row count equivalence and row3-zero
   degeneration to the old three-row behavior.
 
+## HMatch Reuse
+
+`hmatch` uses the same HSim datapath for each resident class slot. The Lane
+hardware is unchanged; `hdec_top` loops over classes and tracks the scalar
+minimum distance and relative index.
+
 ## Current Limits
 
 - `hsim` scans one resident HV pair; streaming class memory is not implemented.
-- There is no HMatch control in this step.
 - BMCA rows are loaded sequentially by `hdec_top`; no engine-level arbiter yet.
 
 ## ECC Reserved

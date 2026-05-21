@@ -97,7 +97,13 @@ module hdec_lane_4x64
     input  logic                              addsub_valid_i,
     input  logic [LANE_WIDTH-1:0]             addsub_old_counter_i,
     input  logic [15:0]                       addsub_hv_bits_i,
-    output logic [LANE_WIDTH-1:0]             addsub_result_o
+    output logic [LANE_WIDTH-1:0]             addsub_result_o,
+
+    // -- Clip Compute Path (HDC packed counter threshold) -------------------
+    input  logic                              clip_valid_i,
+    input  logic [LANE_WIDTH-1:0]             clip_counter_i,
+    input  logic [3:0]                        clip_threshold_i,
+    output logic [15:0]                       clip_bits_o
 );
 
     // ── Operand Isolation: gate all XOR inputs to 0 when inactive ──────────
@@ -189,6 +195,18 @@ module hdec_lane_4x64
         .op_i    (1'b0),
         .result_o(addsub_result_o),
         .carry_o ()
+    );
+
+    // -- Clip Core (combinational static block) -----------------------------
+    logic [LANE_WIDTH-1:0] clip_counter;
+    logic [3:0]            clip_threshold;
+    assign clip_counter   = clip_valid_i ? clip_counter_i   : '0;
+    assign clip_threshold = clip_valid_i ? clip_threshold_i : '0;
+
+    hdec_lane_clip i_clip (
+        .counter_i  (clip_counter),
+        .threshold_i(clip_threshold),
+        .bits_o     (clip_bits_o)
     );
 
     // ── Legacy Passthrough Shell Registers ──────────────────────────────────
