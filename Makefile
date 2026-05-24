@@ -69,6 +69,12 @@ spike-tandem ?= $(SPIKE_TANDEM)
 
 SPIKE_INSTALL_DIR     ?= /home/ysh/cva6_gcc13_toolchain
 
+RISCV_GCC ?= riscv64-unknown-elf-gcc
+HDEC_LOG_DIR ?= tmp/hdec_logs
+HDEC_LINKER ?= verif/hdec/hdec_link.ld
+HDEC_GCC_FLAGS ?= -march=rv64gc_zifencei -mabi=lp64d -nostartfiles -nostdlib -mcmodel=medany \
+		  -I verif/tests/custom/env -I verif/tests/custom/common
+
 # setting additional xilinx board parameters for the selected board
 ifeq ($(BOARD), genesys2)
 	XILINX_PART              := xc7k325tffg900-2
@@ -641,11 +647,12 @@ xrun-ci: xrun-asm-tests xrun-amo-tests xrun-mul-tests xrun-fp-tests xrun-benchma
 
 # verilator-specific
 verilate_command := $(verilator) --no-timing verilator_config.vlt                                                \
+                    +define+HDEC_SIM_PERF                                                                      \
                     -f core/Flist.cva6                                                                           \
                     core/cva6_rvfi.sv                                                                            \
                     $(filter-out %.vhd, $(ariane_pkg))                                                           \
                     $(filter-out core/fpu_wrap.sv, $(filter-out %.vhd, $(filter-out %_config_pkg.sv, $(src))))   \
-                    +define+$(defines)$(if $(TRACE_FAST),+VM_TRACE)$(if $(TRACE_COMPACT),+VM_TRACE+VM_TRACE_FST) \
+                    $(if $(defines),+define+$(defines)$(if $(TRACE_FAST),+VM_TRACE)$(if $(TRACE_COMPACT),+VM_TRACE+VM_TRACE_FST)) \
                     corev_apu/tb/common/mock_uart.sv                                                             \
                     +incdir+corev_apu/axi_node                                                                   \
                     $(if $(verilator_threads), --threads $(verilator_threads))                                   \
@@ -684,6 +691,14 @@ verilate:
 
 sim-verilator: verilate
 	$(ver-library)/Variane_testharness $(elf_file)
+
+$(HDEC_LOG_DIR):
+	mkdir -p $@
+
+$(HDEC_LOG_DIR)/hbind_test.elf: verif/hdec/hbind_test.S verif/tests/custom/common/crt.S $(HDEC_LINKER) | $(HDEC_LOG_DIR)
+	$(RISCV_GCC) $(HDEC_GCC_FLAGS) -T $(HDEC_LINKER) \
+		verif/tests/custom/common/crt.S verif/hdec/hbind_test.S \
+		-o $@ > $(HDEC_LOG_DIR)/hbind_test_compile.log 2>&1
 
 $(addsuffix -verilator,$(riscv-asm-tests)): verilate
 	$(ver-library)/Variane_testharness $(riscv-test-dir)/$(subst -verilator,,$@)
