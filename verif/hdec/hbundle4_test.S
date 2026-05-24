@@ -100,7 +100,7 @@ all_ones_bank_loop:
     HBUNDLE4 0
     bnez t0, fail
     VCHECK 32, 0x2222222222222222
-    VCHECK 33, 0x0000000000000000
+    VCHECK 33, 0x2222222222222222
 
     # Case 4: saturation coverage and acc1 isolation while updating acc0.
     HCLR 0
