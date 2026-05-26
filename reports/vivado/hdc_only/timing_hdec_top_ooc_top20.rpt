@@ -1,0 +1,2429 @@
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+---------------------------------------------------------------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2022.2 (win64) Build 3671981 Fri Oct 14 05:00:03 MDT 2022
+| Date         : Tue May 26 18:03:49 2026
+| Host         : DESKTOP-RSKE6BB running 64-bit major release  (build 9200)
+| Command      : report_timing_summary -max_paths 20 -file H:/CVA6-HDEC/cva6-vhdc-core/reports/vivado/hdc_only/timing_hdec_top_ooc_top20.rpt
+| Design       : hdec_top
+| Device       : 7z020-clg400
+| Speed File   : -2  PRODUCTION 1.12 2019-11-22
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+Timing Summary Report
+
+------------------------------------------------------------------------------------------------
+| Timer Settings
+| --------------
+------------------------------------------------------------------------------------------------
+
+  Enable Multi Corner Analysis               :  Yes
+  Enable Pessimism Removal                   :  Yes
+  Pessimism Removal Resolution               :  Nearest Common Node
+  Enable Input Delay Default Clock           :  No
+  Enable Preset / Clear Arcs                 :  No
+  Disable Flight Delays                      :  No
+  Ignore I/O Paths                           :  No
+  Timing Early Launch at Borrowing Latches   :  No
+  Borrow Time for Max Delay Exceptions       :  Yes
+  Merge Timing Exceptions                    :  Yes
+
+  Corner  Analyze    Analyze    
+  Name    Max Paths  Min Paths  
+  ------  ---------  ---------  
+  Slow    Yes        Yes        
+  Fast    Yes        Yes        
+
+
+------------------------------------------------------------------------------------------------
+| Report Methodology
+| ------------------
+------------------------------------------------------------------------------------------------
+
+No report available as report_methodology has not been run prior. Run report_methodology on the current design for the summary of methodology violations.
+
+
+
+check_timing report
+
+Table of Contents
+-----------------
+1. checking no_clock (0)
+2. checking constant_clock (0)
+3. checking pulse_width_clock (0)
+4. checking unconstrained_internal_endpoints (0)
+5. checking no_input_delay (70)
+6. checking no_output_delay (66)
+7. checking multiple_clock (0)
+8. checking generated_clocks (0)
+9. checking loops (0)
+10. checking partial_input_delay (0)
+11. checking partial_output_delay (0)
+12. checking latch_loops (0)
+
+1. checking no_clock (0)
+------------------------
+ There are 0 register/latch pins with no clock.
+
+
+2. checking constant_clock (0)
+------------------------------
+ There are 0 register/latch pins with constant_clock.
+
+
+3. checking pulse_width_clock (0)
+---------------------------------
+ There are 0 register/latch pins which need pulse_width check
+
+
+4. checking unconstrained_internal_endpoints (0)
+------------------------------------------------
+ There are 0 pins that are not constrained for maximum delay.
+
+ There are 0 pins that are not constrained for maximum delay due to constant clock.
+
+
+5. checking no_input_delay (70)
+-------------------------------
+ There are 70 input ports with no input delay specified. (HIGH)
+
+ There are 0 input ports with no input delay but user has a false path constraint.
+
+
+6. checking no_output_delay (66)
+--------------------------------
+ There are 66 ports with no output delay specified. (HIGH)
+
+ There are 0 ports with no output delay but user has a false path constraint
+
+ There are 0 ports with no output delay but with a timing clock defined on it or propagating through it
+
+
+7. checking multiple_clock (0)
+------------------------------
+ There are 0 register/latch pins with multiple clocks.
+
+
+8. checking generated_clocks (0)
+--------------------------------
+ There are 0 generated clocks that are not connected to a clock source.
+
+
+9. checking loops (0)
+---------------------
+ There are 0 combinational loops in the design.
+
+
+10. checking partial_input_delay (0)
+------------------------------------
+ There are 0 input ports with partial input delay specified.
+
+
+11. checking partial_output_delay (0)
+-------------------------------------
+ There are 0 ports with partial output delay specified.
+
+
+12. checking latch_loops (0)
+----------------------------
+ There are 0 combinational latch loops in the design through latch input
+
+
+
+------------------------------------------------------------------------------------------------
+| Design Timing Summary
+| ---------------------
+------------------------------------------------------------------------------------------------
+
+    WNS(ns)      TNS(ns)  TNS Failing Endpoints  TNS Total Endpoints      WHS(ns)      THS(ns)  THS Failing Endpoints  THS Total Endpoints     WPWS(ns)     TPWS(ns)  TPWS Failing Endpoints  TPWS Total Endpoints  
+    -------      -------  ---------------------  -------------------      -------      -------  ---------------------  -------------------     --------     --------  ----------------------  --------------------  
+      1.483        0.000                      0                22960        0.246        0.000                      0                22960        4.500        0.000                       0                 19861  
+
+
+All user specified timing constraints are met.
+
+
+------------------------------------------------------------------------------------------------
+| Clock Summary
+| -------------
+------------------------------------------------------------------------------------------------
+
+Clock  Waveform(ns)       Period(ns)      Frequency(MHz)
+-----  ------------       ----------      --------------
+clk_i  {0.000 5.000}      10.000          100.000         
+
+
+------------------------------------------------------------------------------------------------
+| Intra Clock Table
+| -----------------
+------------------------------------------------------------------------------------------------
+
+Clock             WNS(ns)      TNS(ns)  TNS Failing Endpoints  TNS Total Endpoints      WHS(ns)      THS(ns)  THS Failing Endpoints  THS Total Endpoints     WPWS(ns)     TPWS(ns)  TPWS Failing Endpoints  TPWS Total Endpoints  
+-----             -------      -------  ---------------------  -------------------      -------      -------  ---------------------  -------------------     --------     --------  ----------------------  --------------------  
+clk_i               1.483        0.000                      0                22960        0.246        0.000                      0                22960        4.500        0.000                       0                 19861  
+
+
+------------------------------------------------------------------------------------------------
+| Inter Clock Table
+| -----------------
+------------------------------------------------------------------------------------------------
+
+From Clock    To Clock          WNS(ns)      TNS(ns)  TNS Failing Endpoints  TNS Total Endpoints      WHS(ns)      THS(ns)  THS Failing Endpoints  THS Total Endpoints  
+----------    --------          -------      -------  ---------------------  -------------------      -------      -------  ---------------------  -------------------  
+
+
+------------------------------------------------------------------------------------------------
+| Other Path Groups Table
+| -----------------------
+------------------------------------------------------------------------------------------------
+
+Path Group    From Clock    To Clock          WNS(ns)      TNS(ns)  TNS Failing Endpoints  TNS Total Endpoints      WHS(ns)      THS(ns)  THS Failing Endpoints  THS Total Endpoints  
+----------    ----------    --------          -------      -------  ---------------------  -------------------      -------      -------  ---------------------  -------------------  
+
+
+------------------------------------------------------------------------------------------------
+| Timing Details
+| --------------
+------------------------------------------------------------------------------------------------
+
+
+---------------------------------------------------------------------------------------------------
+From Clock:  clk_i
+  To Clock:  clk_i
+
+Setup :            0  Failing Endpoints,  Worst Slack        1.483ns,  Total Violation        0.000ns
+Hold  :            0  Failing Endpoints,  Worst Slack        0.246ns,  Total Violation        0.000ns
+PW    :            0  Failing Endpoints,  Worst Slack        4.500ns,  Total Violation        0.000ns
+---------------------------------------------------------------------------------------------------
+
+
+Max Delay Paths
+--------------------------------------------------------------------------------------
+Slack (MET) :             1.483ns  (required time - arrival time)
+  Source:                 gen_lane[0].i_lane/i_bmca/row1_q_reg[56]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Destination:            gen_lane[0].i_lane/i_bmca/count_q_reg[8]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            10.000ns  (clk_i rise@10.000ns - clk_i rise@0.000ns)
+  Data Path Delay:        8.543ns  (logic 1.991ns (23.306%)  route 6.552ns (76.694%))
+  Logic Levels:           10  (CARRY4=2 LUT3=1 LUT5=3 LUT6=4)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 10.748 - 10.000 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.787     0.787    gen_lane[0].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[0].i_lane/i_bmca/row1_q_reg[56]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 r  gen_lane[0].i_lane/i_bmca/row1_q_reg[56]/Q
+                         net (fo=2, unplaced)         0.790     2.010    gen_lane[0].i_lane/i_bmca/row1_q_reg_n_0_[56]
+                         LUT6 (Prop_lut6_I0_O)        0.232     2.242 r  gen_lane[0].i_lane/i_bmca/hbundle_lo_q[0][56]_i_2/O
+                         net (fo=4, unplaced)         0.371     2.613    gen_lane[0].i_lane/i_bmca/lo_a_56
+                         LUT3 (Prop_lut3_I2_O)        0.105     2.718 r  gen_lane[0].i_lane/i_bmca/hbundle_lo_q[0][56]_i_1/O
+                         net (fo=3, unplaced)         0.956     3.674    gen_lane[0].i_lane/i_bmca/lane_bmca_lo[0][50]
+                         LUT5 (Prop_lut5_I0_O)        0.105     3.779 r  gen_lane[0].i_lane/i_bmca/count_q[4]_i_61/O
+                         net (fo=3, unplaced)         0.956     4.735    gen_lane[0].i_lane/i_bmca/count_q[4]_i_61_n_0
+                         LUT6 (Prop_lut6_I1_O)        0.105     4.840 r  gen_lane[0].i_lane/i_bmca/count_q[4]_i_30/O
+                         net (fo=3, unplaced)         0.956     5.796    gen_lane[0].i_lane/i_bmca/count_q[4]_i_30_n_0
+                         LUT5 (Prop_lut5_I0_O)        0.105     5.901 r  gen_lane[0].i_lane/i_bmca/count_q[4]_i_15/O
+                         net (fo=3, unplaced)         0.956     6.857    gen_lane[0].i_lane/i_bmca/count_q[4]_i_15_n_0
+                         LUT6 (Prop_lut6_I1_O)        0.105     6.962 r  gen_lane[0].i_lane/i_bmca/count_q[4]_i_9/O
+                         net (fo=5, unplaced)         0.966     7.928    gen_lane[0].i_lane/i_bmca/count_q[4]_i_9_n_0
+                         LUT5 (Prop_lut5_I0_O)        0.105     8.033 r  gen_lane[0].i_lane/i_bmca/count_q[4]_i_2/O
+                         net (fo=2, unplaced)         0.593     8.626    gen_lane[0].i_lane/i_bmca/count_q[4]_i_2_n_0
+                         LUT6 (Prop_lut6_I3_O)        0.105     8.731 r  gen_lane[0].i_lane/i_bmca/count_q[4]_i_5/O
+                         net (fo=1, unplaced)         0.000     8.731    gen_lane[0].i_lane/i_bmca/count_q[4]_i_5_n_0
+                         CARRY4 (Prop_carry4_S[3]_CO[3])
+                                                      0.314     9.045 r  gen_lane[0].i_lane/i_bmca/count_q_reg[4]_i_1/CO[3]
+                         net (fo=1, unplaced)         0.008     9.053    gen_lane[0].i_lane/i_bmca/count_q_reg[4]_i_1_n_0
+                         CARRY4 (Prop_carry4_CI_O[3])
+                                                      0.277     9.330 r  gen_lane[0].i_lane/i_bmca/count_q_reg[8]_i_2/O[3]
+                         net (fo=1, unplaced)         0.000     9.330    gen_lane[0].i_lane/i_bmca/count_d[8]
+                         FDCE                                         r  gen_lane[0].i_lane/i_bmca/count_q_reg[8]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)     10.000    10.000 r  
+                                                      0.000    10.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.748    10.748    gen_lane[0].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[0].i_lane/i_bmca/count_q_reg[8]/C
+                         clock pessimism              0.000    10.748    
+                         clock uncertainty           -0.035    10.712    
+                         FDCE (Setup_fdce_C_D)        0.101    10.813    gen_lane[0].i_lane/i_bmca/count_q_reg[8]
+  -------------------------------------------------------------------
+                         required time                         10.813    
+                         arrival time                          -9.330    
+  -------------------------------------------------------------------
+                         slack                                  1.483    
+
+Slack (MET) :             1.483ns  (required time - arrival time)
+  Source:                 gen_lane[1].i_lane/i_bmca/row1_q_reg[56]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Destination:            gen_lane[1].i_lane/i_bmca/count_q_reg[8]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            10.000ns  (clk_i rise@10.000ns - clk_i rise@0.000ns)
+  Data Path Delay:        8.543ns  (logic 1.991ns (23.306%)  route 6.552ns (76.694%))
+  Logic Levels:           10  (CARRY4=2 LUT3=1 LUT5=3 LUT6=4)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 10.748 - 10.000 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.787     0.787    gen_lane[1].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[1].i_lane/i_bmca/row1_q_reg[56]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 r  gen_lane[1].i_lane/i_bmca/row1_q_reg[56]/Q
+                         net (fo=2, unplaced)         0.790     2.010    gen_lane[1].i_lane/i_bmca/row1_q_reg_n_0_[56]
+                         LUT6 (Prop_lut6_I0_O)        0.232     2.242 r  gen_lane[1].i_lane/i_bmca/hbundle_lo_q[1][56]_i_2/O
+                         net (fo=4, unplaced)         0.371     2.613    gen_lane[1].i_lane/i_bmca/lo_a_56
+                         LUT3 (Prop_lut3_I2_O)        0.105     2.718 r  gen_lane[1].i_lane/i_bmca/hbundle_lo_q[1][56]_i_1/O
+                         net (fo=3, unplaced)         0.956     3.674    gen_lane[1].i_lane/i_bmca/lane_bmca_lo[1][50]
+                         LUT5 (Prop_lut5_I0_O)        0.105     3.779 r  gen_lane[1].i_lane/i_bmca/count_q[4]_i_61__0/O
+                         net (fo=3, unplaced)         0.956     4.735    gen_lane[1].i_lane/i_bmca/count_q[4]_i_61__0_n_0
+                         LUT6 (Prop_lut6_I1_O)        0.105     4.840 r  gen_lane[1].i_lane/i_bmca/count_q[4]_i_30__0/O
+                         net (fo=3, unplaced)         0.956     5.796    gen_lane[1].i_lane/i_bmca/count_q[4]_i_30__0_n_0
+                         LUT5 (Prop_lut5_I0_O)        0.105     5.901 r  gen_lane[1].i_lane/i_bmca/count_q[4]_i_15__0/O
+                         net (fo=3, unplaced)         0.956     6.857    gen_lane[1].i_lane/i_bmca/count_q[4]_i_15__0_n_0
+                         LUT6 (Prop_lut6_I1_O)        0.105     6.962 r  gen_lane[1].i_lane/i_bmca/count_q[4]_i_9__0/O
+                         net (fo=5, unplaced)         0.966     7.928    gen_lane[1].i_lane/i_bmca/count_q[4]_i_9__0_n_0
+                         LUT5 (Prop_lut5_I0_O)        0.105     8.033 r  gen_lane[1].i_lane/i_bmca/count_q[4]_i_2__0/O
+                         net (fo=2, unplaced)         0.593     8.626    gen_lane[1].i_lane/i_bmca/count_q[4]_i_2__0_n_0
+                         LUT6 (Prop_lut6_I3_O)        0.105     8.731 r  gen_lane[1].i_lane/i_bmca/count_q[4]_i_5__0/O
+                         net (fo=1, unplaced)         0.000     8.731    gen_lane[1].i_lane/i_bmca/count_q[4]_i_5__0_n_0
+                         CARRY4 (Prop_carry4_S[3]_CO[3])
+                                                      0.314     9.045 r  gen_lane[1].i_lane/i_bmca/count_q_reg[4]_i_1__0/CO[3]
+                         net (fo=1, unplaced)         0.008     9.053    gen_lane[1].i_lane/i_bmca/count_q_reg[4]_i_1__0_n_0
+                         CARRY4 (Prop_carry4_CI_O[3])
+                                                      0.277     9.330 r  gen_lane[1].i_lane/i_bmca/count_q_reg[8]_i_1/O[3]
+                         net (fo=1, unplaced)         0.000     9.330    gen_lane[1].i_lane/i_bmca/count_d[8]
+                         FDCE                                         r  gen_lane[1].i_lane/i_bmca/count_q_reg[8]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)     10.000    10.000 r  
+                                                      0.000    10.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.748    10.748    gen_lane[1].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[1].i_lane/i_bmca/count_q_reg[8]/C
+                         clock pessimism              0.000    10.748    
+                         clock uncertainty           -0.035    10.712    
+                         FDCE (Setup_fdce_C_D)        0.101    10.813    gen_lane[1].i_lane/i_bmca/count_q_reg[8]
+  -------------------------------------------------------------------
+                         required time                         10.813    
+                         arrival time                          -9.330    
+  -------------------------------------------------------------------
+                         slack                                  1.483    
+
+Slack (MET) :             1.483ns  (required time - arrival time)
+  Source:                 gen_lane[2].i_lane/i_bmca/row1_q_reg[56]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Destination:            gen_lane[2].i_lane/i_bmca/count_q_reg[8]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            10.000ns  (clk_i rise@10.000ns - clk_i rise@0.000ns)
+  Data Path Delay:        8.543ns  (logic 1.991ns (23.306%)  route 6.552ns (76.694%))
+  Logic Levels:           10  (CARRY4=2 LUT3=1 LUT5=3 LUT6=4)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 10.748 - 10.000 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.787     0.787    gen_lane[2].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[2].i_lane/i_bmca/row1_q_reg[56]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 r  gen_lane[2].i_lane/i_bmca/row1_q_reg[56]/Q
+                         net (fo=2, unplaced)         0.790     2.010    gen_lane[2].i_lane/i_bmca/row1_q_reg_n_0_[56]
+                         LUT6 (Prop_lut6_I0_O)        0.232     2.242 r  gen_lane[2].i_lane/i_bmca/hbundle_lo_q[2][56]_i_2/O
+                         net (fo=4, unplaced)         0.371     2.613    gen_lane[2].i_lane/i_bmca/lo_a_56
+                         LUT3 (Prop_lut3_I2_O)        0.105     2.718 r  gen_lane[2].i_lane/i_bmca/hbundle_lo_q[2][56]_i_1/O
+                         net (fo=3, unplaced)         0.956     3.674    gen_lane[2].i_lane/i_bmca/lane_bmca_lo[2][50]
+                         LUT5 (Prop_lut5_I0_O)        0.105     3.779 r  gen_lane[2].i_lane/i_bmca/count_q[4]_i_61__1/O
+                         net (fo=3, unplaced)         0.956     4.735    gen_lane[2].i_lane/i_bmca/count_q[4]_i_61__1_n_0
+                         LUT6 (Prop_lut6_I1_O)        0.105     4.840 r  gen_lane[2].i_lane/i_bmca/count_q[4]_i_30__1/O
+                         net (fo=3, unplaced)         0.956     5.796    gen_lane[2].i_lane/i_bmca/count_q[4]_i_30__1_n_0
+                         LUT5 (Prop_lut5_I0_O)        0.105     5.901 r  gen_lane[2].i_lane/i_bmca/count_q[4]_i_15__1/O
+                         net (fo=3, unplaced)         0.956     6.857    gen_lane[2].i_lane/i_bmca/count_q[4]_i_15__1_n_0
+                         LUT6 (Prop_lut6_I1_O)        0.105     6.962 r  gen_lane[2].i_lane/i_bmca/count_q[4]_i_9__1/O
+                         net (fo=5, unplaced)         0.966     7.928    gen_lane[2].i_lane/i_bmca/count_q[4]_i_9__1_n_0
+                         LUT5 (Prop_lut5_I0_O)        0.105     8.033 r  gen_lane[2].i_lane/i_bmca/count_q[4]_i_2__1/O
+                         net (fo=2, unplaced)         0.593     8.626    gen_lane[2].i_lane/i_bmca/count_q[4]_i_2__1_n_0
+                         LUT6 (Prop_lut6_I3_O)        0.105     8.731 r  gen_lane[2].i_lane/i_bmca/count_q[4]_i_5__1/O
+                         net (fo=1, unplaced)         0.000     8.731    gen_lane[2].i_lane/i_bmca/count_q[4]_i_5__1_n_0
+                         CARRY4 (Prop_carry4_S[3]_CO[3])
+                                                      0.314     9.045 r  gen_lane[2].i_lane/i_bmca/count_q_reg[4]_i_1__1/CO[3]
+                         net (fo=1, unplaced)         0.008     9.053    gen_lane[2].i_lane/i_bmca/count_q_reg[4]_i_1__1_n_0
+                         CARRY4 (Prop_carry4_CI_O[3])
+                                                      0.277     9.330 r  gen_lane[2].i_lane/i_bmca/count_q_reg[8]_i_1__0/O[3]
+                         net (fo=1, unplaced)         0.000     9.330    gen_lane[2].i_lane/i_bmca/count_d[8]
+                         FDCE                                         r  gen_lane[2].i_lane/i_bmca/count_q_reg[8]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)     10.000    10.000 r  
+                                                      0.000    10.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.748    10.748    gen_lane[2].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[2].i_lane/i_bmca/count_q_reg[8]/C
+                         clock pessimism              0.000    10.748    
+                         clock uncertainty           -0.035    10.712    
+                         FDCE (Setup_fdce_C_D)        0.101    10.813    gen_lane[2].i_lane/i_bmca/count_q_reg[8]
+  -------------------------------------------------------------------
+                         required time                         10.813    
+                         arrival time                          -9.330    
+  -------------------------------------------------------------------
+                         slack                                  1.483    
+
+Slack (MET) :             1.483ns  (required time - arrival time)
+  Source:                 gen_lane[3].i_lane/i_bmca/row1_q_reg[56]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Destination:            gen_lane[3].i_lane/i_bmca/count_q_reg[8]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            10.000ns  (clk_i rise@10.000ns - clk_i rise@0.000ns)
+  Data Path Delay:        8.543ns  (logic 1.991ns (23.306%)  route 6.552ns (76.694%))
+  Logic Levels:           10  (CARRY4=2 LUT3=1 LUT5=3 LUT6=4)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 10.748 - 10.000 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.787     0.787    gen_lane[3].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[3].i_lane/i_bmca/row1_q_reg[56]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 r  gen_lane[3].i_lane/i_bmca/row1_q_reg[56]/Q
+                         net (fo=2, unplaced)         0.790     2.010    gen_lane[3].i_lane/i_bmca/row1_q_reg_n_0_[56]
+                         LUT6 (Prop_lut6_I0_O)        0.232     2.242 r  gen_lane[3].i_lane/i_bmca/hbundle_lo_q[3][56]_i_2/O
+                         net (fo=4, unplaced)         0.371     2.613    gen_lane[3].i_lane/i_bmca/lo_a_56
+                         LUT3 (Prop_lut3_I2_O)        0.105     2.718 r  gen_lane[3].i_lane/i_bmca/hbundle_lo_q[3][56]_i_1/O
+                         net (fo=3, unplaced)         0.956     3.674    gen_lane[3].i_lane/i_bmca/lane_bmca_lo[3][50]
+                         LUT5 (Prop_lut5_I0_O)        0.105     3.779 r  gen_lane[3].i_lane/i_bmca/count_q[4]_i_61__2/O
+                         net (fo=3, unplaced)         0.956     4.735    gen_lane[3].i_lane/i_bmca/count_q[4]_i_61__2_n_0
+                         LUT6 (Prop_lut6_I1_O)        0.105     4.840 r  gen_lane[3].i_lane/i_bmca/count_q[4]_i_30__2/O
+                         net (fo=3, unplaced)         0.956     5.796    gen_lane[3].i_lane/i_bmca/count_q[4]_i_30__2_n_0
+                         LUT5 (Prop_lut5_I0_O)        0.105     5.901 r  gen_lane[3].i_lane/i_bmca/count_q[4]_i_15__2/O
+                         net (fo=3, unplaced)         0.956     6.857    gen_lane[3].i_lane/i_bmca/count_q[4]_i_15__2_n_0
+                         LUT6 (Prop_lut6_I1_O)        0.105     6.962 r  gen_lane[3].i_lane/i_bmca/count_q[4]_i_9__2/O
+                         net (fo=5, unplaced)         0.966     7.928    gen_lane[3].i_lane/i_bmca/count_q[4]_i_9__2_n_0
+                         LUT5 (Prop_lut5_I0_O)        0.105     8.033 r  gen_lane[3].i_lane/i_bmca/count_q[4]_i_2__2/O
+                         net (fo=2, unplaced)         0.593     8.626    gen_lane[3].i_lane/i_bmca/count_q[4]_i_2__2_n_0
+                         LUT6 (Prop_lut6_I3_O)        0.105     8.731 r  gen_lane[3].i_lane/i_bmca/count_q[4]_i_5__2/O
+                         net (fo=1, unplaced)         0.000     8.731    gen_lane[3].i_lane/i_bmca/count_q[4]_i_5__2_n_0
+                         CARRY4 (Prop_carry4_S[3]_CO[3])
+                                                      0.314     9.045 r  gen_lane[3].i_lane/i_bmca/count_q_reg[4]_i_1__2/CO[3]
+                         net (fo=1, unplaced)         0.008     9.053    gen_lane[3].i_lane/i_bmca/count_q_reg[4]_i_1__2_n_0
+                         CARRY4 (Prop_carry4_CI_O[3])
+                                                      0.277     9.330 r  gen_lane[3].i_lane/i_bmca/count_q_reg[8]_i_1__1/O[3]
+                         net (fo=1, unplaced)         0.000     9.330    gen_lane[3].i_lane/i_bmca/count_d[8]
+                         FDCE                                         r  gen_lane[3].i_lane/i_bmca/count_q_reg[8]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)     10.000    10.000 r  
+                                                      0.000    10.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.748    10.748    gen_lane[3].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[3].i_lane/i_bmca/count_q_reg[8]/C
+                         clock pessimism              0.000    10.748    
+                         clock uncertainty           -0.035    10.712    
+                         FDCE (Setup_fdce_C_D)        0.101    10.813    gen_lane[3].i_lane/i_bmca/count_q_reg[8]
+  -------------------------------------------------------------------
+                         required time                         10.813    
+                         arrival time                          -9.330    
+  -------------------------------------------------------------------
+                         slack                                  1.483    
+
+Slack (MET) :             1.491ns  (required time - arrival time)
+  Source:                 gen_lane[0].i_lane/i_bmca/row1_q_reg[56]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Destination:            gen_lane[0].i_lane/i_bmca/count_q_reg[6]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            10.000ns  (clk_i rise@10.000ns - clk_i rise@0.000ns)
+  Data Path Delay:        8.535ns  (logic 1.983ns (23.234%)  route 6.552ns (76.766%))
+  Logic Levels:           10  (CARRY4=2 LUT3=1 LUT5=3 LUT6=4)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 10.748 - 10.000 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.787     0.787    gen_lane[0].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[0].i_lane/i_bmca/row1_q_reg[56]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 r  gen_lane[0].i_lane/i_bmca/row1_q_reg[56]/Q
+                         net (fo=2, unplaced)         0.790     2.010    gen_lane[0].i_lane/i_bmca/row1_q_reg_n_0_[56]
+                         LUT6 (Prop_lut6_I0_O)        0.232     2.242 r  gen_lane[0].i_lane/i_bmca/hbundle_lo_q[0][56]_i_2/O
+                         net (fo=4, unplaced)         0.371     2.613    gen_lane[0].i_lane/i_bmca/lo_a_56
+                         LUT3 (Prop_lut3_I2_O)        0.105     2.718 r  gen_lane[0].i_lane/i_bmca/hbundle_lo_q[0][56]_i_1/O
+                         net (fo=3, unplaced)         0.956     3.674    gen_lane[0].i_lane/i_bmca/lane_bmca_lo[0][50]
+                         LUT5 (Prop_lut5_I0_O)        0.105     3.779 r  gen_lane[0].i_lane/i_bmca/count_q[4]_i_61/O
+                         net (fo=3, unplaced)         0.956     4.735    gen_lane[0].i_lane/i_bmca/count_q[4]_i_61_n_0
+                         LUT6 (Prop_lut6_I1_O)        0.105     4.840 r  gen_lane[0].i_lane/i_bmca/count_q[4]_i_30/O
+                         net (fo=3, unplaced)         0.956     5.796    gen_lane[0].i_lane/i_bmca/count_q[4]_i_30_n_0
+                         LUT5 (Prop_lut5_I0_O)        0.105     5.901 r  gen_lane[0].i_lane/i_bmca/count_q[4]_i_15/O
+                         net (fo=3, unplaced)         0.956     6.857    gen_lane[0].i_lane/i_bmca/count_q[4]_i_15_n_0
+                         LUT6 (Prop_lut6_I1_O)        0.105     6.962 r  gen_lane[0].i_lane/i_bmca/count_q[4]_i_9/O
+                         net (fo=5, unplaced)         0.966     7.928    gen_lane[0].i_lane/i_bmca/count_q[4]_i_9_n_0
+                         LUT5 (Prop_lut5_I0_O)        0.105     8.033 r  gen_lane[0].i_lane/i_bmca/count_q[4]_i_2/O
+                         net (fo=2, unplaced)         0.593     8.626    gen_lane[0].i_lane/i_bmca/count_q[4]_i_2_n_0
+                         LUT6 (Prop_lut6_I3_O)        0.105     8.731 r  gen_lane[0].i_lane/i_bmca/count_q[4]_i_5/O
+                         net (fo=1, unplaced)         0.000     8.731    gen_lane[0].i_lane/i_bmca/count_q[4]_i_5_n_0
+                         CARRY4 (Prop_carry4_S[3]_CO[3])
+                                                      0.314     9.045 r  gen_lane[0].i_lane/i_bmca/count_q_reg[4]_i_1/CO[3]
+                         net (fo=1, unplaced)         0.008     9.053    gen_lane[0].i_lane/i_bmca/count_q_reg[4]_i_1_n_0
+                         CARRY4 (Prop_carry4_CI_O[1])
+                                                      0.269     9.322 r  gen_lane[0].i_lane/i_bmca/count_q_reg[8]_i_2/O[1]
+                         net (fo=1, unplaced)         0.000     9.322    gen_lane[0].i_lane/i_bmca/count_d[6]
+                         FDCE                                         r  gen_lane[0].i_lane/i_bmca/count_q_reg[6]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)     10.000    10.000 r  
+                                                      0.000    10.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.748    10.748    gen_lane[0].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[0].i_lane/i_bmca/count_q_reg[6]/C
+                         clock pessimism              0.000    10.748    
+                         clock uncertainty           -0.035    10.712    
+                         FDCE (Setup_fdce_C_D)        0.101    10.813    gen_lane[0].i_lane/i_bmca/count_q_reg[6]
+  -------------------------------------------------------------------
+                         required time                         10.813    
+                         arrival time                          -9.322    
+  -------------------------------------------------------------------
+                         slack                                  1.491    
+
+Slack (MET) :             1.491ns  (required time - arrival time)
+  Source:                 gen_lane[1].i_lane/i_bmca/row1_q_reg[56]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Destination:            gen_lane[1].i_lane/i_bmca/count_q_reg[6]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            10.000ns  (clk_i rise@10.000ns - clk_i rise@0.000ns)
+  Data Path Delay:        8.535ns  (logic 1.983ns (23.234%)  route 6.552ns (76.766%))
+  Logic Levels:           10  (CARRY4=2 LUT3=1 LUT5=3 LUT6=4)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 10.748 - 10.000 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.787     0.787    gen_lane[1].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[1].i_lane/i_bmca/row1_q_reg[56]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 r  gen_lane[1].i_lane/i_bmca/row1_q_reg[56]/Q
+                         net (fo=2, unplaced)         0.790     2.010    gen_lane[1].i_lane/i_bmca/row1_q_reg_n_0_[56]
+                         LUT6 (Prop_lut6_I0_O)        0.232     2.242 r  gen_lane[1].i_lane/i_bmca/hbundle_lo_q[1][56]_i_2/O
+                         net (fo=4, unplaced)         0.371     2.613    gen_lane[1].i_lane/i_bmca/lo_a_56
+                         LUT3 (Prop_lut3_I2_O)        0.105     2.718 r  gen_lane[1].i_lane/i_bmca/hbundle_lo_q[1][56]_i_1/O
+                         net (fo=3, unplaced)         0.956     3.674    gen_lane[1].i_lane/i_bmca/lane_bmca_lo[1][50]
+                         LUT5 (Prop_lut5_I0_O)        0.105     3.779 r  gen_lane[1].i_lane/i_bmca/count_q[4]_i_61__0/O
+                         net (fo=3, unplaced)         0.956     4.735    gen_lane[1].i_lane/i_bmca/count_q[4]_i_61__0_n_0
+                         LUT6 (Prop_lut6_I1_O)        0.105     4.840 r  gen_lane[1].i_lane/i_bmca/count_q[4]_i_30__0/O
+                         net (fo=3, unplaced)         0.956     5.796    gen_lane[1].i_lane/i_bmca/count_q[4]_i_30__0_n_0
+                         LUT5 (Prop_lut5_I0_O)        0.105     5.901 r  gen_lane[1].i_lane/i_bmca/count_q[4]_i_15__0/O
+                         net (fo=3, unplaced)         0.956     6.857    gen_lane[1].i_lane/i_bmca/count_q[4]_i_15__0_n_0
+                         LUT6 (Prop_lut6_I1_O)        0.105     6.962 r  gen_lane[1].i_lane/i_bmca/count_q[4]_i_9__0/O
+                         net (fo=5, unplaced)         0.966     7.928    gen_lane[1].i_lane/i_bmca/count_q[4]_i_9__0_n_0
+                         LUT5 (Prop_lut5_I0_O)        0.105     8.033 r  gen_lane[1].i_lane/i_bmca/count_q[4]_i_2__0/O
+                         net (fo=2, unplaced)         0.593     8.626    gen_lane[1].i_lane/i_bmca/count_q[4]_i_2__0_n_0
+                         LUT6 (Prop_lut6_I3_O)        0.105     8.731 r  gen_lane[1].i_lane/i_bmca/count_q[4]_i_5__0/O
+                         net (fo=1, unplaced)         0.000     8.731    gen_lane[1].i_lane/i_bmca/count_q[4]_i_5__0_n_0
+                         CARRY4 (Prop_carry4_S[3]_CO[3])
+                                                      0.314     9.045 r  gen_lane[1].i_lane/i_bmca/count_q_reg[4]_i_1__0/CO[3]
+                         net (fo=1, unplaced)         0.008     9.053    gen_lane[1].i_lane/i_bmca/count_q_reg[4]_i_1__0_n_0
+                         CARRY4 (Prop_carry4_CI_O[1])
+                                                      0.269     9.322 r  gen_lane[1].i_lane/i_bmca/count_q_reg[8]_i_1/O[1]
+                         net (fo=1, unplaced)         0.000     9.322    gen_lane[1].i_lane/i_bmca/count_d[6]
+                         FDCE                                         r  gen_lane[1].i_lane/i_bmca/count_q_reg[6]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)     10.000    10.000 r  
+                                                      0.000    10.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.748    10.748    gen_lane[1].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[1].i_lane/i_bmca/count_q_reg[6]/C
+                         clock pessimism              0.000    10.748    
+                         clock uncertainty           -0.035    10.712    
+                         FDCE (Setup_fdce_C_D)        0.101    10.813    gen_lane[1].i_lane/i_bmca/count_q_reg[6]
+  -------------------------------------------------------------------
+                         required time                         10.813    
+                         arrival time                          -9.322    
+  -------------------------------------------------------------------
+                         slack                                  1.491    
+
+Slack (MET) :             1.491ns  (required time - arrival time)
+  Source:                 gen_lane[2].i_lane/i_bmca/row1_q_reg[56]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Destination:            gen_lane[2].i_lane/i_bmca/count_q_reg[6]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            10.000ns  (clk_i rise@10.000ns - clk_i rise@0.000ns)
+  Data Path Delay:        8.535ns  (logic 1.983ns (23.234%)  route 6.552ns (76.766%))
+  Logic Levels:           10  (CARRY4=2 LUT3=1 LUT5=3 LUT6=4)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 10.748 - 10.000 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.787     0.787    gen_lane[2].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[2].i_lane/i_bmca/row1_q_reg[56]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 r  gen_lane[2].i_lane/i_bmca/row1_q_reg[56]/Q
+                         net (fo=2, unplaced)         0.790     2.010    gen_lane[2].i_lane/i_bmca/row1_q_reg_n_0_[56]
+                         LUT6 (Prop_lut6_I0_O)        0.232     2.242 r  gen_lane[2].i_lane/i_bmca/hbundle_lo_q[2][56]_i_2/O
+                         net (fo=4, unplaced)         0.371     2.613    gen_lane[2].i_lane/i_bmca/lo_a_56
+                         LUT3 (Prop_lut3_I2_O)        0.105     2.718 r  gen_lane[2].i_lane/i_bmca/hbundle_lo_q[2][56]_i_1/O
+                         net (fo=3, unplaced)         0.956     3.674    gen_lane[2].i_lane/i_bmca/lane_bmca_lo[2][50]
+                         LUT5 (Prop_lut5_I0_O)        0.105     3.779 r  gen_lane[2].i_lane/i_bmca/count_q[4]_i_61__1/O
+                         net (fo=3, unplaced)         0.956     4.735    gen_lane[2].i_lane/i_bmca/count_q[4]_i_61__1_n_0
+                         LUT6 (Prop_lut6_I1_O)        0.105     4.840 r  gen_lane[2].i_lane/i_bmca/count_q[4]_i_30__1/O
+                         net (fo=3, unplaced)         0.956     5.796    gen_lane[2].i_lane/i_bmca/count_q[4]_i_30__1_n_0
+                         LUT5 (Prop_lut5_I0_O)        0.105     5.901 r  gen_lane[2].i_lane/i_bmca/count_q[4]_i_15__1/O
+                         net (fo=3, unplaced)         0.956     6.857    gen_lane[2].i_lane/i_bmca/count_q[4]_i_15__1_n_0
+                         LUT6 (Prop_lut6_I1_O)        0.105     6.962 r  gen_lane[2].i_lane/i_bmca/count_q[4]_i_9__1/O
+                         net (fo=5, unplaced)         0.966     7.928    gen_lane[2].i_lane/i_bmca/count_q[4]_i_9__1_n_0
+                         LUT5 (Prop_lut5_I0_O)        0.105     8.033 r  gen_lane[2].i_lane/i_bmca/count_q[4]_i_2__1/O
+                         net (fo=2, unplaced)         0.593     8.626    gen_lane[2].i_lane/i_bmca/count_q[4]_i_2__1_n_0
+                         LUT6 (Prop_lut6_I3_O)        0.105     8.731 r  gen_lane[2].i_lane/i_bmca/count_q[4]_i_5__1/O
+                         net (fo=1, unplaced)         0.000     8.731    gen_lane[2].i_lane/i_bmca/count_q[4]_i_5__1_n_0
+                         CARRY4 (Prop_carry4_S[3]_CO[3])
+                                                      0.314     9.045 r  gen_lane[2].i_lane/i_bmca/count_q_reg[4]_i_1__1/CO[3]
+                         net (fo=1, unplaced)         0.008     9.053    gen_lane[2].i_lane/i_bmca/count_q_reg[4]_i_1__1_n_0
+                         CARRY4 (Prop_carry4_CI_O[1])
+                                                      0.269     9.322 r  gen_lane[2].i_lane/i_bmca/count_q_reg[8]_i_1__0/O[1]
+                         net (fo=1, unplaced)         0.000     9.322    gen_lane[2].i_lane/i_bmca/count_d[6]
+                         FDCE                                         r  gen_lane[2].i_lane/i_bmca/count_q_reg[6]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)     10.000    10.000 r  
+                                                      0.000    10.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.748    10.748    gen_lane[2].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[2].i_lane/i_bmca/count_q_reg[6]/C
+                         clock pessimism              0.000    10.748    
+                         clock uncertainty           -0.035    10.712    
+                         FDCE (Setup_fdce_C_D)        0.101    10.813    gen_lane[2].i_lane/i_bmca/count_q_reg[6]
+  -------------------------------------------------------------------
+                         required time                         10.813    
+                         arrival time                          -9.322    
+  -------------------------------------------------------------------
+                         slack                                  1.491    
+
+Slack (MET) :             1.491ns  (required time - arrival time)
+  Source:                 gen_lane[3].i_lane/i_bmca/row1_q_reg[56]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Destination:            gen_lane[3].i_lane/i_bmca/count_q_reg[6]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            10.000ns  (clk_i rise@10.000ns - clk_i rise@0.000ns)
+  Data Path Delay:        8.535ns  (logic 1.983ns (23.234%)  route 6.552ns (76.766%))
+  Logic Levels:           10  (CARRY4=2 LUT3=1 LUT5=3 LUT6=4)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 10.748 - 10.000 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.787     0.787    gen_lane[3].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[3].i_lane/i_bmca/row1_q_reg[56]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 r  gen_lane[3].i_lane/i_bmca/row1_q_reg[56]/Q
+                         net (fo=2, unplaced)         0.790     2.010    gen_lane[3].i_lane/i_bmca/row1_q_reg_n_0_[56]
+                         LUT6 (Prop_lut6_I0_O)        0.232     2.242 r  gen_lane[3].i_lane/i_bmca/hbundle_lo_q[3][56]_i_2/O
+                         net (fo=4, unplaced)         0.371     2.613    gen_lane[3].i_lane/i_bmca/lo_a_56
+                         LUT3 (Prop_lut3_I2_O)        0.105     2.718 r  gen_lane[3].i_lane/i_bmca/hbundle_lo_q[3][56]_i_1/O
+                         net (fo=3, unplaced)         0.956     3.674    gen_lane[3].i_lane/i_bmca/lane_bmca_lo[3][50]
+                         LUT5 (Prop_lut5_I0_O)        0.105     3.779 r  gen_lane[3].i_lane/i_bmca/count_q[4]_i_61__2/O
+                         net (fo=3, unplaced)         0.956     4.735    gen_lane[3].i_lane/i_bmca/count_q[4]_i_61__2_n_0
+                         LUT6 (Prop_lut6_I1_O)        0.105     4.840 r  gen_lane[3].i_lane/i_bmca/count_q[4]_i_30__2/O
+                         net (fo=3, unplaced)         0.956     5.796    gen_lane[3].i_lane/i_bmca/count_q[4]_i_30__2_n_0
+                         LUT5 (Prop_lut5_I0_O)        0.105     5.901 r  gen_lane[3].i_lane/i_bmca/count_q[4]_i_15__2/O
+                         net (fo=3, unplaced)         0.956     6.857    gen_lane[3].i_lane/i_bmca/count_q[4]_i_15__2_n_0
+                         LUT6 (Prop_lut6_I1_O)        0.105     6.962 r  gen_lane[3].i_lane/i_bmca/count_q[4]_i_9__2/O
+                         net (fo=5, unplaced)         0.966     7.928    gen_lane[3].i_lane/i_bmca/count_q[4]_i_9__2_n_0
+                         LUT5 (Prop_lut5_I0_O)        0.105     8.033 r  gen_lane[3].i_lane/i_bmca/count_q[4]_i_2__2/O
+                         net (fo=2, unplaced)         0.593     8.626    gen_lane[3].i_lane/i_bmca/count_q[4]_i_2__2_n_0
+                         LUT6 (Prop_lut6_I3_O)        0.105     8.731 r  gen_lane[3].i_lane/i_bmca/count_q[4]_i_5__2/O
+                         net (fo=1, unplaced)         0.000     8.731    gen_lane[3].i_lane/i_bmca/count_q[4]_i_5__2_n_0
+                         CARRY4 (Prop_carry4_S[3]_CO[3])
+                                                      0.314     9.045 r  gen_lane[3].i_lane/i_bmca/count_q_reg[4]_i_1__2/CO[3]
+                         net (fo=1, unplaced)         0.008     9.053    gen_lane[3].i_lane/i_bmca/count_q_reg[4]_i_1__2_n_0
+                         CARRY4 (Prop_carry4_CI_O[1])
+                                                      0.269     9.322 r  gen_lane[3].i_lane/i_bmca/count_q_reg[8]_i_1__1/O[1]
+                         net (fo=1, unplaced)         0.000     9.322    gen_lane[3].i_lane/i_bmca/count_d[6]
+                         FDCE                                         r  gen_lane[3].i_lane/i_bmca/count_q_reg[6]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)     10.000    10.000 r  
+                                                      0.000    10.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.748    10.748    gen_lane[3].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[3].i_lane/i_bmca/count_q_reg[6]/C
+                         clock pessimism              0.000    10.748    
+                         clock uncertainty           -0.035    10.712    
+                         FDCE (Setup_fdce_C_D)        0.101    10.813    gen_lane[3].i_lane/i_bmca/count_q_reg[6]
+  -------------------------------------------------------------------
+                         required time                         10.813    
+                         arrival time                          -9.322    
+  -------------------------------------------------------------------
+                         slack                                  1.491    
+
+Slack (MET) :             1.546ns  (required time - arrival time)
+  Source:                 gen_lane[0].i_lane/i_bmca/row1_q_reg[56]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Destination:            gen_lane[0].i_lane/i_bmca/count_q_reg[7]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            10.000ns  (clk_i rise@10.000ns - clk_i rise@0.000ns)
+  Data Path Delay:        8.480ns  (logic 1.928ns (22.736%)  route 6.552ns (77.264%))
+  Logic Levels:           10  (CARRY4=2 LUT3=1 LUT5=3 LUT6=4)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 10.748 - 10.000 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.787     0.787    gen_lane[0].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[0].i_lane/i_bmca/row1_q_reg[56]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 r  gen_lane[0].i_lane/i_bmca/row1_q_reg[56]/Q
+                         net (fo=2, unplaced)         0.790     2.010    gen_lane[0].i_lane/i_bmca/row1_q_reg_n_0_[56]
+                         LUT6 (Prop_lut6_I0_O)        0.232     2.242 r  gen_lane[0].i_lane/i_bmca/hbundle_lo_q[0][56]_i_2/O
+                         net (fo=4, unplaced)         0.371     2.613    gen_lane[0].i_lane/i_bmca/lo_a_56
+                         LUT3 (Prop_lut3_I2_O)        0.105     2.718 r  gen_lane[0].i_lane/i_bmca/hbundle_lo_q[0][56]_i_1/O
+                         net (fo=3, unplaced)         0.956     3.674    gen_lane[0].i_lane/i_bmca/lane_bmca_lo[0][50]
+                         LUT5 (Prop_lut5_I0_O)        0.105     3.779 r  gen_lane[0].i_lane/i_bmca/count_q[4]_i_61/O
+                         net (fo=3, unplaced)         0.956     4.735    gen_lane[0].i_lane/i_bmca/count_q[4]_i_61_n_0
+                         LUT6 (Prop_lut6_I1_O)        0.105     4.840 r  gen_lane[0].i_lane/i_bmca/count_q[4]_i_30/O
+                         net (fo=3, unplaced)         0.956     5.796    gen_lane[0].i_lane/i_bmca/count_q[4]_i_30_n_0
+                         LUT5 (Prop_lut5_I0_O)        0.105     5.901 r  gen_lane[0].i_lane/i_bmca/count_q[4]_i_15/O
+                         net (fo=3, unplaced)         0.956     6.857    gen_lane[0].i_lane/i_bmca/count_q[4]_i_15_n_0
+                         LUT6 (Prop_lut6_I1_O)        0.105     6.962 r  gen_lane[0].i_lane/i_bmca/count_q[4]_i_9/O
+                         net (fo=5, unplaced)         0.966     7.928    gen_lane[0].i_lane/i_bmca/count_q[4]_i_9_n_0
+                         LUT5 (Prop_lut5_I0_O)        0.105     8.033 r  gen_lane[0].i_lane/i_bmca/count_q[4]_i_2/O
+                         net (fo=2, unplaced)         0.593     8.626    gen_lane[0].i_lane/i_bmca/count_q[4]_i_2_n_0
+                         LUT6 (Prop_lut6_I3_O)        0.105     8.731 r  gen_lane[0].i_lane/i_bmca/count_q[4]_i_5/O
+                         net (fo=1, unplaced)         0.000     8.731    gen_lane[0].i_lane/i_bmca/count_q[4]_i_5_n_0
+                         CARRY4 (Prop_carry4_S[3]_CO[3])
+                                                      0.314     9.045 r  gen_lane[0].i_lane/i_bmca/count_q_reg[4]_i_1/CO[3]
+                         net (fo=1, unplaced)         0.008     9.053    gen_lane[0].i_lane/i_bmca/count_q_reg[4]_i_1_n_0
+                         CARRY4 (Prop_carry4_CI_O[2])
+                                                      0.214     9.267 r  gen_lane[0].i_lane/i_bmca/count_q_reg[8]_i_2/O[2]
+                         net (fo=1, unplaced)         0.000     9.267    gen_lane[0].i_lane/i_bmca/count_d[7]
+                         FDCE                                         r  gen_lane[0].i_lane/i_bmca/count_q_reg[7]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)     10.000    10.000 r  
+                                                      0.000    10.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.748    10.748    gen_lane[0].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[0].i_lane/i_bmca/count_q_reg[7]/C
+                         clock pessimism              0.000    10.748    
+                         clock uncertainty           -0.035    10.712    
+                         FDCE (Setup_fdce_C_D)        0.101    10.813    gen_lane[0].i_lane/i_bmca/count_q_reg[7]
+  -------------------------------------------------------------------
+                         required time                         10.813    
+                         arrival time                          -9.267    
+  -------------------------------------------------------------------
+                         slack                                  1.546    
+
+Slack (MET) :             1.546ns  (required time - arrival time)
+  Source:                 gen_lane[1].i_lane/i_bmca/row1_q_reg[56]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Destination:            gen_lane[1].i_lane/i_bmca/count_q_reg[7]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            10.000ns  (clk_i rise@10.000ns - clk_i rise@0.000ns)
+  Data Path Delay:        8.480ns  (logic 1.928ns (22.736%)  route 6.552ns (77.264%))
+  Logic Levels:           10  (CARRY4=2 LUT3=1 LUT5=3 LUT6=4)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 10.748 - 10.000 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.787     0.787    gen_lane[1].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[1].i_lane/i_bmca/row1_q_reg[56]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 r  gen_lane[1].i_lane/i_bmca/row1_q_reg[56]/Q
+                         net (fo=2, unplaced)         0.790     2.010    gen_lane[1].i_lane/i_bmca/row1_q_reg_n_0_[56]
+                         LUT6 (Prop_lut6_I0_O)        0.232     2.242 r  gen_lane[1].i_lane/i_bmca/hbundle_lo_q[1][56]_i_2/O
+                         net (fo=4, unplaced)         0.371     2.613    gen_lane[1].i_lane/i_bmca/lo_a_56
+                         LUT3 (Prop_lut3_I2_O)        0.105     2.718 r  gen_lane[1].i_lane/i_bmca/hbundle_lo_q[1][56]_i_1/O
+                         net (fo=3, unplaced)         0.956     3.674    gen_lane[1].i_lane/i_bmca/lane_bmca_lo[1][50]
+                         LUT5 (Prop_lut5_I0_O)        0.105     3.779 r  gen_lane[1].i_lane/i_bmca/count_q[4]_i_61__0/O
+                         net (fo=3, unplaced)         0.956     4.735    gen_lane[1].i_lane/i_bmca/count_q[4]_i_61__0_n_0
+                         LUT6 (Prop_lut6_I1_O)        0.105     4.840 r  gen_lane[1].i_lane/i_bmca/count_q[4]_i_30__0/O
+                         net (fo=3, unplaced)         0.956     5.796    gen_lane[1].i_lane/i_bmca/count_q[4]_i_30__0_n_0
+                         LUT5 (Prop_lut5_I0_O)        0.105     5.901 r  gen_lane[1].i_lane/i_bmca/count_q[4]_i_15__0/O
+                         net (fo=3, unplaced)         0.956     6.857    gen_lane[1].i_lane/i_bmca/count_q[4]_i_15__0_n_0
+                         LUT6 (Prop_lut6_I1_O)        0.105     6.962 r  gen_lane[1].i_lane/i_bmca/count_q[4]_i_9__0/O
+                         net (fo=5, unplaced)         0.966     7.928    gen_lane[1].i_lane/i_bmca/count_q[4]_i_9__0_n_0
+                         LUT5 (Prop_lut5_I0_O)        0.105     8.033 r  gen_lane[1].i_lane/i_bmca/count_q[4]_i_2__0/O
+                         net (fo=2, unplaced)         0.593     8.626    gen_lane[1].i_lane/i_bmca/count_q[4]_i_2__0_n_0
+                         LUT6 (Prop_lut6_I3_O)        0.105     8.731 r  gen_lane[1].i_lane/i_bmca/count_q[4]_i_5__0/O
+                         net (fo=1, unplaced)         0.000     8.731    gen_lane[1].i_lane/i_bmca/count_q[4]_i_5__0_n_0
+                         CARRY4 (Prop_carry4_S[3]_CO[3])
+                                                      0.314     9.045 r  gen_lane[1].i_lane/i_bmca/count_q_reg[4]_i_1__0/CO[3]
+                         net (fo=1, unplaced)         0.008     9.053    gen_lane[1].i_lane/i_bmca/count_q_reg[4]_i_1__0_n_0
+                         CARRY4 (Prop_carry4_CI_O[2])
+                                                      0.214     9.267 r  gen_lane[1].i_lane/i_bmca/count_q_reg[8]_i_1/O[2]
+                         net (fo=1, unplaced)         0.000     9.267    gen_lane[1].i_lane/i_bmca/count_d[7]
+                         FDCE                                         r  gen_lane[1].i_lane/i_bmca/count_q_reg[7]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)     10.000    10.000 r  
+                                                      0.000    10.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.748    10.748    gen_lane[1].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[1].i_lane/i_bmca/count_q_reg[7]/C
+                         clock pessimism              0.000    10.748    
+                         clock uncertainty           -0.035    10.712    
+                         FDCE (Setup_fdce_C_D)        0.101    10.813    gen_lane[1].i_lane/i_bmca/count_q_reg[7]
+  -------------------------------------------------------------------
+                         required time                         10.813    
+                         arrival time                          -9.267    
+  -------------------------------------------------------------------
+                         slack                                  1.546    
+
+Slack (MET) :             1.546ns  (required time - arrival time)
+  Source:                 gen_lane[2].i_lane/i_bmca/row1_q_reg[56]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Destination:            gen_lane[2].i_lane/i_bmca/count_q_reg[7]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            10.000ns  (clk_i rise@10.000ns - clk_i rise@0.000ns)
+  Data Path Delay:        8.480ns  (logic 1.928ns (22.736%)  route 6.552ns (77.264%))
+  Logic Levels:           10  (CARRY4=2 LUT3=1 LUT5=3 LUT6=4)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 10.748 - 10.000 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.787     0.787    gen_lane[2].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[2].i_lane/i_bmca/row1_q_reg[56]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 r  gen_lane[2].i_lane/i_bmca/row1_q_reg[56]/Q
+                         net (fo=2, unplaced)         0.790     2.010    gen_lane[2].i_lane/i_bmca/row1_q_reg_n_0_[56]
+                         LUT6 (Prop_lut6_I0_O)        0.232     2.242 r  gen_lane[2].i_lane/i_bmca/hbundle_lo_q[2][56]_i_2/O
+                         net (fo=4, unplaced)         0.371     2.613    gen_lane[2].i_lane/i_bmca/lo_a_56
+                         LUT3 (Prop_lut3_I2_O)        0.105     2.718 r  gen_lane[2].i_lane/i_bmca/hbundle_lo_q[2][56]_i_1/O
+                         net (fo=3, unplaced)         0.956     3.674    gen_lane[2].i_lane/i_bmca/lane_bmca_lo[2][50]
+                         LUT5 (Prop_lut5_I0_O)        0.105     3.779 r  gen_lane[2].i_lane/i_bmca/count_q[4]_i_61__1/O
+                         net (fo=3, unplaced)         0.956     4.735    gen_lane[2].i_lane/i_bmca/count_q[4]_i_61__1_n_0
+                         LUT6 (Prop_lut6_I1_O)        0.105     4.840 r  gen_lane[2].i_lane/i_bmca/count_q[4]_i_30__1/O
+                         net (fo=3, unplaced)         0.956     5.796    gen_lane[2].i_lane/i_bmca/count_q[4]_i_30__1_n_0
+                         LUT5 (Prop_lut5_I0_O)        0.105     5.901 r  gen_lane[2].i_lane/i_bmca/count_q[4]_i_15__1/O
+                         net (fo=3, unplaced)         0.956     6.857    gen_lane[2].i_lane/i_bmca/count_q[4]_i_15__1_n_0
+                         LUT6 (Prop_lut6_I1_O)        0.105     6.962 r  gen_lane[2].i_lane/i_bmca/count_q[4]_i_9__1/O
+                         net (fo=5, unplaced)         0.966     7.928    gen_lane[2].i_lane/i_bmca/count_q[4]_i_9__1_n_0
+                         LUT5 (Prop_lut5_I0_O)        0.105     8.033 r  gen_lane[2].i_lane/i_bmca/count_q[4]_i_2__1/O
+                         net (fo=2, unplaced)         0.593     8.626    gen_lane[2].i_lane/i_bmca/count_q[4]_i_2__1_n_0
+                         LUT6 (Prop_lut6_I3_O)        0.105     8.731 r  gen_lane[2].i_lane/i_bmca/count_q[4]_i_5__1/O
+                         net (fo=1, unplaced)         0.000     8.731    gen_lane[2].i_lane/i_bmca/count_q[4]_i_5__1_n_0
+                         CARRY4 (Prop_carry4_S[3]_CO[3])
+                                                      0.314     9.045 r  gen_lane[2].i_lane/i_bmca/count_q_reg[4]_i_1__1/CO[3]
+                         net (fo=1, unplaced)         0.008     9.053    gen_lane[2].i_lane/i_bmca/count_q_reg[4]_i_1__1_n_0
+                         CARRY4 (Prop_carry4_CI_O[2])
+                                                      0.214     9.267 r  gen_lane[2].i_lane/i_bmca/count_q_reg[8]_i_1__0/O[2]
+                         net (fo=1, unplaced)         0.000     9.267    gen_lane[2].i_lane/i_bmca/count_d[7]
+                         FDCE                                         r  gen_lane[2].i_lane/i_bmca/count_q_reg[7]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)     10.000    10.000 r  
+                                                      0.000    10.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.748    10.748    gen_lane[2].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[2].i_lane/i_bmca/count_q_reg[7]/C
+                         clock pessimism              0.000    10.748    
+                         clock uncertainty           -0.035    10.712    
+                         FDCE (Setup_fdce_C_D)        0.101    10.813    gen_lane[2].i_lane/i_bmca/count_q_reg[7]
+  -------------------------------------------------------------------
+                         required time                         10.813    
+                         arrival time                          -9.267    
+  -------------------------------------------------------------------
+                         slack                                  1.546    
+
+Slack (MET) :             1.546ns  (required time - arrival time)
+  Source:                 gen_lane[3].i_lane/i_bmca/row1_q_reg[56]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Destination:            gen_lane[3].i_lane/i_bmca/count_q_reg[7]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            10.000ns  (clk_i rise@10.000ns - clk_i rise@0.000ns)
+  Data Path Delay:        8.480ns  (logic 1.928ns (22.736%)  route 6.552ns (77.264%))
+  Logic Levels:           10  (CARRY4=2 LUT3=1 LUT5=3 LUT6=4)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 10.748 - 10.000 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.787     0.787    gen_lane[3].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[3].i_lane/i_bmca/row1_q_reg[56]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 r  gen_lane[3].i_lane/i_bmca/row1_q_reg[56]/Q
+                         net (fo=2, unplaced)         0.790     2.010    gen_lane[3].i_lane/i_bmca/row1_q_reg_n_0_[56]
+                         LUT6 (Prop_lut6_I0_O)        0.232     2.242 r  gen_lane[3].i_lane/i_bmca/hbundle_lo_q[3][56]_i_2/O
+                         net (fo=4, unplaced)         0.371     2.613    gen_lane[3].i_lane/i_bmca/lo_a_56
+                         LUT3 (Prop_lut3_I2_O)        0.105     2.718 r  gen_lane[3].i_lane/i_bmca/hbundle_lo_q[3][56]_i_1/O
+                         net (fo=3, unplaced)         0.956     3.674    gen_lane[3].i_lane/i_bmca/lane_bmca_lo[3][50]
+                         LUT5 (Prop_lut5_I0_O)        0.105     3.779 r  gen_lane[3].i_lane/i_bmca/count_q[4]_i_61__2/O
+                         net (fo=3, unplaced)         0.956     4.735    gen_lane[3].i_lane/i_bmca/count_q[4]_i_61__2_n_0
+                         LUT6 (Prop_lut6_I1_O)        0.105     4.840 r  gen_lane[3].i_lane/i_bmca/count_q[4]_i_30__2/O
+                         net (fo=3, unplaced)         0.956     5.796    gen_lane[3].i_lane/i_bmca/count_q[4]_i_30__2_n_0
+                         LUT5 (Prop_lut5_I0_O)        0.105     5.901 r  gen_lane[3].i_lane/i_bmca/count_q[4]_i_15__2/O
+                         net (fo=3, unplaced)         0.956     6.857    gen_lane[3].i_lane/i_bmca/count_q[4]_i_15__2_n_0
+                         LUT6 (Prop_lut6_I1_O)        0.105     6.962 r  gen_lane[3].i_lane/i_bmca/count_q[4]_i_9__2/O
+                         net (fo=5, unplaced)         0.966     7.928    gen_lane[3].i_lane/i_bmca/count_q[4]_i_9__2_n_0
+                         LUT5 (Prop_lut5_I0_O)        0.105     8.033 r  gen_lane[3].i_lane/i_bmca/count_q[4]_i_2__2/O
+                         net (fo=2, unplaced)         0.593     8.626    gen_lane[3].i_lane/i_bmca/count_q[4]_i_2__2_n_0
+                         LUT6 (Prop_lut6_I3_O)        0.105     8.731 r  gen_lane[3].i_lane/i_bmca/count_q[4]_i_5__2/O
+                         net (fo=1, unplaced)         0.000     8.731    gen_lane[3].i_lane/i_bmca/count_q[4]_i_5__2_n_0
+                         CARRY4 (Prop_carry4_S[3]_CO[3])
+                                                      0.314     9.045 r  gen_lane[3].i_lane/i_bmca/count_q_reg[4]_i_1__2/CO[3]
+                         net (fo=1, unplaced)         0.008     9.053    gen_lane[3].i_lane/i_bmca/count_q_reg[4]_i_1__2_n_0
+                         CARRY4 (Prop_carry4_CI_O[2])
+                                                      0.214     9.267 r  gen_lane[3].i_lane/i_bmca/count_q_reg[8]_i_1__1/O[2]
+                         net (fo=1, unplaced)         0.000     9.267    gen_lane[3].i_lane/i_bmca/count_d[7]
+                         FDCE                                         r  gen_lane[3].i_lane/i_bmca/count_q_reg[7]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)     10.000    10.000 r  
+                                                      0.000    10.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.748    10.748    gen_lane[3].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[3].i_lane/i_bmca/count_q_reg[7]/C
+                         clock pessimism              0.000    10.748    
+                         clock uncertainty           -0.035    10.712    
+                         FDCE (Setup_fdce_C_D)        0.101    10.813    gen_lane[3].i_lane/i_bmca/count_q_reg[7]
+  -------------------------------------------------------------------
+                         required time                         10.813    
+                         arrival time                          -9.267    
+  -------------------------------------------------------------------
+                         slack                                  1.546    
+
+Slack (MET) :             1.571ns  (required time - arrival time)
+  Source:                 gen_lane[0].i_lane/i_bmca/row1_q_reg[56]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Destination:            gen_lane[0].i_lane/i_bmca/count_q_reg[5]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            10.000ns  (clk_i rise@10.000ns - clk_i rise@0.000ns)
+  Data Path Delay:        8.455ns  (logic 1.903ns (22.507%)  route 6.552ns (77.493%))
+  Logic Levels:           10  (CARRY4=2 LUT3=1 LUT5=3 LUT6=4)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 10.748 - 10.000 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.787     0.787    gen_lane[0].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[0].i_lane/i_bmca/row1_q_reg[56]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 r  gen_lane[0].i_lane/i_bmca/row1_q_reg[56]/Q
+                         net (fo=2, unplaced)         0.790     2.010    gen_lane[0].i_lane/i_bmca/row1_q_reg_n_0_[56]
+                         LUT6 (Prop_lut6_I0_O)        0.232     2.242 r  gen_lane[0].i_lane/i_bmca/hbundle_lo_q[0][56]_i_2/O
+                         net (fo=4, unplaced)         0.371     2.613    gen_lane[0].i_lane/i_bmca/lo_a_56
+                         LUT3 (Prop_lut3_I2_O)        0.105     2.718 r  gen_lane[0].i_lane/i_bmca/hbundle_lo_q[0][56]_i_1/O
+                         net (fo=3, unplaced)         0.956     3.674    gen_lane[0].i_lane/i_bmca/lane_bmca_lo[0][50]
+                         LUT5 (Prop_lut5_I0_O)        0.105     3.779 r  gen_lane[0].i_lane/i_bmca/count_q[4]_i_61/O
+                         net (fo=3, unplaced)         0.956     4.735    gen_lane[0].i_lane/i_bmca/count_q[4]_i_61_n_0
+                         LUT6 (Prop_lut6_I1_O)        0.105     4.840 r  gen_lane[0].i_lane/i_bmca/count_q[4]_i_30/O
+                         net (fo=3, unplaced)         0.956     5.796    gen_lane[0].i_lane/i_bmca/count_q[4]_i_30_n_0
+                         LUT5 (Prop_lut5_I0_O)        0.105     5.901 r  gen_lane[0].i_lane/i_bmca/count_q[4]_i_15/O
+                         net (fo=3, unplaced)         0.956     6.857    gen_lane[0].i_lane/i_bmca/count_q[4]_i_15_n_0
+                         LUT6 (Prop_lut6_I1_O)        0.105     6.962 r  gen_lane[0].i_lane/i_bmca/count_q[4]_i_9/O
+                         net (fo=5, unplaced)         0.966     7.928    gen_lane[0].i_lane/i_bmca/count_q[4]_i_9_n_0
+                         LUT5 (Prop_lut5_I0_O)        0.105     8.033 r  gen_lane[0].i_lane/i_bmca/count_q[4]_i_2/O
+                         net (fo=2, unplaced)         0.593     8.626    gen_lane[0].i_lane/i_bmca/count_q[4]_i_2_n_0
+                         LUT6 (Prop_lut6_I3_O)        0.105     8.731 r  gen_lane[0].i_lane/i_bmca/count_q[4]_i_5/O
+                         net (fo=1, unplaced)         0.000     8.731    gen_lane[0].i_lane/i_bmca/count_q[4]_i_5_n_0
+                         CARRY4 (Prop_carry4_S[3]_CO[3])
+                                                      0.314     9.045 r  gen_lane[0].i_lane/i_bmca/count_q_reg[4]_i_1/CO[3]
+                         net (fo=1, unplaced)         0.008     9.053    gen_lane[0].i_lane/i_bmca/count_q_reg[4]_i_1_n_0
+                         CARRY4 (Prop_carry4_CI_O[0])
+                                                      0.189     9.242 r  gen_lane[0].i_lane/i_bmca/count_q_reg[8]_i_2/O[0]
+                         net (fo=1, unplaced)         0.000     9.242    gen_lane[0].i_lane/i_bmca/count_d[5]
+                         FDCE                                         r  gen_lane[0].i_lane/i_bmca/count_q_reg[5]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)     10.000    10.000 r  
+                                                      0.000    10.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.748    10.748    gen_lane[0].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[0].i_lane/i_bmca/count_q_reg[5]/C
+                         clock pessimism              0.000    10.748    
+                         clock uncertainty           -0.035    10.712    
+                         FDCE (Setup_fdce_C_D)        0.101    10.813    gen_lane[0].i_lane/i_bmca/count_q_reg[5]
+  -------------------------------------------------------------------
+                         required time                         10.813    
+                         arrival time                          -9.242    
+  -------------------------------------------------------------------
+                         slack                                  1.571    
+
+Slack (MET) :             1.571ns  (required time - arrival time)
+  Source:                 gen_lane[1].i_lane/i_bmca/row1_q_reg[56]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Destination:            gen_lane[1].i_lane/i_bmca/count_q_reg[5]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            10.000ns  (clk_i rise@10.000ns - clk_i rise@0.000ns)
+  Data Path Delay:        8.455ns  (logic 1.903ns (22.507%)  route 6.552ns (77.493%))
+  Logic Levels:           10  (CARRY4=2 LUT3=1 LUT5=3 LUT6=4)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 10.748 - 10.000 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.787     0.787    gen_lane[1].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[1].i_lane/i_bmca/row1_q_reg[56]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 r  gen_lane[1].i_lane/i_bmca/row1_q_reg[56]/Q
+                         net (fo=2, unplaced)         0.790     2.010    gen_lane[1].i_lane/i_bmca/row1_q_reg_n_0_[56]
+                         LUT6 (Prop_lut6_I0_O)        0.232     2.242 r  gen_lane[1].i_lane/i_bmca/hbundle_lo_q[1][56]_i_2/O
+                         net (fo=4, unplaced)         0.371     2.613    gen_lane[1].i_lane/i_bmca/lo_a_56
+                         LUT3 (Prop_lut3_I2_O)        0.105     2.718 r  gen_lane[1].i_lane/i_bmca/hbundle_lo_q[1][56]_i_1/O
+                         net (fo=3, unplaced)         0.956     3.674    gen_lane[1].i_lane/i_bmca/lane_bmca_lo[1][50]
+                         LUT5 (Prop_lut5_I0_O)        0.105     3.779 r  gen_lane[1].i_lane/i_bmca/count_q[4]_i_61__0/O
+                         net (fo=3, unplaced)         0.956     4.735    gen_lane[1].i_lane/i_bmca/count_q[4]_i_61__0_n_0
+                         LUT6 (Prop_lut6_I1_O)        0.105     4.840 r  gen_lane[1].i_lane/i_bmca/count_q[4]_i_30__0/O
+                         net (fo=3, unplaced)         0.956     5.796    gen_lane[1].i_lane/i_bmca/count_q[4]_i_30__0_n_0
+                         LUT5 (Prop_lut5_I0_O)        0.105     5.901 r  gen_lane[1].i_lane/i_bmca/count_q[4]_i_15__0/O
+                         net (fo=3, unplaced)         0.956     6.857    gen_lane[1].i_lane/i_bmca/count_q[4]_i_15__0_n_0
+                         LUT6 (Prop_lut6_I1_O)        0.105     6.962 r  gen_lane[1].i_lane/i_bmca/count_q[4]_i_9__0/O
+                         net (fo=5, unplaced)         0.966     7.928    gen_lane[1].i_lane/i_bmca/count_q[4]_i_9__0_n_0
+                         LUT5 (Prop_lut5_I0_O)        0.105     8.033 r  gen_lane[1].i_lane/i_bmca/count_q[4]_i_2__0/O
+                         net (fo=2, unplaced)         0.593     8.626    gen_lane[1].i_lane/i_bmca/count_q[4]_i_2__0_n_0
+                         LUT6 (Prop_lut6_I3_O)        0.105     8.731 r  gen_lane[1].i_lane/i_bmca/count_q[4]_i_5__0/O
+                         net (fo=1, unplaced)         0.000     8.731    gen_lane[1].i_lane/i_bmca/count_q[4]_i_5__0_n_0
+                         CARRY4 (Prop_carry4_S[3]_CO[3])
+                                                      0.314     9.045 r  gen_lane[1].i_lane/i_bmca/count_q_reg[4]_i_1__0/CO[3]
+                         net (fo=1, unplaced)         0.008     9.053    gen_lane[1].i_lane/i_bmca/count_q_reg[4]_i_1__0_n_0
+                         CARRY4 (Prop_carry4_CI_O[0])
+                                                      0.189     9.242 r  gen_lane[1].i_lane/i_bmca/count_q_reg[8]_i_1/O[0]
+                         net (fo=1, unplaced)         0.000     9.242    gen_lane[1].i_lane/i_bmca/count_d[5]
+                         FDCE                                         r  gen_lane[1].i_lane/i_bmca/count_q_reg[5]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)     10.000    10.000 r  
+                                                      0.000    10.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.748    10.748    gen_lane[1].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[1].i_lane/i_bmca/count_q_reg[5]/C
+                         clock pessimism              0.000    10.748    
+                         clock uncertainty           -0.035    10.712    
+                         FDCE (Setup_fdce_C_D)        0.101    10.813    gen_lane[1].i_lane/i_bmca/count_q_reg[5]
+  -------------------------------------------------------------------
+                         required time                         10.813    
+                         arrival time                          -9.242    
+  -------------------------------------------------------------------
+                         slack                                  1.571    
+
+Slack (MET) :             1.571ns  (required time - arrival time)
+  Source:                 gen_lane[2].i_lane/i_bmca/row1_q_reg[56]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Destination:            gen_lane[2].i_lane/i_bmca/count_q_reg[5]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            10.000ns  (clk_i rise@10.000ns - clk_i rise@0.000ns)
+  Data Path Delay:        8.455ns  (logic 1.903ns (22.507%)  route 6.552ns (77.493%))
+  Logic Levels:           10  (CARRY4=2 LUT3=1 LUT5=3 LUT6=4)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 10.748 - 10.000 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.787     0.787    gen_lane[2].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[2].i_lane/i_bmca/row1_q_reg[56]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 r  gen_lane[2].i_lane/i_bmca/row1_q_reg[56]/Q
+                         net (fo=2, unplaced)         0.790     2.010    gen_lane[2].i_lane/i_bmca/row1_q_reg_n_0_[56]
+                         LUT6 (Prop_lut6_I0_O)        0.232     2.242 r  gen_lane[2].i_lane/i_bmca/hbundle_lo_q[2][56]_i_2/O
+                         net (fo=4, unplaced)         0.371     2.613    gen_lane[2].i_lane/i_bmca/lo_a_56
+                         LUT3 (Prop_lut3_I2_O)        0.105     2.718 r  gen_lane[2].i_lane/i_bmca/hbundle_lo_q[2][56]_i_1/O
+                         net (fo=3, unplaced)         0.956     3.674    gen_lane[2].i_lane/i_bmca/lane_bmca_lo[2][50]
+                         LUT5 (Prop_lut5_I0_O)        0.105     3.779 r  gen_lane[2].i_lane/i_bmca/count_q[4]_i_61__1/O
+                         net (fo=3, unplaced)         0.956     4.735    gen_lane[2].i_lane/i_bmca/count_q[4]_i_61__1_n_0
+                         LUT6 (Prop_lut6_I1_O)        0.105     4.840 r  gen_lane[2].i_lane/i_bmca/count_q[4]_i_30__1/O
+                         net (fo=3, unplaced)         0.956     5.796    gen_lane[2].i_lane/i_bmca/count_q[4]_i_30__1_n_0
+                         LUT5 (Prop_lut5_I0_O)        0.105     5.901 r  gen_lane[2].i_lane/i_bmca/count_q[4]_i_15__1/O
+                         net (fo=3, unplaced)         0.956     6.857    gen_lane[2].i_lane/i_bmca/count_q[4]_i_15__1_n_0
+                         LUT6 (Prop_lut6_I1_O)        0.105     6.962 r  gen_lane[2].i_lane/i_bmca/count_q[4]_i_9__1/O
+                         net (fo=5, unplaced)         0.966     7.928    gen_lane[2].i_lane/i_bmca/count_q[4]_i_9__1_n_0
+                         LUT5 (Prop_lut5_I0_O)        0.105     8.033 r  gen_lane[2].i_lane/i_bmca/count_q[4]_i_2__1/O
+                         net (fo=2, unplaced)         0.593     8.626    gen_lane[2].i_lane/i_bmca/count_q[4]_i_2__1_n_0
+                         LUT6 (Prop_lut6_I3_O)        0.105     8.731 r  gen_lane[2].i_lane/i_bmca/count_q[4]_i_5__1/O
+                         net (fo=1, unplaced)         0.000     8.731    gen_lane[2].i_lane/i_bmca/count_q[4]_i_5__1_n_0
+                         CARRY4 (Prop_carry4_S[3]_CO[3])
+                                                      0.314     9.045 r  gen_lane[2].i_lane/i_bmca/count_q_reg[4]_i_1__1/CO[3]
+                         net (fo=1, unplaced)         0.008     9.053    gen_lane[2].i_lane/i_bmca/count_q_reg[4]_i_1__1_n_0
+                         CARRY4 (Prop_carry4_CI_O[0])
+                                                      0.189     9.242 r  gen_lane[2].i_lane/i_bmca/count_q_reg[8]_i_1__0/O[0]
+                         net (fo=1, unplaced)         0.000     9.242    gen_lane[2].i_lane/i_bmca/count_d[5]
+                         FDCE                                         r  gen_lane[2].i_lane/i_bmca/count_q_reg[5]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)     10.000    10.000 r  
+                                                      0.000    10.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.748    10.748    gen_lane[2].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[2].i_lane/i_bmca/count_q_reg[5]/C
+                         clock pessimism              0.000    10.748    
+                         clock uncertainty           -0.035    10.712    
+                         FDCE (Setup_fdce_C_D)        0.101    10.813    gen_lane[2].i_lane/i_bmca/count_q_reg[5]
+  -------------------------------------------------------------------
+                         required time                         10.813    
+                         arrival time                          -9.242    
+  -------------------------------------------------------------------
+                         slack                                  1.571    
+
+Slack (MET) :             1.571ns  (required time - arrival time)
+  Source:                 gen_lane[3].i_lane/i_bmca/row1_q_reg[56]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Destination:            gen_lane[3].i_lane/i_bmca/count_q_reg[5]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            10.000ns  (clk_i rise@10.000ns - clk_i rise@0.000ns)
+  Data Path Delay:        8.455ns  (logic 1.903ns (22.507%)  route 6.552ns (77.493%))
+  Logic Levels:           10  (CARRY4=2 LUT3=1 LUT5=3 LUT6=4)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 10.748 - 10.000 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.787     0.787    gen_lane[3].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[3].i_lane/i_bmca/row1_q_reg[56]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 r  gen_lane[3].i_lane/i_bmca/row1_q_reg[56]/Q
+                         net (fo=2, unplaced)         0.790     2.010    gen_lane[3].i_lane/i_bmca/row1_q_reg_n_0_[56]
+                         LUT6 (Prop_lut6_I0_O)        0.232     2.242 r  gen_lane[3].i_lane/i_bmca/hbundle_lo_q[3][56]_i_2/O
+                         net (fo=4, unplaced)         0.371     2.613    gen_lane[3].i_lane/i_bmca/lo_a_56
+                         LUT3 (Prop_lut3_I2_O)        0.105     2.718 r  gen_lane[3].i_lane/i_bmca/hbundle_lo_q[3][56]_i_1/O
+                         net (fo=3, unplaced)         0.956     3.674    gen_lane[3].i_lane/i_bmca/lane_bmca_lo[3][50]
+                         LUT5 (Prop_lut5_I0_O)        0.105     3.779 r  gen_lane[3].i_lane/i_bmca/count_q[4]_i_61__2/O
+                         net (fo=3, unplaced)         0.956     4.735    gen_lane[3].i_lane/i_bmca/count_q[4]_i_61__2_n_0
+                         LUT6 (Prop_lut6_I1_O)        0.105     4.840 r  gen_lane[3].i_lane/i_bmca/count_q[4]_i_30__2/O
+                         net (fo=3, unplaced)         0.956     5.796    gen_lane[3].i_lane/i_bmca/count_q[4]_i_30__2_n_0
+                         LUT5 (Prop_lut5_I0_O)        0.105     5.901 r  gen_lane[3].i_lane/i_bmca/count_q[4]_i_15__2/O
+                         net (fo=3, unplaced)         0.956     6.857    gen_lane[3].i_lane/i_bmca/count_q[4]_i_15__2_n_0
+                         LUT6 (Prop_lut6_I1_O)        0.105     6.962 r  gen_lane[3].i_lane/i_bmca/count_q[4]_i_9__2/O
+                         net (fo=5, unplaced)         0.966     7.928    gen_lane[3].i_lane/i_bmca/count_q[4]_i_9__2_n_0
+                         LUT5 (Prop_lut5_I0_O)        0.105     8.033 r  gen_lane[3].i_lane/i_bmca/count_q[4]_i_2__2/O
+                         net (fo=2, unplaced)         0.593     8.626    gen_lane[3].i_lane/i_bmca/count_q[4]_i_2__2_n_0
+                         LUT6 (Prop_lut6_I3_O)        0.105     8.731 r  gen_lane[3].i_lane/i_bmca/count_q[4]_i_5__2/O
+                         net (fo=1, unplaced)         0.000     8.731    gen_lane[3].i_lane/i_bmca/count_q[4]_i_5__2_n_0
+                         CARRY4 (Prop_carry4_S[3]_CO[3])
+                                                      0.314     9.045 r  gen_lane[3].i_lane/i_bmca/count_q_reg[4]_i_1__2/CO[3]
+                         net (fo=1, unplaced)         0.008     9.053    gen_lane[3].i_lane/i_bmca/count_q_reg[4]_i_1__2_n_0
+                         CARRY4 (Prop_carry4_CI_O[0])
+                                                      0.189     9.242 r  gen_lane[3].i_lane/i_bmca/count_q_reg[8]_i_1__1/O[0]
+                         net (fo=1, unplaced)         0.000     9.242    gen_lane[3].i_lane/i_bmca/count_d[5]
+                         FDCE                                         r  gen_lane[3].i_lane/i_bmca/count_q_reg[5]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)     10.000    10.000 r  
+                                                      0.000    10.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.748    10.748    gen_lane[3].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[3].i_lane/i_bmca/count_q_reg[5]/C
+                         clock pessimism              0.000    10.748    
+                         clock uncertainty           -0.035    10.712    
+                         FDCE (Setup_fdce_C_D)        0.101    10.813    gen_lane[3].i_lane/i_bmca/count_q_reg[5]
+  -------------------------------------------------------------------
+                         required time                         10.813    
+                         arrival time                          -9.242    
+  -------------------------------------------------------------------
+                         slack                                  1.571    
+
+Slack (MET) :             1.871ns  (required time - arrival time)
+  Source:                 gen_lane[0].i_lane/i_bmca/row1_q_reg[56]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Destination:            gen_lane[0].i_lane/i_bmca/count_q_reg[4]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            10.000ns  (clk_i rise@10.000ns - clk_i rise@0.000ns)
+  Data Path Delay:        8.155ns  (logic 1.611ns (19.755%)  route 6.544ns (80.245%))
+  Logic Levels:           9  (CARRY4=1 LUT3=1 LUT5=3 LUT6=4)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 10.748 - 10.000 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.787     0.787    gen_lane[0].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[0].i_lane/i_bmca/row1_q_reg[56]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 r  gen_lane[0].i_lane/i_bmca/row1_q_reg[56]/Q
+                         net (fo=2, unplaced)         0.790     2.010    gen_lane[0].i_lane/i_bmca/row1_q_reg_n_0_[56]
+                         LUT6 (Prop_lut6_I0_O)        0.232     2.242 r  gen_lane[0].i_lane/i_bmca/hbundle_lo_q[0][56]_i_2/O
+                         net (fo=4, unplaced)         0.371     2.613    gen_lane[0].i_lane/i_bmca/lo_a_56
+                         LUT3 (Prop_lut3_I2_O)        0.105     2.718 r  gen_lane[0].i_lane/i_bmca/hbundle_lo_q[0][56]_i_1/O
+                         net (fo=3, unplaced)         0.956     3.674    gen_lane[0].i_lane/i_bmca/lane_bmca_lo[0][50]
+                         LUT5 (Prop_lut5_I0_O)        0.105     3.779 r  gen_lane[0].i_lane/i_bmca/count_q[4]_i_61/O
+                         net (fo=3, unplaced)         0.956     4.735    gen_lane[0].i_lane/i_bmca/count_q[4]_i_61_n_0
+                         LUT6 (Prop_lut6_I1_O)        0.105     4.840 r  gen_lane[0].i_lane/i_bmca/count_q[4]_i_30/O
+                         net (fo=3, unplaced)         0.956     5.796    gen_lane[0].i_lane/i_bmca/count_q[4]_i_30_n_0
+                         LUT5 (Prop_lut5_I0_O)        0.105     5.901 r  gen_lane[0].i_lane/i_bmca/count_q[4]_i_15/O
+                         net (fo=3, unplaced)         0.956     6.857    gen_lane[0].i_lane/i_bmca/count_q[4]_i_15_n_0
+                         LUT6 (Prop_lut6_I1_O)        0.105     6.962 r  gen_lane[0].i_lane/i_bmca/count_q[4]_i_9/O
+                         net (fo=5, unplaced)         0.966     7.928    gen_lane[0].i_lane/i_bmca/count_q[4]_i_9_n_0
+                         LUT5 (Prop_lut5_I0_O)        0.105     8.033 r  gen_lane[0].i_lane/i_bmca/count_q[4]_i_2/O
+                         net (fo=2, unplaced)         0.593     8.626    gen_lane[0].i_lane/i_bmca/count_q[4]_i_2_n_0
+                         LUT6 (Prop_lut6_I3_O)        0.105     8.731 r  gen_lane[0].i_lane/i_bmca/count_q[4]_i_5/O
+                         net (fo=1, unplaced)         0.000     8.731    gen_lane[0].i_lane/i_bmca/count_q[4]_i_5_n_0
+                         CARRY4 (Prop_carry4_S[3]_O[3])
+                                                      0.211     8.942 r  gen_lane[0].i_lane/i_bmca/count_q_reg[4]_i_1/O[3]
+                         net (fo=1, unplaced)         0.000     8.942    gen_lane[0].i_lane/i_bmca/count_d[4]
+                         FDCE                                         r  gen_lane[0].i_lane/i_bmca/count_q_reg[4]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)     10.000    10.000 r  
+                                                      0.000    10.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.748    10.748    gen_lane[0].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[0].i_lane/i_bmca/count_q_reg[4]/C
+                         clock pessimism              0.000    10.748    
+                         clock uncertainty           -0.035    10.712    
+                         FDCE (Setup_fdce_C_D)        0.101    10.813    gen_lane[0].i_lane/i_bmca/count_q_reg[4]
+  -------------------------------------------------------------------
+                         required time                         10.813    
+                         arrival time                          -8.942    
+  -------------------------------------------------------------------
+                         slack                                  1.871    
+
+Slack (MET) :             1.871ns  (required time - arrival time)
+  Source:                 gen_lane[1].i_lane/i_bmca/row1_q_reg[56]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Destination:            gen_lane[1].i_lane/i_bmca/count_q_reg[4]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            10.000ns  (clk_i rise@10.000ns - clk_i rise@0.000ns)
+  Data Path Delay:        8.155ns  (logic 1.611ns (19.755%)  route 6.544ns (80.245%))
+  Logic Levels:           9  (CARRY4=1 LUT3=1 LUT5=3 LUT6=4)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 10.748 - 10.000 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.787     0.787    gen_lane[1].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[1].i_lane/i_bmca/row1_q_reg[56]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 r  gen_lane[1].i_lane/i_bmca/row1_q_reg[56]/Q
+                         net (fo=2, unplaced)         0.790     2.010    gen_lane[1].i_lane/i_bmca/row1_q_reg_n_0_[56]
+                         LUT6 (Prop_lut6_I0_O)        0.232     2.242 r  gen_lane[1].i_lane/i_bmca/hbundle_lo_q[1][56]_i_2/O
+                         net (fo=4, unplaced)         0.371     2.613    gen_lane[1].i_lane/i_bmca/lo_a_56
+                         LUT3 (Prop_lut3_I2_O)        0.105     2.718 r  gen_lane[1].i_lane/i_bmca/hbundle_lo_q[1][56]_i_1/O
+                         net (fo=3, unplaced)         0.956     3.674    gen_lane[1].i_lane/i_bmca/lane_bmca_lo[1][50]
+                         LUT5 (Prop_lut5_I0_O)        0.105     3.779 r  gen_lane[1].i_lane/i_bmca/count_q[4]_i_61__0/O
+                         net (fo=3, unplaced)         0.956     4.735    gen_lane[1].i_lane/i_bmca/count_q[4]_i_61__0_n_0
+                         LUT6 (Prop_lut6_I1_O)        0.105     4.840 r  gen_lane[1].i_lane/i_bmca/count_q[4]_i_30__0/O
+                         net (fo=3, unplaced)         0.956     5.796    gen_lane[1].i_lane/i_bmca/count_q[4]_i_30__0_n_0
+                         LUT5 (Prop_lut5_I0_O)        0.105     5.901 r  gen_lane[1].i_lane/i_bmca/count_q[4]_i_15__0/O
+                         net (fo=3, unplaced)         0.956     6.857    gen_lane[1].i_lane/i_bmca/count_q[4]_i_15__0_n_0
+                         LUT6 (Prop_lut6_I1_O)        0.105     6.962 r  gen_lane[1].i_lane/i_bmca/count_q[4]_i_9__0/O
+                         net (fo=5, unplaced)         0.966     7.928    gen_lane[1].i_lane/i_bmca/count_q[4]_i_9__0_n_0
+                         LUT5 (Prop_lut5_I0_O)        0.105     8.033 r  gen_lane[1].i_lane/i_bmca/count_q[4]_i_2__0/O
+                         net (fo=2, unplaced)         0.593     8.626    gen_lane[1].i_lane/i_bmca/count_q[4]_i_2__0_n_0
+                         LUT6 (Prop_lut6_I3_O)        0.105     8.731 r  gen_lane[1].i_lane/i_bmca/count_q[4]_i_5__0/O
+                         net (fo=1, unplaced)         0.000     8.731    gen_lane[1].i_lane/i_bmca/count_q[4]_i_5__0_n_0
+                         CARRY4 (Prop_carry4_S[3]_O[3])
+                                                      0.211     8.942 r  gen_lane[1].i_lane/i_bmca/count_q_reg[4]_i_1__0/O[3]
+                         net (fo=1, unplaced)         0.000     8.942    gen_lane[1].i_lane/i_bmca/count_d[4]
+                         FDCE                                         r  gen_lane[1].i_lane/i_bmca/count_q_reg[4]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)     10.000    10.000 r  
+                                                      0.000    10.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.748    10.748    gen_lane[1].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[1].i_lane/i_bmca/count_q_reg[4]/C
+                         clock pessimism              0.000    10.748    
+                         clock uncertainty           -0.035    10.712    
+                         FDCE (Setup_fdce_C_D)        0.101    10.813    gen_lane[1].i_lane/i_bmca/count_q_reg[4]
+  -------------------------------------------------------------------
+                         required time                         10.813    
+                         arrival time                          -8.942    
+  -------------------------------------------------------------------
+                         slack                                  1.871    
+
+Slack (MET) :             1.871ns  (required time - arrival time)
+  Source:                 gen_lane[2].i_lane/i_bmca/row1_q_reg[56]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Destination:            gen_lane[2].i_lane/i_bmca/count_q_reg[4]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            10.000ns  (clk_i rise@10.000ns - clk_i rise@0.000ns)
+  Data Path Delay:        8.155ns  (logic 1.611ns (19.755%)  route 6.544ns (80.245%))
+  Logic Levels:           9  (CARRY4=1 LUT3=1 LUT5=3 LUT6=4)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 10.748 - 10.000 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.787     0.787    gen_lane[2].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[2].i_lane/i_bmca/row1_q_reg[56]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 r  gen_lane[2].i_lane/i_bmca/row1_q_reg[56]/Q
+                         net (fo=2, unplaced)         0.790     2.010    gen_lane[2].i_lane/i_bmca/row1_q_reg_n_0_[56]
+                         LUT6 (Prop_lut6_I0_O)        0.232     2.242 r  gen_lane[2].i_lane/i_bmca/hbundle_lo_q[2][56]_i_2/O
+                         net (fo=4, unplaced)         0.371     2.613    gen_lane[2].i_lane/i_bmca/lo_a_56
+                         LUT3 (Prop_lut3_I2_O)        0.105     2.718 r  gen_lane[2].i_lane/i_bmca/hbundle_lo_q[2][56]_i_1/O
+                         net (fo=3, unplaced)         0.956     3.674    gen_lane[2].i_lane/i_bmca/lane_bmca_lo[2][50]
+                         LUT5 (Prop_lut5_I0_O)        0.105     3.779 r  gen_lane[2].i_lane/i_bmca/count_q[4]_i_61__1/O
+                         net (fo=3, unplaced)         0.956     4.735    gen_lane[2].i_lane/i_bmca/count_q[4]_i_61__1_n_0
+                         LUT6 (Prop_lut6_I1_O)        0.105     4.840 r  gen_lane[2].i_lane/i_bmca/count_q[4]_i_30__1/O
+                         net (fo=3, unplaced)         0.956     5.796    gen_lane[2].i_lane/i_bmca/count_q[4]_i_30__1_n_0
+                         LUT5 (Prop_lut5_I0_O)        0.105     5.901 r  gen_lane[2].i_lane/i_bmca/count_q[4]_i_15__1/O
+                         net (fo=3, unplaced)         0.956     6.857    gen_lane[2].i_lane/i_bmca/count_q[4]_i_15__1_n_0
+                         LUT6 (Prop_lut6_I1_O)        0.105     6.962 r  gen_lane[2].i_lane/i_bmca/count_q[4]_i_9__1/O
+                         net (fo=5, unplaced)         0.966     7.928    gen_lane[2].i_lane/i_bmca/count_q[4]_i_9__1_n_0
+                         LUT5 (Prop_lut5_I0_O)        0.105     8.033 r  gen_lane[2].i_lane/i_bmca/count_q[4]_i_2__1/O
+                         net (fo=2, unplaced)         0.593     8.626    gen_lane[2].i_lane/i_bmca/count_q[4]_i_2__1_n_0
+                         LUT6 (Prop_lut6_I3_O)        0.105     8.731 r  gen_lane[2].i_lane/i_bmca/count_q[4]_i_5__1/O
+                         net (fo=1, unplaced)         0.000     8.731    gen_lane[2].i_lane/i_bmca/count_q[4]_i_5__1_n_0
+                         CARRY4 (Prop_carry4_S[3]_O[3])
+                                                      0.211     8.942 r  gen_lane[2].i_lane/i_bmca/count_q_reg[4]_i_1__1/O[3]
+                         net (fo=1, unplaced)         0.000     8.942    gen_lane[2].i_lane/i_bmca/count_d[4]
+                         FDCE                                         r  gen_lane[2].i_lane/i_bmca/count_q_reg[4]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)     10.000    10.000 r  
+                                                      0.000    10.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.748    10.748    gen_lane[2].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[2].i_lane/i_bmca/count_q_reg[4]/C
+                         clock pessimism              0.000    10.748    
+                         clock uncertainty           -0.035    10.712    
+                         FDCE (Setup_fdce_C_D)        0.101    10.813    gen_lane[2].i_lane/i_bmca/count_q_reg[4]
+  -------------------------------------------------------------------
+                         required time                         10.813    
+                         arrival time                          -8.942    
+  -------------------------------------------------------------------
+                         slack                                  1.871    
+
+Slack (MET) :             1.871ns  (required time - arrival time)
+  Source:                 gen_lane[3].i_lane/i_bmca/row1_q_reg[56]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Destination:            gen_lane[3].i_lane/i_bmca/count_q_reg[4]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            10.000ns  (clk_i rise@10.000ns - clk_i rise@0.000ns)
+  Data Path Delay:        8.155ns  (logic 1.611ns (19.755%)  route 6.544ns (80.245%))
+  Logic Levels:           9  (CARRY4=1 LUT3=1 LUT5=3 LUT6=4)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 10.748 - 10.000 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.787     0.787    gen_lane[3].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[3].i_lane/i_bmca/row1_q_reg[56]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 r  gen_lane[3].i_lane/i_bmca/row1_q_reg[56]/Q
+                         net (fo=2, unplaced)         0.790     2.010    gen_lane[3].i_lane/i_bmca/row1_q_reg_n_0_[56]
+                         LUT6 (Prop_lut6_I0_O)        0.232     2.242 r  gen_lane[3].i_lane/i_bmca/hbundle_lo_q[3][56]_i_2/O
+                         net (fo=4, unplaced)         0.371     2.613    gen_lane[3].i_lane/i_bmca/lo_a_56
+                         LUT3 (Prop_lut3_I2_O)        0.105     2.718 r  gen_lane[3].i_lane/i_bmca/hbundle_lo_q[3][56]_i_1/O
+                         net (fo=3, unplaced)         0.956     3.674    gen_lane[3].i_lane/i_bmca/lane_bmca_lo[3][50]
+                         LUT5 (Prop_lut5_I0_O)        0.105     3.779 r  gen_lane[3].i_lane/i_bmca/count_q[4]_i_61__2/O
+                         net (fo=3, unplaced)         0.956     4.735    gen_lane[3].i_lane/i_bmca/count_q[4]_i_61__2_n_0
+                         LUT6 (Prop_lut6_I1_O)        0.105     4.840 r  gen_lane[3].i_lane/i_bmca/count_q[4]_i_30__2/O
+                         net (fo=3, unplaced)         0.956     5.796    gen_lane[3].i_lane/i_bmca/count_q[4]_i_30__2_n_0
+                         LUT5 (Prop_lut5_I0_O)        0.105     5.901 r  gen_lane[3].i_lane/i_bmca/count_q[4]_i_15__2/O
+                         net (fo=3, unplaced)         0.956     6.857    gen_lane[3].i_lane/i_bmca/count_q[4]_i_15__2_n_0
+                         LUT6 (Prop_lut6_I1_O)        0.105     6.962 r  gen_lane[3].i_lane/i_bmca/count_q[4]_i_9__2/O
+                         net (fo=5, unplaced)         0.966     7.928    gen_lane[3].i_lane/i_bmca/count_q[4]_i_9__2_n_0
+                         LUT5 (Prop_lut5_I0_O)        0.105     8.033 r  gen_lane[3].i_lane/i_bmca/count_q[4]_i_2__2/O
+                         net (fo=2, unplaced)         0.593     8.626    gen_lane[3].i_lane/i_bmca/count_q[4]_i_2__2_n_0
+                         LUT6 (Prop_lut6_I3_O)        0.105     8.731 r  gen_lane[3].i_lane/i_bmca/count_q[4]_i_5__2/O
+                         net (fo=1, unplaced)         0.000     8.731    gen_lane[3].i_lane/i_bmca/count_q[4]_i_5__2_n_0
+                         CARRY4 (Prop_carry4_S[3]_O[3])
+                                                      0.211     8.942 r  gen_lane[3].i_lane/i_bmca/count_q_reg[4]_i_1__2/O[3]
+                         net (fo=1, unplaced)         0.000     8.942    gen_lane[3].i_lane/i_bmca/count_d[4]
+                         FDCE                                         r  gen_lane[3].i_lane/i_bmca/count_q_reg[4]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)     10.000    10.000 r  
+                                                      0.000    10.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.748    10.748    gen_lane[3].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[3].i_lane/i_bmca/count_q_reg[4]/C
+                         clock pessimism              0.000    10.748    
+                         clock uncertainty           -0.035    10.712    
+                         FDCE (Setup_fdce_C_D)        0.101    10.813    gen_lane[3].i_lane/i_bmca/count_q_reg[4]
+  -------------------------------------------------------------------
+                         required time                         10.813    
+                         arrival time                          -8.942    
+  -------------------------------------------------------------------
+                         slack                                  1.871    
+
+
+
+
+
+Min Delay Paths
+--------------------------------------------------------------------------------------
+Slack (MET) :             0.246ns  (arrival time - required time)
+  Source:                 gen_lane[0].i_lane/i_bmca/row2_q_reg[0]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Destination:            hbundle_hi_a_q_reg[0][0]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Path Group:             clk_i
+  Path Type:              Hold (Min at Fast Process Corner)
+  Requirement:            0.000ns  (clk_i rise@0.000ns - clk_i rise@0.000ns)
+  Data Path Delay:        0.386ns  (logic 0.262ns (67.793%)  route 0.124ns (32.207%))
+  Logic Levels:           1  (LUT6=1)
+  Clock Path Skew:        0.021ns (DCD - SCD - CPR)
+    Destination Clock Delay (DCD):    0.411ns
+    Source Clock Delay      (SCD):    0.390ns
+    Clock Pessimism Removal (CPR):    -0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.390     0.390    gen_lane[0].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[0].i_lane/i_bmca/row2_q_reg[0]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.164     0.554 r  gen_lane[0].i_lane/i_bmca/row2_q_reg[0]/Q
+                         net (fo=2, unplaced)         0.124     0.679    gen_lane[0].i_lane/i_bmca/row2_q_reg_n_0_[0]
+                         LUT6 (Prop_lut6_I5_O)        0.098     0.777 r  gen_lane[0].i_lane/i_bmca/hbundle_hi_a_q[0][0]_i_1/O
+                         net (fo=4, unplaced)         0.000     0.777    lane_bmca_hi_a[0][0]
+                         FDCE                                         r  hbundle_hi_a_q_reg[0][0]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.411     0.411    clk_i
+                         FDCE                                         r  hbundle_hi_a_q_reg[0][0]/C
+                         clock pessimism              0.000     0.411    
+                         FDCE (Hold_fdce_C_D)         0.120     0.531    hbundle_hi_a_q_reg[0][0]
+  -------------------------------------------------------------------
+                         required time                         -0.531    
+                         arrival time                           0.777    
+  -------------------------------------------------------------------
+                         slack                                  0.246    
+
+Slack (MET) :             0.246ns  (arrival time - required time)
+  Source:                 gen_lane[0].i_lane/i_bmca/row2_q_reg[10]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Destination:            hbundle_hi_a_q_reg[0][10]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Path Group:             clk_i
+  Path Type:              Hold (Min at Fast Process Corner)
+  Requirement:            0.000ns  (clk_i rise@0.000ns - clk_i rise@0.000ns)
+  Data Path Delay:        0.386ns  (logic 0.262ns (67.793%)  route 0.124ns (32.207%))
+  Logic Levels:           1  (LUT6=1)
+  Clock Path Skew:        0.021ns (DCD - SCD - CPR)
+    Destination Clock Delay (DCD):    0.411ns
+    Source Clock Delay      (SCD):    0.390ns
+    Clock Pessimism Removal (CPR):    -0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.390     0.390    gen_lane[0].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[0].i_lane/i_bmca/row2_q_reg[10]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.164     0.554 r  gen_lane[0].i_lane/i_bmca/row2_q_reg[10]/Q
+                         net (fo=2, unplaced)         0.124     0.679    gen_lane[0].i_lane/i_bmca/row2_q_reg_n_0_[10]
+                         LUT6 (Prop_lut6_I5_O)        0.098     0.777 r  gen_lane[0].i_lane/i_bmca/hbundle_hi_a_q[0][10]_i_1/O
+                         net (fo=4, unplaced)         0.000     0.777    lane_bmca_hi_a[0][10]
+                         FDCE                                         r  hbundle_hi_a_q_reg[0][10]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.411     0.411    clk_i
+                         FDCE                                         r  hbundle_hi_a_q_reg[0][10]/C
+                         clock pessimism              0.000     0.411    
+                         FDCE (Hold_fdce_C_D)         0.120     0.531    hbundle_hi_a_q_reg[0][10]
+  -------------------------------------------------------------------
+                         required time                         -0.531    
+                         arrival time                           0.777    
+  -------------------------------------------------------------------
+                         slack                                  0.246    
+
+Slack (MET) :             0.246ns  (arrival time - required time)
+  Source:                 gen_lane[0].i_lane/i_bmca/row2_q_reg[11]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Destination:            hbundle_hi_a_q_reg[0][11]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Path Group:             clk_i
+  Path Type:              Hold (Min at Fast Process Corner)
+  Requirement:            0.000ns  (clk_i rise@0.000ns - clk_i rise@0.000ns)
+  Data Path Delay:        0.386ns  (logic 0.262ns (67.793%)  route 0.124ns (32.207%))
+  Logic Levels:           1  (LUT6=1)
+  Clock Path Skew:        0.021ns (DCD - SCD - CPR)
+    Destination Clock Delay (DCD):    0.411ns
+    Source Clock Delay      (SCD):    0.390ns
+    Clock Pessimism Removal (CPR):    -0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.390     0.390    gen_lane[0].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[0].i_lane/i_bmca/row2_q_reg[11]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.164     0.554 r  gen_lane[0].i_lane/i_bmca/row2_q_reg[11]/Q
+                         net (fo=2, unplaced)         0.124     0.679    gen_lane[0].i_lane/i_bmca/row2_q_reg_n_0_[11]
+                         LUT6 (Prop_lut6_I5_O)        0.098     0.777 r  gen_lane[0].i_lane/i_bmca/hbundle_hi_a_q[0][11]_i_1/O
+                         net (fo=4, unplaced)         0.000     0.777    lane_bmca_hi_a[0][11]
+                         FDCE                                         r  hbundle_hi_a_q_reg[0][11]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.411     0.411    clk_i
+                         FDCE                                         r  hbundle_hi_a_q_reg[0][11]/C
+                         clock pessimism              0.000     0.411    
+                         FDCE (Hold_fdce_C_D)         0.120     0.531    hbundle_hi_a_q_reg[0][11]
+  -------------------------------------------------------------------
+                         required time                         -0.531    
+                         arrival time                           0.777    
+  -------------------------------------------------------------------
+                         slack                                  0.246    
+
+Slack (MET) :             0.246ns  (arrival time - required time)
+  Source:                 gen_lane[0].i_lane/i_bmca/row2_q_reg[12]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Destination:            hbundle_hi_a_q_reg[0][12]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Path Group:             clk_i
+  Path Type:              Hold (Min at Fast Process Corner)
+  Requirement:            0.000ns  (clk_i rise@0.000ns - clk_i rise@0.000ns)
+  Data Path Delay:        0.386ns  (logic 0.262ns (67.793%)  route 0.124ns (32.207%))
+  Logic Levels:           1  (LUT6=1)
+  Clock Path Skew:        0.021ns (DCD - SCD - CPR)
+    Destination Clock Delay (DCD):    0.411ns
+    Source Clock Delay      (SCD):    0.390ns
+    Clock Pessimism Removal (CPR):    -0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.390     0.390    gen_lane[0].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[0].i_lane/i_bmca/row2_q_reg[12]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.164     0.554 r  gen_lane[0].i_lane/i_bmca/row2_q_reg[12]/Q
+                         net (fo=2, unplaced)         0.124     0.679    gen_lane[0].i_lane/i_bmca/row2_q_reg_n_0_[12]
+                         LUT6 (Prop_lut6_I5_O)        0.098     0.777 r  gen_lane[0].i_lane/i_bmca/hbundle_hi_a_q[0][12]_i_1/O
+                         net (fo=4, unplaced)         0.000     0.777    lane_bmca_hi_a[0][12]
+                         FDCE                                         r  hbundle_hi_a_q_reg[0][12]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.411     0.411    clk_i
+                         FDCE                                         r  hbundle_hi_a_q_reg[0][12]/C
+                         clock pessimism              0.000     0.411    
+                         FDCE (Hold_fdce_C_D)         0.120     0.531    hbundle_hi_a_q_reg[0][12]
+  -------------------------------------------------------------------
+                         required time                         -0.531    
+                         arrival time                           0.777    
+  -------------------------------------------------------------------
+                         slack                                  0.246    
+
+Slack (MET) :             0.246ns  (arrival time - required time)
+  Source:                 gen_lane[0].i_lane/i_bmca/row2_q_reg[13]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Destination:            hbundle_hi_a_q_reg[0][13]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Path Group:             clk_i
+  Path Type:              Hold (Min at Fast Process Corner)
+  Requirement:            0.000ns  (clk_i rise@0.000ns - clk_i rise@0.000ns)
+  Data Path Delay:        0.386ns  (logic 0.262ns (67.793%)  route 0.124ns (32.207%))
+  Logic Levels:           1  (LUT6=1)
+  Clock Path Skew:        0.021ns (DCD - SCD - CPR)
+    Destination Clock Delay (DCD):    0.411ns
+    Source Clock Delay      (SCD):    0.390ns
+    Clock Pessimism Removal (CPR):    -0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.390     0.390    gen_lane[0].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[0].i_lane/i_bmca/row2_q_reg[13]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.164     0.554 r  gen_lane[0].i_lane/i_bmca/row2_q_reg[13]/Q
+                         net (fo=2, unplaced)         0.124     0.679    gen_lane[0].i_lane/i_bmca/row2_q_reg_n_0_[13]
+                         LUT6 (Prop_lut6_I5_O)        0.098     0.777 r  gen_lane[0].i_lane/i_bmca/hbundle_hi_a_q[0][13]_i_1/O
+                         net (fo=4, unplaced)         0.000     0.777    lane_bmca_hi_a[0][13]
+                         FDCE                                         r  hbundle_hi_a_q_reg[0][13]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.411     0.411    clk_i
+                         FDCE                                         r  hbundle_hi_a_q_reg[0][13]/C
+                         clock pessimism              0.000     0.411    
+                         FDCE (Hold_fdce_C_D)         0.120     0.531    hbundle_hi_a_q_reg[0][13]
+  -------------------------------------------------------------------
+                         required time                         -0.531    
+                         arrival time                           0.777    
+  -------------------------------------------------------------------
+                         slack                                  0.246    
+
+Slack (MET) :             0.246ns  (arrival time - required time)
+  Source:                 gen_lane[0].i_lane/i_bmca/row2_q_reg[14]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Destination:            hbundle_hi_a_q_reg[0][14]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Path Group:             clk_i
+  Path Type:              Hold (Min at Fast Process Corner)
+  Requirement:            0.000ns  (clk_i rise@0.000ns - clk_i rise@0.000ns)
+  Data Path Delay:        0.386ns  (logic 0.262ns (67.793%)  route 0.124ns (32.207%))
+  Logic Levels:           1  (LUT6=1)
+  Clock Path Skew:        0.021ns (DCD - SCD - CPR)
+    Destination Clock Delay (DCD):    0.411ns
+    Source Clock Delay      (SCD):    0.390ns
+    Clock Pessimism Removal (CPR):    -0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.390     0.390    gen_lane[0].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[0].i_lane/i_bmca/row2_q_reg[14]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.164     0.554 r  gen_lane[0].i_lane/i_bmca/row2_q_reg[14]/Q
+                         net (fo=2, unplaced)         0.124     0.679    gen_lane[0].i_lane/i_bmca/row2_q_reg_n_0_[14]
+                         LUT6 (Prop_lut6_I5_O)        0.098     0.777 r  gen_lane[0].i_lane/i_bmca/hbundle_hi_a_q[0][14]_i_1/O
+                         net (fo=4, unplaced)         0.000     0.777    lane_bmca_hi_a[0][14]
+                         FDCE                                         r  hbundle_hi_a_q_reg[0][14]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.411     0.411    clk_i
+                         FDCE                                         r  hbundle_hi_a_q_reg[0][14]/C
+                         clock pessimism              0.000     0.411    
+                         FDCE (Hold_fdce_C_D)         0.120     0.531    hbundle_hi_a_q_reg[0][14]
+  -------------------------------------------------------------------
+                         required time                         -0.531    
+                         arrival time                           0.777    
+  -------------------------------------------------------------------
+                         slack                                  0.246    
+
+Slack (MET) :             0.246ns  (arrival time - required time)
+  Source:                 gen_lane[0].i_lane/i_bmca/row2_q_reg[15]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Destination:            hbundle_hi_a_q_reg[0][15]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Path Group:             clk_i
+  Path Type:              Hold (Min at Fast Process Corner)
+  Requirement:            0.000ns  (clk_i rise@0.000ns - clk_i rise@0.000ns)
+  Data Path Delay:        0.386ns  (logic 0.262ns (67.793%)  route 0.124ns (32.207%))
+  Logic Levels:           1  (LUT6=1)
+  Clock Path Skew:        0.021ns (DCD - SCD - CPR)
+    Destination Clock Delay (DCD):    0.411ns
+    Source Clock Delay      (SCD):    0.390ns
+    Clock Pessimism Removal (CPR):    -0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.390     0.390    gen_lane[0].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[0].i_lane/i_bmca/row2_q_reg[15]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.164     0.554 r  gen_lane[0].i_lane/i_bmca/row2_q_reg[15]/Q
+                         net (fo=2, unplaced)         0.124     0.679    gen_lane[0].i_lane/i_bmca/row2_q_reg_n_0_[15]
+                         LUT6 (Prop_lut6_I5_O)        0.098     0.777 r  gen_lane[0].i_lane/i_bmca/hbundle_hi_a_q[0][15]_i_1/O
+                         net (fo=4, unplaced)         0.000     0.777    lane_bmca_hi_a[0][15]
+                         FDCE                                         r  hbundle_hi_a_q_reg[0][15]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.411     0.411    clk_i
+                         FDCE                                         r  hbundle_hi_a_q_reg[0][15]/C
+                         clock pessimism              0.000     0.411    
+                         FDCE (Hold_fdce_C_D)         0.120     0.531    hbundle_hi_a_q_reg[0][15]
+  -------------------------------------------------------------------
+                         required time                         -0.531    
+                         arrival time                           0.777    
+  -------------------------------------------------------------------
+                         slack                                  0.246    
+
+Slack (MET) :             0.246ns  (arrival time - required time)
+  Source:                 gen_lane[0].i_lane/i_bmca/row2_q_reg[16]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Destination:            hbundle_hi_a_q_reg[0][16]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Path Group:             clk_i
+  Path Type:              Hold (Min at Fast Process Corner)
+  Requirement:            0.000ns  (clk_i rise@0.000ns - clk_i rise@0.000ns)
+  Data Path Delay:        0.386ns  (logic 0.262ns (67.793%)  route 0.124ns (32.207%))
+  Logic Levels:           1  (LUT6=1)
+  Clock Path Skew:        0.021ns (DCD - SCD - CPR)
+    Destination Clock Delay (DCD):    0.411ns
+    Source Clock Delay      (SCD):    0.390ns
+    Clock Pessimism Removal (CPR):    -0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.390     0.390    gen_lane[0].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[0].i_lane/i_bmca/row2_q_reg[16]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.164     0.554 r  gen_lane[0].i_lane/i_bmca/row2_q_reg[16]/Q
+                         net (fo=2, unplaced)         0.124     0.679    gen_lane[0].i_lane/i_bmca/row2_q_reg_n_0_[16]
+                         LUT6 (Prop_lut6_I5_O)        0.098     0.777 r  gen_lane[0].i_lane/i_bmca/hbundle_hi_a_q[0][16]_i_1/O
+                         net (fo=4, unplaced)         0.000     0.777    lane_bmca_hi_a[0][16]
+                         FDCE                                         r  hbundle_hi_a_q_reg[0][16]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.411     0.411    clk_i
+                         FDCE                                         r  hbundle_hi_a_q_reg[0][16]/C
+                         clock pessimism              0.000     0.411    
+                         FDCE (Hold_fdce_C_D)         0.120     0.531    hbundle_hi_a_q_reg[0][16]
+  -------------------------------------------------------------------
+                         required time                         -0.531    
+                         arrival time                           0.777    
+  -------------------------------------------------------------------
+                         slack                                  0.246    
+
+Slack (MET) :             0.246ns  (arrival time - required time)
+  Source:                 gen_lane[0].i_lane/i_bmca/row2_q_reg[17]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Destination:            hbundle_hi_a_q_reg[0][17]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Path Group:             clk_i
+  Path Type:              Hold (Min at Fast Process Corner)
+  Requirement:            0.000ns  (clk_i rise@0.000ns - clk_i rise@0.000ns)
+  Data Path Delay:        0.386ns  (logic 0.262ns (67.793%)  route 0.124ns (32.207%))
+  Logic Levels:           1  (LUT6=1)
+  Clock Path Skew:        0.021ns (DCD - SCD - CPR)
+    Destination Clock Delay (DCD):    0.411ns
+    Source Clock Delay      (SCD):    0.390ns
+    Clock Pessimism Removal (CPR):    -0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.390     0.390    gen_lane[0].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[0].i_lane/i_bmca/row2_q_reg[17]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.164     0.554 r  gen_lane[0].i_lane/i_bmca/row2_q_reg[17]/Q
+                         net (fo=2, unplaced)         0.124     0.679    gen_lane[0].i_lane/i_bmca/row2_q_reg_n_0_[17]
+                         LUT6 (Prop_lut6_I5_O)        0.098     0.777 r  gen_lane[0].i_lane/i_bmca/hbundle_hi_a_q[0][17]_i_1/O
+                         net (fo=4, unplaced)         0.000     0.777    lane_bmca_hi_a[0][17]
+                         FDCE                                         r  hbundle_hi_a_q_reg[0][17]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.411     0.411    clk_i
+                         FDCE                                         r  hbundle_hi_a_q_reg[0][17]/C
+                         clock pessimism              0.000     0.411    
+                         FDCE (Hold_fdce_C_D)         0.120     0.531    hbundle_hi_a_q_reg[0][17]
+  -------------------------------------------------------------------
+                         required time                         -0.531    
+                         arrival time                           0.777    
+  -------------------------------------------------------------------
+                         slack                                  0.246    
+
+Slack (MET) :             0.246ns  (arrival time - required time)
+  Source:                 gen_lane[0].i_lane/i_bmca/row2_q_reg[18]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Destination:            hbundle_hi_a_q_reg[0][18]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Path Group:             clk_i
+  Path Type:              Hold (Min at Fast Process Corner)
+  Requirement:            0.000ns  (clk_i rise@0.000ns - clk_i rise@0.000ns)
+  Data Path Delay:        0.386ns  (logic 0.262ns (67.793%)  route 0.124ns (32.207%))
+  Logic Levels:           1  (LUT6=1)
+  Clock Path Skew:        0.021ns (DCD - SCD - CPR)
+    Destination Clock Delay (DCD):    0.411ns
+    Source Clock Delay      (SCD):    0.390ns
+    Clock Pessimism Removal (CPR):    -0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.390     0.390    gen_lane[0].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[0].i_lane/i_bmca/row2_q_reg[18]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.164     0.554 r  gen_lane[0].i_lane/i_bmca/row2_q_reg[18]/Q
+                         net (fo=2, unplaced)         0.124     0.679    gen_lane[0].i_lane/i_bmca/row2_q_reg_n_0_[18]
+                         LUT6 (Prop_lut6_I5_O)        0.098     0.777 r  gen_lane[0].i_lane/i_bmca/hbundle_hi_a_q[0][18]_i_1/O
+                         net (fo=4, unplaced)         0.000     0.777    lane_bmca_hi_a[0][18]
+                         FDCE                                         r  hbundle_hi_a_q_reg[0][18]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.411     0.411    clk_i
+                         FDCE                                         r  hbundle_hi_a_q_reg[0][18]/C
+                         clock pessimism              0.000     0.411    
+                         FDCE (Hold_fdce_C_D)         0.120     0.531    hbundle_hi_a_q_reg[0][18]
+  -------------------------------------------------------------------
+                         required time                         -0.531    
+                         arrival time                           0.777    
+  -------------------------------------------------------------------
+                         slack                                  0.246    
+
+Slack (MET) :             0.246ns  (arrival time - required time)
+  Source:                 gen_lane[0].i_lane/i_bmca/row2_q_reg[19]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Destination:            hbundle_hi_a_q_reg[0][19]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Path Group:             clk_i
+  Path Type:              Hold (Min at Fast Process Corner)
+  Requirement:            0.000ns  (clk_i rise@0.000ns - clk_i rise@0.000ns)
+  Data Path Delay:        0.386ns  (logic 0.262ns (67.793%)  route 0.124ns (32.207%))
+  Logic Levels:           1  (LUT6=1)
+  Clock Path Skew:        0.021ns (DCD - SCD - CPR)
+    Destination Clock Delay (DCD):    0.411ns
+    Source Clock Delay      (SCD):    0.390ns
+    Clock Pessimism Removal (CPR):    -0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.390     0.390    gen_lane[0].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[0].i_lane/i_bmca/row2_q_reg[19]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.164     0.554 r  gen_lane[0].i_lane/i_bmca/row2_q_reg[19]/Q
+                         net (fo=2, unplaced)         0.124     0.679    gen_lane[0].i_lane/i_bmca/row2_q_reg_n_0_[19]
+                         LUT6 (Prop_lut6_I5_O)        0.098     0.777 r  gen_lane[0].i_lane/i_bmca/hbundle_hi_a_q[0][19]_i_1/O
+                         net (fo=4, unplaced)         0.000     0.777    lane_bmca_hi_a[0][19]
+                         FDCE                                         r  hbundle_hi_a_q_reg[0][19]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.411     0.411    clk_i
+                         FDCE                                         r  hbundle_hi_a_q_reg[0][19]/C
+                         clock pessimism              0.000     0.411    
+                         FDCE (Hold_fdce_C_D)         0.120     0.531    hbundle_hi_a_q_reg[0][19]
+  -------------------------------------------------------------------
+                         required time                         -0.531    
+                         arrival time                           0.777    
+  -------------------------------------------------------------------
+                         slack                                  0.246    
+
+Slack (MET) :             0.246ns  (arrival time - required time)
+  Source:                 gen_lane[0].i_lane/i_bmca/row2_q_reg[1]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Destination:            hbundle_hi_a_q_reg[0][1]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Path Group:             clk_i
+  Path Type:              Hold (Min at Fast Process Corner)
+  Requirement:            0.000ns  (clk_i rise@0.000ns - clk_i rise@0.000ns)
+  Data Path Delay:        0.386ns  (logic 0.262ns (67.793%)  route 0.124ns (32.207%))
+  Logic Levels:           1  (LUT6=1)
+  Clock Path Skew:        0.021ns (DCD - SCD - CPR)
+    Destination Clock Delay (DCD):    0.411ns
+    Source Clock Delay      (SCD):    0.390ns
+    Clock Pessimism Removal (CPR):    -0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.390     0.390    gen_lane[0].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[0].i_lane/i_bmca/row2_q_reg[1]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.164     0.554 r  gen_lane[0].i_lane/i_bmca/row2_q_reg[1]/Q
+                         net (fo=2, unplaced)         0.124     0.679    gen_lane[0].i_lane/i_bmca/row2_q_reg_n_0_[1]
+                         LUT6 (Prop_lut6_I5_O)        0.098     0.777 r  gen_lane[0].i_lane/i_bmca/hbundle_hi_a_q[0][1]_i_1/O
+                         net (fo=3, unplaced)         0.000     0.777    lane_bmca_hi_a[0][1]
+                         FDCE                                         r  hbundle_hi_a_q_reg[0][1]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.411     0.411    clk_i
+                         FDCE                                         r  hbundle_hi_a_q_reg[0][1]/C
+                         clock pessimism              0.000     0.411    
+                         FDCE (Hold_fdce_C_D)         0.120     0.531    hbundle_hi_a_q_reg[0][1]
+  -------------------------------------------------------------------
+                         required time                         -0.531    
+                         arrival time                           0.777    
+  -------------------------------------------------------------------
+                         slack                                  0.246    
+
+Slack (MET) :             0.246ns  (arrival time - required time)
+  Source:                 gen_lane[0].i_lane/i_bmca/row2_q_reg[20]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Destination:            hbundle_hi_a_q_reg[0][20]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Path Group:             clk_i
+  Path Type:              Hold (Min at Fast Process Corner)
+  Requirement:            0.000ns  (clk_i rise@0.000ns - clk_i rise@0.000ns)
+  Data Path Delay:        0.386ns  (logic 0.262ns (67.793%)  route 0.124ns (32.207%))
+  Logic Levels:           1  (LUT6=1)
+  Clock Path Skew:        0.021ns (DCD - SCD - CPR)
+    Destination Clock Delay (DCD):    0.411ns
+    Source Clock Delay      (SCD):    0.390ns
+    Clock Pessimism Removal (CPR):    -0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.390     0.390    gen_lane[0].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[0].i_lane/i_bmca/row2_q_reg[20]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.164     0.554 r  gen_lane[0].i_lane/i_bmca/row2_q_reg[20]/Q
+                         net (fo=2, unplaced)         0.124     0.679    gen_lane[0].i_lane/i_bmca/row2_q_reg_n_0_[20]
+                         LUT6 (Prop_lut6_I5_O)        0.098     0.777 r  gen_lane[0].i_lane/i_bmca/hbundle_hi_a_q[0][20]_i_1/O
+                         net (fo=4, unplaced)         0.000     0.777    lane_bmca_hi_a[0][20]
+                         FDCE                                         r  hbundle_hi_a_q_reg[0][20]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.411     0.411    clk_i
+                         FDCE                                         r  hbundle_hi_a_q_reg[0][20]/C
+                         clock pessimism              0.000     0.411    
+                         FDCE (Hold_fdce_C_D)         0.120     0.531    hbundle_hi_a_q_reg[0][20]
+  -------------------------------------------------------------------
+                         required time                         -0.531    
+                         arrival time                           0.777    
+  -------------------------------------------------------------------
+                         slack                                  0.246    
+
+Slack (MET) :             0.246ns  (arrival time - required time)
+  Source:                 gen_lane[0].i_lane/i_bmca/row2_q_reg[21]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Destination:            hbundle_hi_a_q_reg[0][21]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Path Group:             clk_i
+  Path Type:              Hold (Min at Fast Process Corner)
+  Requirement:            0.000ns  (clk_i rise@0.000ns - clk_i rise@0.000ns)
+  Data Path Delay:        0.386ns  (logic 0.262ns (67.793%)  route 0.124ns (32.207%))
+  Logic Levels:           1  (LUT6=1)
+  Clock Path Skew:        0.021ns (DCD - SCD - CPR)
+    Destination Clock Delay (DCD):    0.411ns
+    Source Clock Delay      (SCD):    0.390ns
+    Clock Pessimism Removal (CPR):    -0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.390     0.390    gen_lane[0].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[0].i_lane/i_bmca/row2_q_reg[21]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.164     0.554 r  gen_lane[0].i_lane/i_bmca/row2_q_reg[21]/Q
+                         net (fo=2, unplaced)         0.124     0.679    gen_lane[0].i_lane/i_bmca/row2_q_reg_n_0_[21]
+                         LUT6 (Prop_lut6_I5_O)        0.098     0.777 r  gen_lane[0].i_lane/i_bmca/hbundle_hi_a_q[0][21]_i_1/O
+                         net (fo=4, unplaced)         0.000     0.777    lane_bmca_hi_a[0][21]
+                         FDCE                                         r  hbundle_hi_a_q_reg[0][21]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.411     0.411    clk_i
+                         FDCE                                         r  hbundle_hi_a_q_reg[0][21]/C
+                         clock pessimism              0.000     0.411    
+                         FDCE (Hold_fdce_C_D)         0.120     0.531    hbundle_hi_a_q_reg[0][21]
+  -------------------------------------------------------------------
+                         required time                         -0.531    
+                         arrival time                           0.777    
+  -------------------------------------------------------------------
+                         slack                                  0.246    
+
+Slack (MET) :             0.246ns  (arrival time - required time)
+  Source:                 gen_lane[0].i_lane/i_bmca/row2_q_reg[22]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Destination:            hbundle_hi_a_q_reg[0][22]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Path Group:             clk_i
+  Path Type:              Hold (Min at Fast Process Corner)
+  Requirement:            0.000ns  (clk_i rise@0.000ns - clk_i rise@0.000ns)
+  Data Path Delay:        0.386ns  (logic 0.262ns (67.793%)  route 0.124ns (32.207%))
+  Logic Levels:           1  (LUT6=1)
+  Clock Path Skew:        0.021ns (DCD - SCD - CPR)
+    Destination Clock Delay (DCD):    0.411ns
+    Source Clock Delay      (SCD):    0.390ns
+    Clock Pessimism Removal (CPR):    -0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.390     0.390    gen_lane[0].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[0].i_lane/i_bmca/row2_q_reg[22]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.164     0.554 r  gen_lane[0].i_lane/i_bmca/row2_q_reg[22]/Q
+                         net (fo=2, unplaced)         0.124     0.679    gen_lane[0].i_lane/i_bmca/row2_q_reg_n_0_[22]
+                         LUT6 (Prop_lut6_I5_O)        0.098     0.777 r  gen_lane[0].i_lane/i_bmca/hbundle_hi_a_q[0][22]_i_1/O
+                         net (fo=4, unplaced)         0.000     0.777    lane_bmca_hi_a[0][22]
+                         FDCE                                         r  hbundle_hi_a_q_reg[0][22]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.411     0.411    clk_i
+                         FDCE                                         r  hbundle_hi_a_q_reg[0][22]/C
+                         clock pessimism              0.000     0.411    
+                         FDCE (Hold_fdce_C_D)         0.120     0.531    hbundle_hi_a_q_reg[0][22]
+  -------------------------------------------------------------------
+                         required time                         -0.531    
+                         arrival time                           0.777    
+  -------------------------------------------------------------------
+                         slack                                  0.246    
+
+Slack (MET) :             0.246ns  (arrival time - required time)
+  Source:                 gen_lane[0].i_lane/i_bmca/row2_q_reg[23]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Destination:            hbundle_hi_a_q_reg[0][23]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Path Group:             clk_i
+  Path Type:              Hold (Min at Fast Process Corner)
+  Requirement:            0.000ns  (clk_i rise@0.000ns - clk_i rise@0.000ns)
+  Data Path Delay:        0.386ns  (logic 0.262ns (67.793%)  route 0.124ns (32.207%))
+  Logic Levels:           1  (LUT6=1)
+  Clock Path Skew:        0.021ns (DCD - SCD - CPR)
+    Destination Clock Delay (DCD):    0.411ns
+    Source Clock Delay      (SCD):    0.390ns
+    Clock Pessimism Removal (CPR):    -0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.390     0.390    gen_lane[0].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[0].i_lane/i_bmca/row2_q_reg[23]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.164     0.554 r  gen_lane[0].i_lane/i_bmca/row2_q_reg[23]/Q
+                         net (fo=2, unplaced)         0.124     0.679    gen_lane[0].i_lane/i_bmca/row2_q_reg_n_0_[23]
+                         LUT6 (Prop_lut6_I5_O)        0.098     0.777 r  gen_lane[0].i_lane/i_bmca/hbundle_hi_a_q[0][23]_i_1/O
+                         net (fo=4, unplaced)         0.000     0.777    lane_bmca_hi_a[0][23]
+                         FDCE                                         r  hbundle_hi_a_q_reg[0][23]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.411     0.411    clk_i
+                         FDCE                                         r  hbundle_hi_a_q_reg[0][23]/C
+                         clock pessimism              0.000     0.411    
+                         FDCE (Hold_fdce_C_D)         0.120     0.531    hbundle_hi_a_q_reg[0][23]
+  -------------------------------------------------------------------
+                         required time                         -0.531    
+                         arrival time                           0.777    
+  -------------------------------------------------------------------
+                         slack                                  0.246    
+
+Slack (MET) :             0.246ns  (arrival time - required time)
+  Source:                 gen_lane[0].i_lane/i_bmca/row2_q_reg[24]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Destination:            hbundle_hi_a_q_reg[0][24]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Path Group:             clk_i
+  Path Type:              Hold (Min at Fast Process Corner)
+  Requirement:            0.000ns  (clk_i rise@0.000ns - clk_i rise@0.000ns)
+  Data Path Delay:        0.386ns  (logic 0.262ns (67.793%)  route 0.124ns (32.207%))
+  Logic Levels:           1  (LUT6=1)
+  Clock Path Skew:        0.021ns (DCD - SCD - CPR)
+    Destination Clock Delay (DCD):    0.411ns
+    Source Clock Delay      (SCD):    0.390ns
+    Clock Pessimism Removal (CPR):    -0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.390     0.390    gen_lane[0].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[0].i_lane/i_bmca/row2_q_reg[24]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.164     0.554 r  gen_lane[0].i_lane/i_bmca/row2_q_reg[24]/Q
+                         net (fo=2, unplaced)         0.124     0.679    gen_lane[0].i_lane/i_bmca/row2_q_reg_n_0_[24]
+                         LUT6 (Prop_lut6_I5_O)        0.098     0.777 r  gen_lane[0].i_lane/i_bmca/hbundle_hi_a_q[0][24]_i_1/O
+                         net (fo=4, unplaced)         0.000     0.777    lane_bmca_hi_a[0][24]
+                         FDCE                                         r  hbundle_hi_a_q_reg[0][24]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.411     0.411    clk_i
+                         FDCE                                         r  hbundle_hi_a_q_reg[0][24]/C
+                         clock pessimism              0.000     0.411    
+                         FDCE (Hold_fdce_C_D)         0.120     0.531    hbundle_hi_a_q_reg[0][24]
+  -------------------------------------------------------------------
+                         required time                         -0.531    
+                         arrival time                           0.777    
+  -------------------------------------------------------------------
+                         slack                                  0.246    
+
+Slack (MET) :             0.246ns  (arrival time - required time)
+  Source:                 gen_lane[0].i_lane/i_bmca/row2_q_reg[25]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Destination:            hbundle_hi_a_q_reg[0][25]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Path Group:             clk_i
+  Path Type:              Hold (Min at Fast Process Corner)
+  Requirement:            0.000ns  (clk_i rise@0.000ns - clk_i rise@0.000ns)
+  Data Path Delay:        0.386ns  (logic 0.262ns (67.793%)  route 0.124ns (32.207%))
+  Logic Levels:           1  (LUT6=1)
+  Clock Path Skew:        0.021ns (DCD - SCD - CPR)
+    Destination Clock Delay (DCD):    0.411ns
+    Source Clock Delay      (SCD):    0.390ns
+    Clock Pessimism Removal (CPR):    -0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.390     0.390    gen_lane[0].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[0].i_lane/i_bmca/row2_q_reg[25]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.164     0.554 r  gen_lane[0].i_lane/i_bmca/row2_q_reg[25]/Q
+                         net (fo=2, unplaced)         0.124     0.679    gen_lane[0].i_lane/i_bmca/row2_q_reg_n_0_[25]
+                         LUT6 (Prop_lut6_I5_O)        0.098     0.777 r  gen_lane[0].i_lane/i_bmca/hbundle_hi_a_q[0][25]_i_1/O
+                         net (fo=5, unplaced)         0.000     0.777    lane_bmca_hi_a[0][25]
+                         FDCE                                         r  hbundle_hi_a_q_reg[0][25]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.411     0.411    clk_i
+                         FDCE                                         r  hbundle_hi_a_q_reg[0][25]/C
+                         clock pessimism              0.000     0.411    
+                         FDCE (Hold_fdce_C_D)         0.120     0.531    hbundle_hi_a_q_reg[0][25]
+  -------------------------------------------------------------------
+                         required time                         -0.531    
+                         arrival time                           0.777    
+  -------------------------------------------------------------------
+                         slack                                  0.246    
+
+Slack (MET) :             0.246ns  (arrival time - required time)
+  Source:                 gen_lane[0].i_lane/i_bmca/row2_q_reg[26]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Destination:            hbundle_hi_a_q_reg[0][26]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Path Group:             clk_i
+  Path Type:              Hold (Min at Fast Process Corner)
+  Requirement:            0.000ns  (clk_i rise@0.000ns - clk_i rise@0.000ns)
+  Data Path Delay:        0.386ns  (logic 0.262ns (67.793%)  route 0.124ns (32.207%))
+  Logic Levels:           1  (LUT6=1)
+  Clock Path Skew:        0.021ns (DCD - SCD - CPR)
+    Destination Clock Delay (DCD):    0.411ns
+    Source Clock Delay      (SCD):    0.390ns
+    Clock Pessimism Removal (CPR):    -0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.390     0.390    gen_lane[0].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[0].i_lane/i_bmca/row2_q_reg[26]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.164     0.554 r  gen_lane[0].i_lane/i_bmca/row2_q_reg[26]/Q
+                         net (fo=2, unplaced)         0.124     0.679    gen_lane[0].i_lane/i_bmca/row2_q_reg_n_0_[26]
+                         LUT6 (Prop_lut6_I5_O)        0.098     0.777 r  gen_lane[0].i_lane/i_bmca/hbundle_hi_a_q[0][26]_i_1/O
+                         net (fo=5, unplaced)         0.000     0.777    lane_bmca_hi_a[0][26]
+                         FDCE                                         r  hbundle_hi_a_q_reg[0][26]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.411     0.411    clk_i
+                         FDCE                                         r  hbundle_hi_a_q_reg[0][26]/C
+                         clock pessimism              0.000     0.411    
+                         FDCE (Hold_fdce_C_D)         0.120     0.531    hbundle_hi_a_q_reg[0][26]
+  -------------------------------------------------------------------
+                         required time                         -0.531    
+                         arrival time                           0.777    
+  -------------------------------------------------------------------
+                         slack                                  0.246    
+
+Slack (MET) :             0.246ns  (arrival time - required time)
+  Source:                 gen_lane[0].i_lane/i_bmca/row2_q_reg[27]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Destination:            hbundle_hi_a_q_reg[0][27]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Path Group:             clk_i
+  Path Type:              Hold (Min at Fast Process Corner)
+  Requirement:            0.000ns  (clk_i rise@0.000ns - clk_i rise@0.000ns)
+  Data Path Delay:        0.386ns  (logic 0.262ns (67.793%)  route 0.124ns (32.207%))
+  Logic Levels:           1  (LUT6=1)
+  Clock Path Skew:        0.021ns (DCD - SCD - CPR)
+    Destination Clock Delay (DCD):    0.411ns
+    Source Clock Delay      (SCD):    0.390ns
+    Clock Pessimism Removal (CPR):    -0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.390     0.390    gen_lane[0].i_lane/i_bmca/clk_i
+                         FDCE                                         r  gen_lane[0].i_lane/i_bmca/row2_q_reg[27]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.164     0.554 r  gen_lane[0].i_lane/i_bmca/row2_q_reg[27]/Q
+                         net (fo=2, unplaced)         0.124     0.679    gen_lane[0].i_lane/i_bmca/row2_q_reg_n_0_[27]
+                         LUT6 (Prop_lut6_I5_O)        0.098     0.777 r  gen_lane[0].i_lane/i_bmca/hbundle_hi_a_q[0][27]_i_1/O
+                         net (fo=5, unplaced)         0.000     0.777    lane_bmca_hi_a[0][27]
+                         FDCE                                         r  hbundle_hi_a_q_reg[0][27]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=19860, unset)        0.411     0.411    clk_i
+                         FDCE                                         r  hbundle_hi_a_q_reg[0][27]/C
+                         clock pessimism              0.000     0.411    
+                         FDCE (Hold_fdce_C_D)         0.120     0.531    hbundle_hi_a_q_reg[0][27]
+  -------------------------------------------------------------------
+                         required time                         -0.531    
+                         arrival time                           0.777    
+  -------------------------------------------------------------------
+                         slack                                  0.246    
+
+
+
+
+
+Pulse Width Checks
+--------------------------------------------------------------------------------------
+Clock Name:         clk_i
+Waveform(ns):       { 0.000 5.000 }
+Period(ns):         10.000
+Sources:            { clk_i }
+
+Check Type        Corner  Lib Pin  Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location  Pin
+Min Period        n/a     FDPE/C   n/a            1.000         10.000      9.000                FSM_onehot_st_q_reg[0]/C
+Min Period        n/a     FDCE/C   n/a            1.000         10.000      9.000                FSM_onehot_st_q_reg[10]/C
+Min Period        n/a     FDCE/C   n/a            1.000         10.000      9.000                FSM_onehot_st_q_reg[11]/C
+Min Period        n/a     FDCE/C   n/a            1.000         10.000      9.000                FSM_onehot_st_q_reg[12]/C
+Min Period        n/a     FDCE/C   n/a            1.000         10.000      9.000                FSM_onehot_st_q_reg[13]/C
+Min Period        n/a     FDCE/C   n/a            1.000         10.000      9.000                FSM_onehot_st_q_reg[14]/C
+Min Period        n/a     FDCE/C   n/a            1.000         10.000      9.000                FSM_onehot_st_q_reg[15]/C
+Min Period        n/a     FDCE/C   n/a            1.000         10.000      9.000                FSM_onehot_st_q_reg[16]/C
+Min Period        n/a     FDCE/C   n/a            1.000         10.000      9.000                FSM_onehot_st_q_reg[17]/C
+Min Period        n/a     FDCE/C   n/a            1.000         10.000      9.000                FSM_onehot_st_q_reg[18]/C
+Min Period        n/a     FDCE/C   n/a            1.000         10.000      9.000                FSM_onehot_st_q_reg[18]_rep/C
+Min Period        n/a     FDCE/C   n/a            1.000         10.000      9.000                FSM_onehot_st_q_reg[18]_rep__0/C
+Min Period        n/a     FDCE/C   n/a            1.000         10.000      9.000                FSM_onehot_st_q_reg[19]/C
+Min Period        n/a     FDCE/C   n/a            1.000         10.000      9.000                FSM_onehot_st_q_reg[1]/C
+Min Period        n/a     FDCE/C   n/a            1.000         10.000      9.000                FSM_onehot_st_q_reg[20]/C
+Min Period        n/a     FDCE/C   n/a            1.000         10.000      9.000                FSM_onehot_st_q_reg[21]/C
+Min Period        n/a     FDCE/C   n/a            1.000         10.000      9.000                FSM_onehot_st_q_reg[22]/C
+Min Period        n/a     FDCE/C   n/a            1.000         10.000      9.000                FSM_onehot_st_q_reg[23]/C
+Min Period        n/a     FDCE/C   n/a            1.000         10.000      9.000                FSM_onehot_st_q_reg[24]/C
+Min Period        n/a     FDCE/C   n/a            1.000         10.000      9.000                FSM_onehot_st_q_reg[25]/C
+Low Pulse Width   Slow    FDPE/C   n/a            0.500         5.000       4.500                FSM_onehot_st_q_reg[0]/C
+Low Pulse Width   Fast    FDPE/C   n/a            0.500         5.000       4.500                FSM_onehot_st_q_reg[0]/C
+Low Pulse Width   Slow    FDCE/C   n/a            0.500         5.000       4.500                FSM_onehot_st_q_reg[10]/C
+Low Pulse Width   Fast    FDCE/C   n/a            0.500         5.000       4.500                FSM_onehot_st_q_reg[10]/C
+Low Pulse Width   Slow    FDCE/C   n/a            0.500         5.000       4.500                FSM_onehot_st_q_reg[11]/C
+Low Pulse Width   Fast    FDCE/C   n/a            0.500         5.000       4.500                FSM_onehot_st_q_reg[11]/C
+Low Pulse Width   Slow    FDCE/C   n/a            0.500         5.000       4.500                FSM_onehot_st_q_reg[12]/C
+Low Pulse Width   Fast    FDCE/C   n/a            0.500         5.000       4.500                FSM_onehot_st_q_reg[12]/C
+Low Pulse Width   Slow    FDCE/C   n/a            0.500         5.000       4.500                FSM_onehot_st_q_reg[13]/C
+Low Pulse Width   Fast    FDCE/C   n/a            0.500         5.000       4.500                FSM_onehot_st_q_reg[13]/C
+Low Pulse Width   Slow    FDCE/C   n/a            0.500         5.000       4.500                FSM_onehot_st_q_reg[14]/C
+Low Pulse Width   Fast    FDCE/C   n/a            0.500         5.000       4.500                FSM_onehot_st_q_reg[14]/C
+Low Pulse Width   Slow    FDCE/C   n/a            0.500         5.000       4.500                FSM_onehot_st_q_reg[15]/C
+Low Pulse Width   Fast    FDCE/C   n/a            0.500         5.000       4.500                FSM_onehot_st_q_reg[15]/C
+Low Pulse Width   Slow    FDCE/C   n/a            0.500         5.000       4.500                FSM_onehot_st_q_reg[16]/C
+Low Pulse Width   Fast    FDCE/C   n/a            0.500         5.000       4.500                FSM_onehot_st_q_reg[16]/C
+Low Pulse Width   Slow    FDCE/C   n/a            0.500         5.000       4.500                FSM_onehot_st_q_reg[17]/C
+Low Pulse Width   Fast    FDCE/C   n/a            0.500         5.000       4.500                FSM_onehot_st_q_reg[17]/C
+Low Pulse Width   Slow    FDCE/C   n/a            0.500         5.000       4.500                FSM_onehot_st_q_reg[18]/C
+Low Pulse Width   Fast    FDCE/C   n/a            0.500         5.000       4.500                FSM_onehot_st_q_reg[18]/C
+High Pulse Width  Slow    FDPE/C   n/a            0.500         5.000       4.500                FSM_onehot_st_q_reg[0]/C
+High Pulse Width  Fast    FDPE/C   n/a            0.500         5.000       4.500                FSM_onehot_st_q_reg[0]/C
+High Pulse Width  Slow    FDCE/C   n/a            0.500         5.000       4.500                FSM_onehot_st_q_reg[10]/C
+High Pulse Width  Fast    FDCE/C   n/a            0.500         5.000       4.500                FSM_onehot_st_q_reg[10]/C
+High Pulse Width  Slow    FDCE/C   n/a            0.500         5.000       4.500                FSM_onehot_st_q_reg[11]/C
+High Pulse Width  Fast    FDCE/C   n/a            0.500         5.000       4.500                FSM_onehot_st_q_reg[11]/C
+High Pulse Width  Slow    FDCE/C   n/a            0.500         5.000       4.500                FSM_onehot_st_q_reg[12]/C
+High Pulse Width  Fast    FDCE/C   n/a            0.500         5.000       4.500                FSM_onehot_st_q_reg[12]/C
+High Pulse Width  Slow    FDCE/C   n/a            0.500         5.000       4.500                FSM_onehot_st_q_reg[13]/C
+High Pulse Width  Fast    FDCE/C   n/a            0.500         5.000       4.500                FSM_onehot_st_q_reg[13]/C
+High Pulse Width  Slow    FDCE/C   n/a            0.500         5.000       4.500                FSM_onehot_st_q_reg[14]/C
+High Pulse Width  Fast    FDCE/C   n/a            0.500         5.000       4.500                FSM_onehot_st_q_reg[14]/C
+High Pulse Width  Slow    FDCE/C   n/a            0.500         5.000       4.500                FSM_onehot_st_q_reg[15]/C
+High Pulse Width  Fast    FDCE/C   n/a            0.500         5.000       4.500                FSM_onehot_st_q_reg[15]/C
+High Pulse Width  Slow    FDCE/C   n/a            0.500         5.000       4.500                FSM_onehot_st_q_reg[16]/C
+High Pulse Width  Fast    FDCE/C   n/a            0.500         5.000       4.500                FSM_onehot_st_q_reg[16]/C
+High Pulse Width  Slow    FDCE/C   n/a            0.500         5.000       4.500                FSM_onehot_st_q_reg[17]/C
+High Pulse Width  Fast    FDCE/C   n/a            0.500         5.000       4.500                FSM_onehot_st_q_reg[17]/C
+High Pulse Width  Slow    FDCE/C   n/a            0.500         5.000       4.500                FSM_onehot_st_q_reg[18]/C
+High Pulse Width  Fast    FDCE/C   n/a            0.500         5.000       4.500                FSM_onehot_st_q_reg[18]/C
+
+
+

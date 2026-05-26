@@ -1,0 +1,31 @@
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+-----------------------------------------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2022.2 (win64) Build 3671981 Fri Oct 14 05:00:03 MDT 2022
+| Date         : Tue May 26 18:03:49 2026
+| Host         : DESKTOP-RSKE6BB running 64-bit major release  (build 9200)
+| Command      : report_ram_utilization -file H:/CVA6-HDEC/cva6-vhdc-core/reports/vivado/hdc_only/ram_hdec_top_ooc.rpt
+| Design       : hdec_top
+| Device       : xc7z020clg400-2
+| Speed File   : -2
+-----------------------------------------------------------------------------------------------------------------------
+
+RAM Usage Information
+
+Table of Contents
+-----------------
+1. Summary
+
+1. Summary
+----------
+
++--------------------------+------------+-----------+-------+-----------+
+| Memory Type              | Total Used | Available | Util% | Inferred% |
++--------------------------+------------+-----------+-------+-----------+
+| BlockRAM                 |          0 |       140 |  0.00 |      0.00 |
+| LUTMs as Distributed RAM |          0 |     17400 |  0.00 |      0.00 |
++--------------------------+------------+-----------+-------+-----------+
+*  Each RAMB18 is calculated as 0.5 BlockRAM
+**  Tables 2, 3, 4 and 5 cover RAMs inferred by Vivado Synthesis using XPMs or RTL inference
+***  XRAMs are not reported for detailed tables
+
+
