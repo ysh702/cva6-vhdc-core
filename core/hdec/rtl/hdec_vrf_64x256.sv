@@ -1,8 +1,8 @@
 // =============================================================================
-// hdec_vrf_64x256.sv — 4-Bank Parameterized Vector Register File
+// hdec_vrf_64x256.sv - 4-bank vector register file
 // =============================================================================
-// Phase 1: REG/LUTRAM (1-cycle read), write-forwarding, power-on init clear.
-// NOT hardwired to BRAM; parameter VRF_IMPL selects storage type.
+// Phase 1: LUTRAM-friendly storage with 1-cycle registered reads,
+// same-cycle normal write forwarding, and sequential power-on init clear.
 // =============================================================================
 
 module hdec_vrf_64x256
@@ -12,31 +12,33 @@ module hdec_vrf_64x256
     input  logic        clk_i,
     input  logic        rst_ni,
 
-    // ── Per-Bank Read Port ──────────────────────────────────────────────────
-    input  logic [LANE_NUM-1:0][VRF_IDX_W-1:0]     bank_ra_addr_i,
-    output logic [LANE_NUM-1:0][LANE_WIDTH-1:0]     bank_ra_data_o,
+    input  logic [LANE_NUM-1:0][VRF_IDX_W-1:0]  bank_ra_addr_i,
+    output logic [LANE_NUM-1:0][LANE_WIDTH-1:0] bank_ra_data_o,
 
-    // ── Per-Bank Write Port ─────────────────────────────────────────────────
-    input  logic [LANE_NUM-1:0]                      bank_we_i,
-    input  logic [LANE_NUM-1:0][VRF_IDX_W-1:0]      bank_wa_addr_i,
-    input  logic [LANE_NUM-1:0][LANE_WIDTH-1:0]     bank_wdata_i,
+    input  logic [LANE_NUM-1:0]                 bank_we_i,
+    input  logic [LANE_NUM-1:0][VRF_IDX_W-1:0]  bank_wa_addr_i,
+    input  logic [LANE_NUM-1:0][LANE_WIDTH-1:0] bank_wdata_i,
 
-    // ── Ready ───────────────────────────────────────────────────────────────
     output logic        vrf_ready_o
 );
 
-    // ── Parameterized Storage (Phase 1: REG) ───────────────────────────────
-    localparam string VRF_IMPL = "REG";
+    (* ram_style = "distributed" *) logic [LANE_WIDTH-1:0] vrf_b0 [0:VRF_ENTRIES-1];
+    (* ram_style = "distributed" *) logic [LANE_WIDTH-1:0] vrf_b1 [0:VRF_ENTRIES-1];
+    (* ram_style = "distributed" *) logic [LANE_WIDTH-1:0] vrf_b2 [0:VRF_ENTRIES-1];
+    (* ram_style = "distributed" *) logic [LANE_WIDTH-1:0] vrf_b3 [0:VRF_ENTRIES-1];
 
-    logic [LANE_WIDTH-1:0] vrf_b0 [0:VRF_ENTRIES-1];
-    logic [LANE_WIDTH-1:0] vrf_b1 [0:VRF_ENTRIES-1];
-    logic [LANE_WIDTH-1:0] vrf_b2 [0:VRF_ENTRIES-1];
-    logic [LANE_WIDTH-1:0] vrf_b3 [0:VRF_ENTRIES-1];
-
-    // ── Init FSM ────────────────────────────────────────────────────────────
     typedef enum logic [1:0] { INIT_CLEAR, INIT_DONE } init_state_t;
     init_state_t init_state_q, init_state_n;
-    logic [7:0]  init_cnt_q, init_cnt_n;   // 256 total words: 4 banks × 64 entries
+    logic [7:0] init_cnt_q, init_cnt_n;
+
+    logic init_b0_we, init_b1_we, init_b2_we, init_b3_we;
+    logic [VRF_IDX_W-1:0] init_addr;
+
+    assign init_addr  = init_cnt_q[5:0];
+    assign init_b0_we = (init_state_q == INIT_CLEAR) && (init_cnt_q[7:6] == 2'd0);
+    assign init_b1_we = (init_state_q == INIT_CLEAR) && (init_cnt_q[7:6] == 2'd1);
+    assign init_b2_we = (init_state_q == INIT_CLEAR) && (init_cnt_q[7:6] == 2'd2);
+    assign init_b3_we = (init_state_q == INIT_CLEAR) && (init_cnt_q[7:6] == 2'd3);
 
     always_comb begin
         init_state_n = init_state_q;
@@ -61,66 +63,61 @@ module hdec_vrf_64x256
         end
     end
 
-    // ── Bank Read / Write / Init Clear ──────────────────────────────────────
+    // One write port per bank. During init, the sequential clear owns the write
+    // port; normal HDEC traffic is expected after reset/init.
     always_ff @(posedge clk_i) begin
-        if (rst_ni) begin
-            // ── Read: 1-cycle synchronous ──────────────────────────────────
-            automatic logic [VRF_IDX_W-1:0] ra0 = bank_ra_addr_i[0];
-            automatic logic [VRF_IDX_W-1:0] ra1 = bank_ra_addr_i[1];
-            automatic logic [VRF_IDX_W-1:0] ra2 = bank_ra_addr_i[2];
-            automatic logic [VRF_IDX_W-1:0] ra3 = bank_ra_addr_i[3];
+        if (init_b0_we)
+            vrf_b0[init_addr] <= '0;
+        else if (bank_we_i[0])
+            vrf_b0[bank_wa_addr_i[0]] <= bank_wdata_i[0];
+    end
 
-            // ── Bank 0 ─────────────────────────────────────────────────────
-            if (bank_we_i[0] && (bank_wa_addr_i[0] == ra0))
-                bank_ra_data_o[0] <= bank_wdata_i[0];     // write-forwarding
+    always_ff @(posedge clk_i) begin
+        if (init_b1_we)
+            vrf_b1[init_addr] <= '0;
+        else if (bank_we_i[1])
+            vrf_b1[bank_wa_addr_i[1]] <= bank_wdata_i[1];
+    end
+
+    always_ff @(posedge clk_i) begin
+        if (init_b2_we)
+            vrf_b2[init_addr] <= '0;
+        else if (bank_we_i[2])
+            vrf_b2[bank_wa_addr_i[2]] <= bank_wdata_i[2];
+    end
+
+    always_ff @(posedge clk_i) begin
+        if (init_b3_we)
+            vrf_b3[init_addr] <= '0;
+        else if (bank_we_i[3])
+            vrf_b3[bank_wa_addr_i[3]] <= bank_wdata_i[3];
+    end
+
+    // Keep the existing 1-cycle registered read behavior seen by hdec_top.
+    // Same-cycle normal write/read to the same bank/address forwards write data.
+    always_ff @(posedge clk_i or negedge rst_ni) begin
+        if (!rst_ni) begin
+            bank_ra_data_o <= '0;
+        end else begin
+            if (bank_we_i[0] && (bank_wa_addr_i[0] == bank_ra_addr_i[0]))
+                bank_ra_data_o[0] <= bank_wdata_i[0];
             else
-                bank_ra_data_o[0] <= vrf_b0[ra0];
+                bank_ra_data_o[0] <= vrf_b0[bank_ra_addr_i[0]];
 
-            if (bank_we_i[0])
-                vrf_b0[bank_wa_addr_i[0]] <= bank_wdata_i[0];
-
-            if (init_state_q == INIT_CLEAR && init_cnt_q[7:6] == 2'd0)
-                vrf_b0[init_cnt_q[5:0]] <= '0;
-
-            // ── Bank 1 ─────────────────────────────────────────────────────
-            if (bank_we_i[1] && (bank_wa_addr_i[1] == ra1))
+            if (bank_we_i[1] && (bank_wa_addr_i[1] == bank_ra_addr_i[1]))
                 bank_ra_data_o[1] <= bank_wdata_i[1];
             else
-                bank_ra_data_o[1] <= vrf_b1[ra1];
+                bank_ra_data_o[1] <= vrf_b1[bank_ra_addr_i[1]];
 
-            if (bank_we_i[1])
-                vrf_b1[bank_wa_addr_i[1]] <= bank_wdata_i[1];
-
-            if (init_state_q == INIT_CLEAR && init_cnt_q[7:6] == 2'd1)
-                vrf_b1[init_cnt_q[5:0]] <= '0;
-
-            // ── Bank 2 ─────────────────────────────────────────────────────
-            if (bank_we_i[2] && (bank_wa_addr_i[2] == ra2))
+            if (bank_we_i[2] && (bank_wa_addr_i[2] == bank_ra_addr_i[2]))
                 bank_ra_data_o[2] <= bank_wdata_i[2];
             else
-                bank_ra_data_o[2] <= vrf_b2[ra2];
+                bank_ra_data_o[2] <= vrf_b2[bank_ra_addr_i[2]];
 
-            if (bank_we_i[2])
-                vrf_b2[bank_wa_addr_i[2]] <= bank_wdata_i[2];
-
-            if (init_state_q == INIT_CLEAR && init_cnt_q[7:6] == 2'd2)
-                vrf_b2[init_cnt_q[5:0]] <= '0;
-
-            // ── Bank 3 ─────────────────────────────────────────────────────
-            if (bank_we_i[3] && (bank_wa_addr_i[3] == ra3))
+            if (bank_we_i[3] && (bank_wa_addr_i[3] == bank_ra_addr_i[3]))
                 bank_ra_data_o[3] <= bank_wdata_i[3];
             else
-                bank_ra_data_o[3] <= vrf_b3[ra3];
-
-            if (bank_we_i[3])
-                vrf_b3[bank_wa_addr_i[3]] <= bank_wdata_i[3];
-
-            if (init_state_q == INIT_CLEAR && init_cnt_q[7:6] == 2'd3)
-                vrf_b3[init_cnt_q[5:0]] <= '0;
-
-        end else begin
-            for (int b = 0; b < LANE_NUM; b++)
-                bank_ra_data_o[b] <= '0;
+                bank_ra_data_o[3] <= vrf_b3[bank_ra_addr_i[3]];
         end
     end
 
