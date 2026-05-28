@@ -1,0 +1,28 @@
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2022.2 (win64) Build 3671981 Fri Oct 14 05:00:03 MDT 2022
+| Date         : Thu May 28 17:26:10 2026
+| Host         : DESKTOP-RSKE6BB running 64-bit major release  (build 9200)
+| Command      : report_utilization -hierarchical -hierarchical_depth 4 -file H:/CVA6-HDEC/cva6-vhdc-core/reports/vivado/gf2_256_diag_mul_raw_ooc/utilization_gf2_256_diag_mul_raw_ooc_hier.rpt
+| Design       : gf2_256_diag_mul_raw
+| Device       : xc7z020clg400-2
+| Speed File   : -2
+| Design State : Synthesized
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Utilization Design Information
+
+Table of Contents
+-----------------
+1. Utilization by Hierarchy
+
+1. Utilization by Hierarchy
+---------------------------
+
++----------------------+--------+------------+------------+---------+------+------+--------+--------+------------+
+|       Instance       | Module | Total LUTs | Logic LUTs | LUTRAMs | SRLs |  FFs | RAMB36 | RAMB18 | DSP Blocks |
++----------------------+--------+------------+------------+---------+------+------+--------+--------+------------+
+| gf2_256_diag_mul_raw |  (top) |       3640 |       3640 |       0 |    0 | 1082 |      0 |      0 |          0 |
++----------------------+--------+------------+------------+---------+------+------+--------+--------+------------+
+
+

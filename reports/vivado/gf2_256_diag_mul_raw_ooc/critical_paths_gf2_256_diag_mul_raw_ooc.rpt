@@ -1,0 +1,341 @@
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2022.2 (win64) Build 3671981 Fri Oct 14 05:00:03 MDT 2022
+| Date         : Thu May 28 17:26:14 2026
+| Host         : DESKTOP-RSKE6BB running 64-bit major release  (build 9200)
+| Command      : report_timing -max_paths 5 -path_type full_clock_expanded -file H:/CVA6-HDEC/cva6-vhdc-core/reports/vivado/gf2_256_diag_mul_raw_ooc/critical_paths_gf2_256_diag_mul_raw_ooc.rpt
+| Design       : gf2_256_diag_mul_raw
+| Device       : 7z020-clg400
+| Speed File   : -2  PRODUCTION 1.12 2019-11-22
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Timing Report
+
+Slack (MET) :             1.975ns  (required time - arrival time)
+  Source:                 b_reg_reg[224]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Destination:            prod_q_reg[0]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            10.000ns  (clk_i rise@10.000ns - clk_i rise@0.000ns)
+  Data Path Delay:        8.022ns  (logic 1.610ns (20.070%)  route 6.412ns (79.930%))
+  Logic Levels:           10  (LUT3=1 LUT5=1 LUT6=8)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 10.748 - 10.000 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=1081, unset)         0.787     0.787    clk_i
+                         FDCE                                         r  b_reg_reg[224]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 r  b_reg_reg[224]/Q
+                         net (fo=8, unplaced)         0.637     1.857    b[224]
+                         LUT3 (Prop_lut3_I0_O)        0.232     2.089 r  prod_q[510]_i_2592/O
+                         net (fo=4, unplaced)         0.962     3.051    prod_q[510]_i_2592_n_0
+                         LUT6 (Prop_lut6_I1_O)        0.105     3.156 r  prod_q[510]_i_2060/O
+                         net (fo=3, unplaced)         0.600     3.756    prod_q[510]_i_2060_n_0
+                         LUT6 (Prop_lut6_I1_O)        0.105     3.861 r  prod_q[510]_i_1062/O
+                         net (fo=2, unplaced)         0.593     4.454    prod_q[510]_i_1062_n_0
+                         LUT6 (Prop_lut6_I1_O)        0.105     4.559 r  prod_q[510]_i_739/O
+                         net (fo=1, unplaced)         0.347     4.906    prod_q[510]_i_739_n_0
+                         LUT6 (Prop_lut6_I4_O)        0.105     5.011 r  prod_q[510]_i_251/O
+                         net (fo=1, unplaced)         0.582     5.593    v890_out
+                         LUT5 (Prop_lut5_I1_O)        0.105     5.698 r  prod_q[510]_i_63/O
+                         net (fo=1, unplaced)         0.938     6.636    prod_q[510]_i_63_n_0
+                         LUT6 (Prop_lut6_I0_O)        0.105     6.741 r  prod_q[510]_i_16/O
+                         net (fo=1, unplaced)         0.328     7.069    prod_q[510]_i_16_n_0
+                         LUT6 (Prop_lut6_I4_O)        0.105     7.174 r  prod_q[510]_i_6/O
+                         net (fo=1, unplaced)         0.938     8.112    lane_diag_parity0_return
+                         LUT6 (Prop_lut6_I1_O)        0.105     8.217 r  prod_q[510]_i_2/O
+                         net (fo=511, unplaced)       0.487     8.704    prod_q[510]_i_2_n_0
+                         LUT6 (Prop_lut6_I0_O)        0.105     8.809 r  prod_q[0]_i_1/O
+                         net (fo=1, unplaced)         0.000     8.809    prod_q[0]_i_1_n_0
+                         FDCE                                         r  prod_q_reg[0]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)     10.000    10.000 r  
+                                                      0.000    10.000 r  clk_i (IN)
+                         net (fo=1081, unset)         0.748    10.748    clk_i
+                         FDCE                                         r  prod_q_reg[0]/C
+                         clock pessimism              0.000    10.748    
+                         clock uncertainty           -0.035    10.712    
+                         FDCE (Setup_fdce_C_D)        0.072    10.784    prod_q_reg[0]
+  -------------------------------------------------------------------
+                         required time                         10.784    
+                         arrival time                          -8.809    
+  -------------------------------------------------------------------
+                         slack                                  1.975    
+
+Slack (MET) :             1.975ns  (required time - arrival time)
+  Source:                 b_reg_reg[224]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Destination:            prod_q_reg[100]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            10.000ns  (clk_i rise@10.000ns - clk_i rise@0.000ns)
+  Data Path Delay:        8.022ns  (logic 1.610ns (20.070%)  route 6.412ns (79.930%))
+  Logic Levels:           10  (LUT3=1 LUT5=1 LUT6=8)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 10.748 - 10.000 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=1081, unset)         0.787     0.787    clk_i
+                         FDCE                                         r  b_reg_reg[224]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 r  b_reg_reg[224]/Q
+                         net (fo=8, unplaced)         0.637     1.857    b[224]
+                         LUT3 (Prop_lut3_I0_O)        0.232     2.089 r  prod_q[510]_i_2592/O
+                         net (fo=4, unplaced)         0.962     3.051    prod_q[510]_i_2592_n_0
+                         LUT6 (Prop_lut6_I1_O)        0.105     3.156 r  prod_q[510]_i_2060/O
+                         net (fo=3, unplaced)         0.600     3.756    prod_q[510]_i_2060_n_0
+                         LUT6 (Prop_lut6_I1_O)        0.105     3.861 r  prod_q[510]_i_1062/O
+                         net (fo=2, unplaced)         0.593     4.454    prod_q[510]_i_1062_n_0
+                         LUT6 (Prop_lut6_I1_O)        0.105     4.559 r  prod_q[510]_i_739/O
+                         net (fo=1, unplaced)         0.347     4.906    prod_q[510]_i_739_n_0
+                         LUT6 (Prop_lut6_I4_O)        0.105     5.011 r  prod_q[510]_i_251/O
+                         net (fo=1, unplaced)         0.582     5.593    v890_out
+                         LUT5 (Prop_lut5_I1_O)        0.105     5.698 r  prod_q[510]_i_63/O
+                         net (fo=1, unplaced)         0.938     6.636    prod_q[510]_i_63_n_0
+                         LUT6 (Prop_lut6_I0_O)        0.105     6.741 r  prod_q[510]_i_16/O
+                         net (fo=1, unplaced)         0.328     7.069    prod_q[510]_i_16_n_0
+                         LUT6 (Prop_lut6_I4_O)        0.105     7.174 r  prod_q[510]_i_6/O
+                         net (fo=1, unplaced)         0.938     8.112    lane_diag_parity0_return
+                         LUT6 (Prop_lut6_I1_O)        0.105     8.217 r  prod_q[510]_i_2/O
+                         net (fo=511, unplaced)       0.487     8.704    prod_q[510]_i_2_n_0
+                         LUT6 (Prop_lut6_I0_O)        0.105     8.809 r  prod_q[100]_i_1/O
+                         net (fo=1, unplaced)         0.000     8.809    prod_q[100]_i_1_n_0
+                         FDCE                                         r  prod_q_reg[100]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)     10.000    10.000 r  
+                                                      0.000    10.000 r  clk_i (IN)
+                         net (fo=1081, unset)         0.748    10.748    clk_i
+                         FDCE                                         r  prod_q_reg[100]/C
+                         clock pessimism              0.000    10.748    
+                         clock uncertainty           -0.035    10.712    
+                         FDCE (Setup_fdce_C_D)        0.072    10.784    prod_q_reg[100]
+  -------------------------------------------------------------------
+                         required time                         10.784    
+                         arrival time                          -8.809    
+  -------------------------------------------------------------------
+                         slack                                  1.975    
+
+Slack (MET) :             1.975ns  (required time - arrival time)
+  Source:                 b_reg_reg[224]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Destination:            prod_q_reg[101]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            10.000ns  (clk_i rise@10.000ns - clk_i rise@0.000ns)
+  Data Path Delay:        8.022ns  (logic 1.610ns (20.070%)  route 6.412ns (79.930%))
+  Logic Levels:           10  (LUT3=1 LUT5=1 LUT6=8)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 10.748 - 10.000 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=1081, unset)         0.787     0.787    clk_i
+                         FDCE                                         r  b_reg_reg[224]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 r  b_reg_reg[224]/Q
+                         net (fo=8, unplaced)         0.637     1.857    b[224]
+                         LUT3 (Prop_lut3_I0_O)        0.232     2.089 r  prod_q[510]_i_2592/O
+                         net (fo=4, unplaced)         0.962     3.051    prod_q[510]_i_2592_n_0
+                         LUT6 (Prop_lut6_I1_O)        0.105     3.156 r  prod_q[510]_i_2060/O
+                         net (fo=3, unplaced)         0.600     3.756    prod_q[510]_i_2060_n_0
+                         LUT6 (Prop_lut6_I1_O)        0.105     3.861 r  prod_q[510]_i_1062/O
+                         net (fo=2, unplaced)         0.593     4.454    prod_q[510]_i_1062_n_0
+                         LUT6 (Prop_lut6_I1_O)        0.105     4.559 r  prod_q[510]_i_739/O
+                         net (fo=1, unplaced)         0.347     4.906    prod_q[510]_i_739_n_0
+                         LUT6 (Prop_lut6_I4_O)        0.105     5.011 r  prod_q[510]_i_251/O
+                         net (fo=1, unplaced)         0.582     5.593    v890_out
+                         LUT5 (Prop_lut5_I1_O)        0.105     5.698 r  prod_q[510]_i_63/O
+                         net (fo=1, unplaced)         0.938     6.636    prod_q[510]_i_63_n_0
+                         LUT6 (Prop_lut6_I0_O)        0.105     6.741 r  prod_q[510]_i_16/O
+                         net (fo=1, unplaced)         0.328     7.069    prod_q[510]_i_16_n_0
+                         LUT6 (Prop_lut6_I4_O)        0.105     7.174 r  prod_q[510]_i_6/O
+                         net (fo=1, unplaced)         0.938     8.112    lane_diag_parity0_return
+                         LUT6 (Prop_lut6_I1_O)        0.105     8.217 r  prod_q[510]_i_2/O
+                         net (fo=511, unplaced)       0.487     8.704    prod_q[510]_i_2_n_0
+                         LUT6 (Prop_lut6_I0_O)        0.105     8.809 r  prod_q[101]_i_1/O
+                         net (fo=1, unplaced)         0.000     8.809    prod_q[101]_i_1_n_0
+                         FDCE                                         r  prod_q_reg[101]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)     10.000    10.000 r  
+                                                      0.000    10.000 r  clk_i (IN)
+                         net (fo=1081, unset)         0.748    10.748    clk_i
+                         FDCE                                         r  prod_q_reg[101]/C
+                         clock pessimism              0.000    10.748    
+                         clock uncertainty           -0.035    10.712    
+                         FDCE (Setup_fdce_C_D)        0.072    10.784    prod_q_reg[101]
+  -------------------------------------------------------------------
+                         required time                         10.784    
+                         arrival time                          -8.809    
+  -------------------------------------------------------------------
+                         slack                                  1.975    
+
+Slack (MET) :             1.975ns  (required time - arrival time)
+  Source:                 b_reg_reg[224]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Destination:            prod_q_reg[102]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            10.000ns  (clk_i rise@10.000ns - clk_i rise@0.000ns)
+  Data Path Delay:        8.022ns  (logic 1.610ns (20.070%)  route 6.412ns (79.930%))
+  Logic Levels:           10  (LUT3=1 LUT5=1 LUT6=8)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 10.748 - 10.000 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=1081, unset)         0.787     0.787    clk_i
+                         FDCE                                         r  b_reg_reg[224]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 r  b_reg_reg[224]/Q
+                         net (fo=8, unplaced)         0.637     1.857    b[224]
+                         LUT3 (Prop_lut3_I0_O)        0.232     2.089 r  prod_q[510]_i_2592/O
+                         net (fo=4, unplaced)         0.962     3.051    prod_q[510]_i_2592_n_0
+                         LUT6 (Prop_lut6_I1_O)        0.105     3.156 r  prod_q[510]_i_2060/O
+                         net (fo=3, unplaced)         0.600     3.756    prod_q[510]_i_2060_n_0
+                         LUT6 (Prop_lut6_I1_O)        0.105     3.861 r  prod_q[510]_i_1062/O
+                         net (fo=2, unplaced)         0.593     4.454    prod_q[510]_i_1062_n_0
+                         LUT6 (Prop_lut6_I1_O)        0.105     4.559 r  prod_q[510]_i_739/O
+                         net (fo=1, unplaced)         0.347     4.906    prod_q[510]_i_739_n_0
+                         LUT6 (Prop_lut6_I4_O)        0.105     5.011 r  prod_q[510]_i_251/O
+                         net (fo=1, unplaced)         0.582     5.593    v890_out
+                         LUT5 (Prop_lut5_I1_O)        0.105     5.698 r  prod_q[510]_i_63/O
+                         net (fo=1, unplaced)         0.938     6.636    prod_q[510]_i_63_n_0
+                         LUT6 (Prop_lut6_I0_O)        0.105     6.741 r  prod_q[510]_i_16/O
+                         net (fo=1, unplaced)         0.328     7.069    prod_q[510]_i_16_n_0
+                         LUT6 (Prop_lut6_I4_O)        0.105     7.174 r  prod_q[510]_i_6/O
+                         net (fo=1, unplaced)         0.938     8.112    lane_diag_parity0_return
+                         LUT6 (Prop_lut6_I1_O)        0.105     8.217 r  prod_q[510]_i_2/O
+                         net (fo=511, unplaced)       0.487     8.704    prod_q[510]_i_2_n_0
+                         LUT6 (Prop_lut6_I0_O)        0.105     8.809 r  prod_q[102]_i_1/O
+                         net (fo=1, unplaced)         0.000     8.809    prod_q[102]_i_1_n_0
+                         FDCE                                         r  prod_q_reg[102]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)     10.000    10.000 r  
+                                                      0.000    10.000 r  clk_i (IN)
+                         net (fo=1081, unset)         0.748    10.748    clk_i
+                         FDCE                                         r  prod_q_reg[102]/C
+                         clock pessimism              0.000    10.748    
+                         clock uncertainty           -0.035    10.712    
+                         FDCE (Setup_fdce_C_D)        0.072    10.784    prod_q_reg[102]
+  -------------------------------------------------------------------
+                         required time                         10.784    
+                         arrival time                          -8.809    
+  -------------------------------------------------------------------
+                         slack                                  1.975    
+
+Slack (MET) :             1.975ns  (required time - arrival time)
+  Source:                 b_reg_reg[224]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Destination:            prod_q_reg[103]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@5.000ns period=10.000ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            10.000ns  (clk_i rise@10.000ns - clk_i rise@0.000ns)
+  Data Path Delay:        8.022ns  (logic 1.610ns (20.070%)  route 6.412ns (79.930%))
+  Logic Levels:           10  (LUT3=1 LUT5=1 LUT6=8)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 10.748 - 10.000 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=1081, unset)         0.787     0.787    clk_i
+                         FDCE                                         r  b_reg_reg[224]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 r  b_reg_reg[224]/Q
+                         net (fo=8, unplaced)         0.637     1.857    b[224]
+                         LUT3 (Prop_lut3_I0_O)        0.232     2.089 r  prod_q[510]_i_2592/O
+                         net (fo=4, unplaced)         0.962     3.051    prod_q[510]_i_2592_n_0
+                         LUT6 (Prop_lut6_I1_O)        0.105     3.156 r  prod_q[510]_i_2060/O
+                         net (fo=3, unplaced)         0.600     3.756    prod_q[510]_i_2060_n_0
+                         LUT6 (Prop_lut6_I1_O)        0.105     3.861 r  prod_q[510]_i_1062/O
+                         net (fo=2, unplaced)         0.593     4.454    prod_q[510]_i_1062_n_0
+                         LUT6 (Prop_lut6_I1_O)        0.105     4.559 r  prod_q[510]_i_739/O
+                         net (fo=1, unplaced)         0.347     4.906    prod_q[510]_i_739_n_0
+                         LUT6 (Prop_lut6_I4_O)        0.105     5.011 r  prod_q[510]_i_251/O
+                         net (fo=1, unplaced)         0.582     5.593    v890_out
+                         LUT5 (Prop_lut5_I1_O)        0.105     5.698 r  prod_q[510]_i_63/O
+                         net (fo=1, unplaced)         0.938     6.636    prod_q[510]_i_63_n_0
+                         LUT6 (Prop_lut6_I0_O)        0.105     6.741 r  prod_q[510]_i_16/O
+                         net (fo=1, unplaced)         0.328     7.069    prod_q[510]_i_16_n_0
+                         LUT6 (Prop_lut6_I4_O)        0.105     7.174 r  prod_q[510]_i_6/O
+                         net (fo=1, unplaced)         0.938     8.112    lane_diag_parity0_return
+                         LUT6 (Prop_lut6_I1_O)        0.105     8.217 r  prod_q[510]_i_2/O
+                         net (fo=511, unplaced)       0.487     8.704    prod_q[510]_i_2_n_0
+                         LUT6 (Prop_lut6_I0_O)        0.105     8.809 r  prod_q[103]_i_1/O
+                         net (fo=1, unplaced)         0.000     8.809    prod_q[103]_i_1_n_0
+                         FDCE                                         r  prod_q_reg[103]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)     10.000    10.000 r  
+                                                      0.000    10.000 r  clk_i (IN)
+                         net (fo=1081, unset)         0.748    10.748    clk_i
+                         FDCE                                         r  prod_q_reg[103]/C
+                         clock pessimism              0.000    10.748    
+                         clock uncertainty           -0.035    10.712    
+                         FDCE (Setup_fdce_C_D)        0.072    10.784    prod_q_reg[103]
+  -------------------------------------------------------------------
+                         required time                         10.784    
+                         arrival time                          -8.809    
+  -------------------------------------------------------------------
+                         slack                                  1.975    
+
+
+
+
