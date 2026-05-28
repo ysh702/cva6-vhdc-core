@@ -1,10 +1,8 @@
 // =============================================================================
 // hdec_lane_4x64.sv — 64-bit Lane Shell with Lane-Local Static Function Blocks
 // =============================================================================
-// Phase 1: transitional control ports plus independent combinational XOR Front-End
-//          and Popcount/Compressor blocks. Complex operators can later add local
-//          thin register shells around these blocks without changing top-level
-//          CV-X-IF or VRF protocols.
+// Phase 1: transitional control ports plus independent combinational XOR,
+//          popcount, packed counter, shift, add/sub, and clip blocks.
 // =============================================================================
 
 module hdec_lane_4x64
@@ -65,25 +63,18 @@ module hdec_lane_4x64
     input  logic [LANE_WIDTH-1:0]             bool_src_b_i,
     output logic [LANE_WIDTH-1:0]             bool_result_o,
 
-    // -- BMCA hvsim batch path --------------------------------------------
-    input  logic                              bmca_row_clear_i,
-    input  logic                              bmca_row_load_valid_i,
-    input  logic [1:0]                        bmca_row_load_sel_i,
-    input  logic                              bmca_row_use_direct_i,
-    input  logic [LANE_WIDTH-1:0]             bmca_row_direct_i,
-    input  logic                              bmca_compress_valid_i,
-    output logic [LANE_WIDTH-1:0]             bmca_lo_o,
-    output logic [LANE_WIDTH-1:0]             bmca_hi_a_o,
-    output logic [LANE_WIDTH-1:0]             bmca_hi_b_o,
-    output logic [8:0]                        bmca_count_o,
-    output logic                              bmca_count_valid_o,
+    // -- HDC popcount path -------------------------------------------------
+    output logic [6:0]                        popcount_count_o,
 
-    // -- BMCA Bundle packed-counter tail -----------------------------------
+    // -- HDC bundle packed-counter update ----------------------------------
     input  logic                              bundle_valid_i,
     input  logic [LANE_WIDTH-1:0]             bundle_old_counter_i,
-    input  logic [15:0]                       bundle_lo_bits_i,
-    input  logic [15:0]                       bundle_hi_a_bits_i,
-    input  logic [15:0]                       bundle_hi_b_bits_i,
+    input  logic [LANE_WIDTH-1:0]             bundle_row0_i,
+    input  logic [LANE_WIDTH-1:0]             bundle_row1_i,
+    input  logic [LANE_WIDTH-1:0]             bundle_row2_i,
+    input  logic [LANE_WIDTH-1:0]             bundle_row3_i,
+    input  logic [2:0]                        bundle_row_count_i,
+    input  logic [1:0]                        bundle_subgroup_i,
     output logic [LANE_WIDTH-1:0]             bundle_counter_result_o,
 
     // ── Shift-Align Compute Path (4-bit granular, lane-local) ───────────────
@@ -125,41 +116,34 @@ module hdec_lane_4x64
 
     assign bool_result_o = bool_result;
 
-    // -- BMCA hvsim/hbundle3 batch compressor ------------------------------
-    logic [LANE_WIDTH-1:0] bmca_row_data;
-    assign bmca_row_data = bmca_row_use_direct_i ? bmca_row_direct_i : bool_result;
-
-    hdec_lane_bmca i_bmca (
-        .clk_i,
-        .rst_ni,
-        .row_clear_i      (bmca_row_clear_i),
-        .row_load_valid_i (bmca_row_load_valid_i),
-        .row_load_sel_i   (bmca_row_load_sel_i),
-        .row_load_data_i  (bmca_row_data),
-        .compress_valid_i (bmca_compress_valid_i),
-        .lo_o             (bmca_lo_o),
-        .hi_a_o           (bmca_hi_a_o),
-        .hi_b_o           (bmca_hi_b_o),
-        .count_o          (bmca_count_o),
-        .count_valid_o    (bmca_count_valid_o)
+    // -- HDC popcount over XOR diff ----------------------------------------
+    hdec_lane_popcount_compressor i_popcount (
+        .mode_i      (1'b0),
+        .diff_i      (bool_result),
+        .a_i         ('0),
+        .b_i         ('0),
+        .c_i         ('0),
+        .count_o     (popcount_count_o),
+        .csa_sum_o   (),
+        .csa_carry_o (),
+        .csa_cout_o  ()
     );
 
-    // -- BMCA Bundle tail: packed 4-bit saturating counter update -----------
-    logic [LANE_WIDTH-1:0] bundle_old_counter;
-    logic [15:0]           bundle_lo_bits, bundle_hi_a_bits, bundle_hi_b_bits;
-    assign bundle_old_counter = bundle_valid_i ? bundle_old_counter_i : '0;
-    assign bundle_lo_bits     = bundle_valid_i ? bundle_lo_bits_i      : '0;
-    assign bundle_hi_a_bits   = bundle_valid_i ? bundle_hi_a_bits_i    : '0;
-    assign bundle_hi_b_bits   = bundle_valid_i ? bundle_hi_b_bits_i    : '0;
-
-    for (genvar bundle_bit = 0; bundle_bit < 16; bundle_bit++) begin : gen_bundle_tail
-        logic [2:0] inc;
-        logic [4:0] sum;
-
-        assign inc = {2'b00, bundle_lo_bits[bundle_bit]} + {1'b0, bundle_hi_a_bits[bundle_bit], 1'b0} + {1'b0, bundle_hi_b_bits[bundle_bit], 1'b0};
-        assign sum = {1'b0, bundle_old_counter[4*bundle_bit +: 4]} + {2'b00, inc};
-        assign bundle_counter_result_o[4*bundle_bit +: 4] = sum[4] ? 4'hF : sum[3:0];
-    end
+    // -- HDC bundle tail: unsigned packed 4-bit saturating counter update ---
+    hdec_cnt_array i_cnt_array (
+        .clear_i          (1'b0),
+        .update_i         (bundle_valid_i),
+        .old_counter_i    (bundle_old_counter_i),
+        .row0_i           (bundle_row0_i),
+        .row1_i           (bundle_row1_i),
+        .row2_i           (bundle_row2_i),
+        .row3_i           (bundle_row3_i),
+        .row_count_i      (bundle_row_count_i),
+        .subgroup_i       (bundle_subgroup_i),
+        .clip_threshold_i ('0),
+        .new_counter_o    (bundle_counter_result_o),
+        .clip_bits_o      ()
+    );
 
     // ── Shift-Align Core (combinational static block) ──────────────────────
     // Gate all shift inputs to 0 when inactive to avoid unused-path toggling.
