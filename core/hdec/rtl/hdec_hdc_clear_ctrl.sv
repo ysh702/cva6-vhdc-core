@@ -1,8 +1,8 @@
 // =============================================================================
-// hdec_hdc_clear_ctrl.sv — hclr / bclr Controller (Phase 1: Real Multi-Cycle)
+// hdec_hdc_clear_ctrl.sv — hclr / hcntclr Controller
 // =============================================================================
-// hclr: zeroes 4 contiguous VRF entries (one 1024-bit HDC vector slot)
-// bclr: zeroes 16 contiguous VRF entries (one 4-bit bundle accumulator slot)
+// hclr:    zeroes 4 contiguous VRF entries (one 1024-bit HDC vector slot)
+// hcntclr: zeroes 16 contiguous VRF entries (one CNT accumulator bank)
 // Asserts busy while iterating, returns OK on completion.
 // =============================================================================
 
@@ -18,7 +18,7 @@ module hdec_hdc_clear_ctrl
     output logic                    busy_o,
     output logic                    done_o,         // 1-cycle pulse
     output logic [1:0]              status_o,       // OK / ERROR
-    input  hdec_op_t                opcode_i,       // HDEC_HCLR or HDEC_BCLR
+    input  hdec_op_t                opcode_i,       // HDEC_HCLR or HDEC_HCNTCLR
     input  logic [VRF_IDX_W-1:0]    base_slot_i,    // first VRF entry to clear
 
     // ── VRF Write Interface (to engine / VRF) ───────────────────────────────
@@ -35,7 +35,7 @@ module hdec_hdc_clear_ctrl
 
     always_comb begin
         // Determine clear count from opcode
-        clr_total = (opcode_i == HDEC_BCLR) ? 8'(BCLR_CLEAR_ENTRIES) : 8'(HCLR_CLEAR_ENTRIES);
+        clr_total = (opcode_i == HDEC_HCNTCLR) ? 8'(HCNTCLR_CLEAR_ENTRIES) : 8'(HCLR_CLEAR_ENTRIES);
     end
 
     always_comb begin

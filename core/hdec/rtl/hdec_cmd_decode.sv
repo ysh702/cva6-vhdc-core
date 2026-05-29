@@ -1,7 +1,7 @@
 // =============================================================================
 // hdec_cmd_decode.sv — Instruction Field Parser & Command Dispatcher
 // =============================================================================
-// Phase 1: parses 10 instructions, extracts VRF address fields,
+// HDCU Phase: parses HDC instructions, extracts VRF address fields,
 // routes vwr64/vrd64 directly, dispatches HDC ops to engine.
 // =============================================================================
 

@@ -33,17 +33,17 @@
     .insn r 0x0B, 2, 2, t0, a0, zero
     .endm
 
-    .macro BCLR acc
+    .macro HCNTCLR acc
     li a0, \acc
     .insn r 0x0B, 3, 2, t0, a0, zero
     .endm
 
-    .macro HBUNDLE4 param
+    .macro HCNTADD param
     li a0, \param
-    .insn r 0x0B, 4, 3, t0, a0, zero
+    .insn r 0x0B, 4, 2, t0, a0, zero
     .endm
 
-    .macro HCLIP param
+    .macro HCNTCLIP param
     li a0, \param
     .insn r 0x0B, 0, 3, t0, a0, zero
     .endm
@@ -66,7 +66,7 @@ main:
     HCLR 5
     HCLR 6
     HCLR 7
-    BCLR 0
+    HCNTCLR 0
 
     # =====================================================================
     # Phase 2: Preload class prototypes HV0-HV3
@@ -111,7 +111,7 @@ main:
     #   HBUNDLE4 base=4, acc_sel=0
     #   This is the start of the steady-state compute region
     # =====================================================================
-    HBUNDLE4 0x04
+    HCNTADD 4; HCNTADD 5; HCNTADD 6; HCNTADD 7
 
     # =====================================================================
     # Phase 5: Query — clip acc0 into HV4 (overwrite)
@@ -119,7 +119,7 @@ main:
     #   Since all 4 basis HVs are identical 0xAAAA..., counters are 0 or 4.
     #   threshold=2 → output=1 iff counter>=2 → query = 0xAAAA...
     # =====================================================================
-    HCLIP 0x24
+    HCNTCLIP 0x24
 
     # =====================================================================
     # Phase 6: Match — 4-class HMATCH

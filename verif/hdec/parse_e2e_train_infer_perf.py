@@ -178,7 +178,7 @@ def main():
     print()
 
     dm_ops = {"VADDR", "VWR64", "VRD64"}
-    compute_ops = {"HBUNDLE4", "HCLIP", "HMATCH", "BCLR"}
+    compute_ops = {"HCNTADD", "HCNTCLIP", "HMATCH", "HCNTCLR"}
 
     for label, recs in [("All Training (A+B+C-train)", records[:c_train_end]),
                           ("Inference (C-infer only)", ladder_c_infer),
@@ -199,10 +199,10 @@ def main():
 
     # --- HBUNDLE4 accumulation verification ---
     print(sep)
-    print("HBUNDLE4 ACCUMULATION BEHAVIOR")
+    print("HCNTADD ACCUMULATION BEHAVIOR")
     print(sep)
     print()
-    print("  Repeated HBUNDLE4 calls WITHOUT BCLR accumulate correctly.")
+    print("  Repeated HCNTADD calls WITHOUT HCNTCLR accumulate correctly.")
     print("  Verified: 4 training samples per class each add to acc0,")
     print("  and after HCLIP threshold=2 the prototype matches the target.")
     print("  Ladder B independently confirms min_dist=0 for all 4 prototypes.")

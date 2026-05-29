@@ -1,8 +1,8 @@
 // =============================================================================
-// hdec_lane_4x64.sv — 64-bit Lane Shell with Lane-Local Static Function Blocks
+// hdec_lane_4x64.sv — 64-bit Lane Shell with HDCU Static Function Blocks
 // =============================================================================
-// Phase 1: transitional control ports plus independent combinational XOR,
-//          popcount, packed counter, shift, add/sub, and clip blocks.
+// HDCU Phase: XOR, popcount, CNT array update, clip, shift-align.
+// No bundle, no add/sub counter, no BMCA.
 // =============================================================================
 
 module hdec_lane_4x64
@@ -38,11 +38,11 @@ module hdec_lane_4x64
     output logic [LANE_WIDTH-1:0]             res_data_o,
     output logic [1:0]                        res_owner_o,
 
-    // ── Neighbor Lane Interface (reserved for future lane-local operators) ──
+    // ── Neighbor Lane Interface (reserved) ──────────────────────────────────
     input  logic [LANE_WIDTH-1:0]             neighbor_in_i,
     output logic [LANE_WIDTH-1:0]             neighbor_out_o,
 
-    // ── Carry / Borrow / Count / Flag (reserved for future local operators) ─
+    // ── Carry / Borrow / Count / Flag (reserved) ────────────────────────────
     input  logic                              carry_in_i,
     output logic                              carry_out_o,
     input  logic                              borrow_in_i,
@@ -52,30 +52,26 @@ module hdec_lane_4x64
     input  logic                              flag_in_i,
     output logic                              flag_out_o,
 
-    // ── Local Writeback (reserved for future local operators) ───────────────
+    // ── Local Writeback (reserved) ──────────────────────────────────────────
     output logic [LANE_WIDTH-1:0]             local_wb_data_o,
     output logic [VRF_IDX_W-1:0]              local_wb_addr_o,
     output logic                              local_wb_we_o,
 
-    // ── XOR Front-End Compute Path (transitional: will be unified under engine) ─
+    // ── XOR Front-End Compute Path ──────────────────────────────────────────
     input  logic                              bool_valid_i,
     input  logic [LANE_WIDTH-1:0]             bool_src_a_i,
     input  logic [LANE_WIDTH-1:0]             bool_src_b_i,
     output logic [LANE_WIDTH-1:0]             bool_result_o,
 
-    // -- HDC popcount path -------------------------------------------------
+    // ── HDC popcount path ───────────────────────────────────────────────────
     output logic [6:0]                        popcount_count_o,
 
-    // -- HDC bundle packed-counter update ----------------------------------
-    input  logic                              bundle_valid_i,
-    input  logic [LANE_WIDTH-1:0]             bundle_old_counter_i,
-    input  logic [LANE_WIDTH-1:0]             bundle_row0_i,
-    input  logic [LANE_WIDTH-1:0]             bundle_row1_i,
-    input  logic [LANE_WIDTH-1:0]             bundle_row2_i,
-    input  logic [LANE_WIDTH-1:0]             bundle_row3_i,
-    input  logic [2:0]                        bundle_row_count_i,
-    input  logic [1:0]                        bundle_subgroup_i,
-    output logic [LANE_WIDTH-1:0]             bundle_counter_result_o,
+    // ── HDCU CNT array update path ─────────────────────────────────────────
+    input  logic                              cnt_valid_i,
+    input  logic [LANE_WIDTH-1:0]             cnt_hv_word_i,
+    input  logic [LANE_WIDTH-1:0]             cnt_old_counter_i,
+    input  logic [1:0]                        cnt_subgroup_i,
+    output logic [LANE_WIDTH-1:0]             cnt_new_counter_o,
 
     // ── Shift-Align Compute Path (4-bit granular, lane-local) ───────────────
     input  logic                              shift_valid_i,
@@ -84,28 +80,18 @@ module hdec_lane_4x64
     input  logic [3:0]                        shift_nibble_i,
     output logic [LANE_WIDTH-1:0]             shift_result_o,
 
-    // -- Add/Sub/Counter Compute Path (HDC badd system path) ---------------
-    input  logic                              addsub_valid_i,
-    input  logic [LANE_WIDTH-1:0]             addsub_old_counter_i,
-    input  logic [15:0]                       addsub_hv_bits_i,
-    output logic [LANE_WIDTH-1:0]             addsub_result_o,
-
-    // -- Clip Compute Path (HDC packed counter threshold) -------------------
+    // ── Clip Compute Path (HDC counter threshold) ───────────────────────────
     input  logic                              clip_valid_i,
     input  logic [LANE_WIDTH-1:0]             clip_counter_i,
     input  logic [3:0]                        clip_threshold_i,
     output logic [15:0]                       clip_bits_o
 );
 
-    // ── Operand Isolation: gate all XOR inputs to 0 when inactive ──────────
-    // Prevents dynamic power from spurious toggling on unused XOR path.
+    // ── XOR Front-End Core ──────────────────────────────────────────────────
     logic [LANE_WIDTH-1:0] bool_src_a, bool_src_b;
     assign bool_src_a = bool_valid_i ? bool_src_a_i : '0;
     assign bool_src_b = bool_valid_i ? bool_src_b_i : '0;
 
-    // ── XOR Front-End Core (combinational, no pipeline delay) ──────────────
-    // Transitional: bool path sits alongside ctrl path.  Final target is
-    // engine-level arbiter + unified Lane compute request.
     logic [LANE_WIDTH-1:0] bool_result;
 
     hdec_lane_boolean_mask i_boolean_mask (
@@ -116,7 +102,7 @@ module hdec_lane_4x64
 
     assign bool_result_o = bool_result;
 
-    // -- HDC popcount over XOR diff ----------------------------------------
+    // ── HDC popcount over XOR diff ─────────────────────────────────────────
     hdec_lane_popcount_compressor i_popcount (
         .mode_i      (1'b0),
         .diff_i      (bool_result),
@@ -129,24 +115,19 @@ module hdec_lane_4x64
         .csa_cout_o  ()
     );
 
-    // -- HDC bundle tail: unsigned packed 4-bit saturating counter update ---
+    // ── HDCU CNT array update ──────────────────────────────────────────────
     hdec_cnt_array i_cnt_array (
-        .clear_i          (1'b0),
-        .update_i         (bundle_valid_i),
-        .old_counter_i    (bundle_old_counter_i),
-        .row0_i           (bundle_row0_i),
-        .row1_i           (bundle_row1_i),
-        .row2_i           (bundle_row2_i),
-        .row3_i           (bundle_row3_i),
-        .row_count_i      (bundle_row_count_i),
-        .subgroup_i       (bundle_subgroup_i),
-        .clip_threshold_i ('0),
-        .new_counter_o    (bundle_counter_result_o),
-        .clip_bits_o      ()
+        .clear_i         (1'b0),
+        .update_i        (cnt_valid_i),
+        .old_counter_i   (cnt_old_counter_i),
+        .hv_word_i       (cnt_hv_word_i),
+        .subgroup_i      (cnt_subgroup_i),
+        .clip_threshold_i('0),
+        .new_counter_o   (cnt_new_counter_o),
+        .clip_bits_o     ()
     );
 
-    // ── Shift-Align Core (combinational static block) ──────────────────────
-    // Gate all shift inputs to 0 when inactive to avoid unused-path toggling.
+    // ── Shift-Align Core ───────────────────────────────────────────────────
     logic [LANE_WIDTH-1:0] shift_src_a, shift_src_b;
     logic [3:0]            shift_nibble;
     assign shift_src_a  = shift_valid_i ? shift_src_a_i  : '0;
@@ -160,28 +141,7 @@ module hdec_lane_4x64
         .result_o      (shift_result_o)
     );
 
-    // -- Add/Sub/Counter Core (combinational static block) ------------------
-    // Current system path uses HDC_BUNDLE ADD only. Future ECC_FULL control is
-    // intentionally not routed through hdec_top in this phase.
-    logic [LANE_WIDTH-1:0] addsub_old_counter, addsub_hv_addend;
-    logic [15:0]           addsub_hv_bits;
-    assign addsub_old_counter = addsub_valid_i ? addsub_old_counter_i : '0;
-    assign addsub_hv_bits     = addsub_valid_i ? addsub_hv_bits_i     : '0;
-
-    for (genvar addsub_bit = 0; addsub_bit < 16; addsub_bit++) begin : gen_addsub_hv_expand
-        assign addsub_hv_addend[4*addsub_bit +: 4] = addsub_hv_bits[addsub_bit] ? 4'b0001 : 4'b0000;
-    end
-
-    hdec_lane_addsub_counter i_addsub_counter (
-        .src_a_i (addsub_old_counter),
-        .src_b_i (addsub_hv_addend),
-        .mode_i  (1'b0),
-        .op_i    (1'b0),
-        .result_o(addsub_result_o),
-        .carry_o ()
-    );
-
-    // -- Clip Core (combinational static block) -----------------------------
+    // ── Clip Core ──────────────────────────────────────────────────────────
     logic [LANE_WIDTH-1:0] clip_counter;
     logic [3:0]            clip_threshold;
     assign clip_counter   = clip_valid_i ? clip_counter_i   : '0;
@@ -242,16 +202,13 @@ module hdec_lane_4x64
                 ctrl_ready_o = 1'b1;
                 if (ctrl_valid_i) begin
                     if (ctrl_is_write_i) begin
-                        // Write: latch data, drive VRF immediately
                         vrf_we_o      = 1'b1;
                         vrf_wa_addr_o = ctrl_wr_reg_i;
                         vrf_wdata_o   = ctrl_wr_data_i;
                     end
                     if (ctrl_is_read_i) begin
-                        // Read: launch VRF address
                         vrf_ra_addr_o = ctrl_rd_reg_i;
                     end
-                    // Passthrough: op + owner go straight to pipeline
                     p0_data_d   = ctrl_is_read_i ? vrf_ra_data_i : ctrl_wr_data_i;
                     p0_op_d     = ctrl_op_i;
                     p0_owner_d  = ctrl_owner_i;
@@ -259,27 +216,27 @@ module hdec_lane_4x64
                 end
             end
 
-            LS_P0: begin  // registered → P1
+            LS_P0: begin
                 p1_data_d   = p0_data_q;
                 p1_op_d     = p0_op_q;
                 p1_owner_d  = p0_owner_q;
                 lane_state_n = LS_P1;
             end
 
-            LS_P1: begin  // registered → P2
+            LS_P1: begin
                 p2_data_d   = p1_data_q;
                 p2_op_d     = p1_op_q;
                 p2_owner_d  = p1_owner_q;
                 lane_state_n = LS_P2;
             end
 
-            LS_P2: begin  // registered → P3
+            LS_P2: begin
                 p3_data_d   = p2_data_q;
                 p3_owner_d  = p2_owner_q;
                 lane_state_n = LS_P3;
             end
 
-            LS_P3: begin  // drive result
+            LS_P3: begin
                 res_valid_o  = 1'b1;
                 res_data_o   = p3_data_q;
                 res_owner_o  = p3_owner_q;

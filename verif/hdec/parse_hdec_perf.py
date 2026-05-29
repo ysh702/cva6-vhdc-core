@@ -108,7 +108,7 @@ def main():
     print("C. COMPUTE PRIMITIVE LATENCY STABILITY")
     print("=" * 90)
 
-    compute_ops = ["HBIND", "HPERM", "HSIM", "HBUNDLE4", "HCLIP", "HMATCH"]
+    compute_ops = ["HBIND", "HPERM", "HSIM", "HCNTADD", "HCNTCLIP", "HMATCH"]
     for op in compute_ops:
         if op in global_st:
             s = global_st[op]
@@ -174,12 +174,12 @@ def main():
         ("VWR64",    "VRF write 64-bit",          "64-bit data",    3,    "always 3"),
         ("VRD64",    "VRF read 64-bit",           "64-bit data",    4,    "always 4"),
         ("HCLR",     "VRF row clear",             "1024-bit row",   7,    "always 7"),
-        ("BCLR",     "BMCA bank clear",           "4-row bank",    19,    "always 19"),
+        ("HCNTCLR",     "CNT bank clear",           "4-row bank",    19,    "always 19"),
         ("HBIND",    "XOR bind",                  "1024-bit vec",  15,    "fixed 15"),
         ("HPERM",    "4-bit granularity permute", "1024-bit vec",  15,    "fixed 15 (init: 3)"),
         ("HSIM",     "similarity (popcount)",     "1024-bit vec",  18,    "fixed 18"),
-        ("HBUNDLE4", "4-row majority bundle",     "4×1024-bit",    63,    "fixed 63 (init: 3)"),
-        ("HCLIP",    "threshold clip",            "1024-bit vec",  39,    "fixed 39"),
+        ("HCNTADD", "4-sample CNT accumulate",     "4×1024-bit",    63,    "fixed 63 (init: 3)"),
+        ("HCNTCLIP",    "threshold clip",            "1024-bit vec",  39,    "fixed 39"),
         ("HMATCH",   "multi-class match",         "N×1024-bit",    3,      "varies by class count: 3(cfg)+N×15"),
     ]
 

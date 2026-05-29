@@ -42,15 +42,15 @@ def main():
     preload_start = None
     compute_start = None
     for i, (op, _) in enumerate(records):
-        if op in ("HCLR", "BCLR") and preload_start is None:
+        if op in ("HCLR", "HCNTCLR") and preload_start is None:
             preload_start = i
-        elif op in ("HBUNDLE4", "HCLIP", "HMATCH") and compute_start is None:
+        elif op in ("HCNTADD", "HCNTCLIP", "HMATCH") and compute_start is None:
             compute_start = i
 
     if compute_start is None:
         compute_start = len(records)
 
-    # Find init boundary: all HCLR/BCLR before first VADDR
+    # Find init boundary: all HCLR/HCNTCLR before first VADDR
     init_end = 0
     for i, (op, _) in enumerate(records):
         if op == "VADDR":
@@ -97,7 +97,7 @@ def main():
     print()
 
     for region_name, recs, reg_total in [
-        ("Init (HCLR+BCLR)", init_recs, init_total),
+        ("Init (HCLR+HCNTCLR)", init_recs, init_total),
         ("Preload (prototypes + basis HVs)", preload_recs, preload_total),
         ("Compute (HBUNDLE4+HCLIP+HMATCH)", compute_recs, compute_total),
     ]:
@@ -137,13 +137,13 @@ def main():
 
     summary = [
         ("Cold-start total", cold_total, 100.0),
-        ("  Init (HCLR+BCLR)", init_total, init_total / cold_total * 100),
+        ("  Init (HCLR+HCNTCLR)", init_total, init_total / cold_total * 100),
         ("  Data Preload", preload_total, preload_total / cold_total * 100),
         ("  Compute Kernel", compute_total, compute_total / cold_total * 100),
         ("", 0, 0),
         ("Steady-state (per query)", steady_total, 0),
-        ("  HBUNDLE4", compute_st.get("HBUNDLE4", {}).get("total", 0), 0),
-        ("  HCLIP", compute_st.get("HCLIP", {}).get("total", 0), 0),
+        ("  HBUNDLE4", compute_st.get("HCNTADD", {}).get("total", 0), 0),
+        ("  HCLIP", compute_st.get("HCNTCLIP", {}).get("total", 0), 0),
         ("  HMATCH (4 classes)", compute_st.get("HMATCH", {}).get("total", 0), 0),
     ]
 

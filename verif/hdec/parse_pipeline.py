@@ -9,7 +9,7 @@
 phases = [
     ("1. Clear/Init", [
         ("HCLR x7", 7, 7, 49),
-        ("BCLR x1", 1, 19, 19),
+        ("HCNTCLR x1", 1, 19, 19),
     ]),
     ("2. Data Preload (fill HV1/HV3)", [
         ("VADDR", 32, 3, 96),
@@ -22,15 +22,15 @@ phases = [
         ("VADDR", 1, 3, 3),
         ("VRD64", 1, 4, 4),
     ]),
-    ("5. HBUNDLE4 Compute", [
-        ("HBUNDLE4", 1, 63, 63),
+    ("5. HCNTADD Compute", [
+        ("HCNTADD", 1, 63, 63),
     ]),
     ("6. VCHECK x2 (HBUNDLE4 verify)", [
         ("VADDR", 2, 3, 6),
         ("VRD64", 2, 4, 8),
     ]),
     ("7. HCLIP Compute", [
-        ("HCLIP", 1, 39, 39),
+        ("HCNTCLIP", 1, 39, 39),
     ]),
     ("8. VCHECK x2 (HCLIP verify)", [
         ("VADDR", 2, 3, 6),
@@ -77,9 +77,9 @@ print("=" * 90)
 print()
 
 categories = [
-    ("Clear/Init", ["HCLR", "BCLR"], 68),
+    ("Clear/Init", ["HCLR", "HCNTCLR"], 68),
     ("Data Preload (VADDR+VWR64)", ["VADDR", "VWR64"], 192),
-    ("HDC Compute Kernel", ["HBIND", "HBUNDLE4", "HCLIP", "HSIM", "HMATCH"], 213),
+    ("HDC Compute Kernel", ["HBIND", "HCNTADD", "HCNTCLIP", "HSIM", "HMATCH"], 213),
     ("Verification Overhead (VCHECK)", ["VADDR (VCHECK)", "VRD64 (VCHECK)"], 35),
 ]
 
@@ -122,8 +122,8 @@ print()
 
 compute_ops = [
     ("HBIND", 1, 15, 15),
-    ("HBUNDLE4", 1, 63, 63),
-    ("HCLIP", 1, 39, 39),
+    ("HCNTADD", 1, 63, 63),
+    ("HCNTCLIP", 1, 39, 39),
     ("HSIM", 1, 18, 18),
     ("HMATCH (5 classes)", 1, 78, 78),
 ]
@@ -147,8 +147,8 @@ throughput = [
     ("HBIND", 1, 15, 1024),
     ("HPERM", 1, 15, 1024),
     ("HSIM", 1, 18, 1024),
-    ("HBUNDLE4", 4, 63, 4096),
-    ("HCLIP", 1, 39, 1024),
+    ("HCNTADD", 4, 63, 4096),
+    ("HCNTCLIP", 1, 39, 1024),
     ("HMATCH (5 class)", 5, 78, 5120),
 ]
 

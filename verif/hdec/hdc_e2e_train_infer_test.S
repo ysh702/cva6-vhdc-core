@@ -5,15 +5,15 @@
 # Ladder C: full 4-class train + 8-sample inference
 #
 # Parameter reference:
-#   BCLR acc0:        a0 = 0
-#   BCLR acc1:        a0 = 1
-#   HBUNDLE4 base=4 acc0:  0x04  (a0[2:0]=4, a0[3]=0)
-#   HBUNDLE4 base=4 acc1:  0x0C  (a0[2:0]=4, a0[3]=1)
-#   HCLIP dst=4 acc1 t=2:  0x2C  (a0[2:0]=4, a0[3]=1, a0[7:4]=2)
-#   HCLIP dst=0 acc0 t=2:  0x20
-#   HCLIP dst=1 acc0 t=2:  0x21
-#   HCLIP dst=2 acc0 t=2:  0x22
-#   HCLIP dst=3 acc0 t=2:  0x23
+#   HCNTCLR acc0:        a0 = 0
+#   HCNTCLR acc1:        a0 = 1
+
+
+#   HCNTCLIP dst=4 acc1 t=2:  0x2C  (a0[2:0]=4, a0[3]=1, a0[7:4]=2)
+#   HCNTCLIP dst=0 acc0 t=2:  0x20
+#   HCNTCLIP dst=1 acc0 t=2:  0x21
+#   HCNTCLIP dst=2 acc0 t=2:  0x22
+#   HCNTCLIP dst=3 acc0 t=2:  0x23
 #   HMATCH result: min_idx=(result>>11)&0xFF, min_dist=result&0x7FF
 #
 # Target patterns (each HV = 16×64-bit words):
@@ -32,17 +32,17 @@
     .globl main
 
 # --- Macros for HDEC instructions ---
-    .macro BCLR acc
+    .macro HCNTCLR acc
     li a0, \acc
     .insn r 0x0B, 3, 2, t0, a0, zero
     .endm
 
-    .macro HBUNDLE4 param
+    .macro HCNTADD param
     li a0, \param
-    .insn r 0x0B, 4, 3, t0, a0, zero
+    .insn r 0x0B, 4, 2, t0, a0, zero
     .endm
 
-    .macro HCLIP param
+    .macro HCNTCLIP param
     li a0, \param
     .insn r 0x0B, 0, 3, t0, a0, zero
     .endm
@@ -86,9 +86,9 @@ main:
     FILL_HV 5, s0       # HV5 = ZERO
     FILL_HV 6, s0       # HV6 = ZERO
     FILL_HV 7, s0       # HV7 = ZERO
-    BCLR 1
-    HBUNDLE4 0x0C       # bundle [FFFF,0,0,0] → acc1: counter=1 where FFFF=1
-    HCLIP 0x2C          # dst=4, acc1, t=2 → HV4 = ZERO (1 < 2)
+    HCNTCLR 1
+    HCNTADD 0x14; HCNTADD 0x15; HCNTADD 0x16; HCNTADD 0x17       # bundle [FFFF,0,0,0] → acc1: counter=1 where FFFF=1
+    HCNTCLIP 0x2C          # dst=4, acc1, t=2 → HV4 = ZERO (1 < 2)
     HMATCH 0x0404       # query=4, base=0, num=4
     srli t1, t0, 11
     andi t1, t1, 0xFF
@@ -102,9 +102,9 @@ main:
     FILL_HV 5, s1       # HV5 = FFFF
     FILL_HV 6, s1       # HV6 = FFFF
     FILL_HV 7, s0       # HV7 = ZERO
-    BCLR 1
-    HBUNDLE4 0x0C       # bundle [FFFF,FFFF,FFFF,0] → counter=3 where FFFF=1
-    HCLIP 0x2C          # HV4 = FFFF (3 ≥ 2)
+    HCNTCLR 1
+    HCNTADD 0x14; HCNTADD 0x15; HCNTADD 0x16; HCNTADD 0x17       # bundle [FFFF,FFFF,FFFF,0] → counter=3 where FFFF=1
+    HCNTCLIP 0x2C          # HV4 = FFFF (3 ≥ 2)
     HMATCH 0x0404
     srli t1, t0, 11
     andi t1, t1, 0xFF
@@ -118,9 +118,9 @@ main:
     FILL_HV 5, s2       # HV5 = AAAA
     FILL_HV 6, s2       # HV6 = AAAA
     FILL_HV 7, s3       # HV7 = 5555
-    BCLR 1
-    HBUNDLE4 0x0C       # 3×AAAA + 1×5555 → counter=3 where AAAA=1, counter=1 where AAAA=0
-    HCLIP 0x2C          # HV4 = AAAA (3 ≥ 2, 1 < 2)
+    HCNTCLR 1
+    HCNTADD 0x14; HCNTADD 0x15; HCNTADD 0x16; HCNTADD 0x17       # 3×AAAA + 1×5555 → counter=3 where AAAA=1, counter=1 where AAAA=0
+    HCNTCLIP 0x2C          # HV4 = AAAA (3 ≥ 2, 1 < 2)
     HMATCH 0x0404
     srli t1, t0, 11
     andi t1, t1, 0xFF
@@ -134,9 +134,9 @@ main:
     FILL_HV 5, s3       # HV5 = 5555
     FILL_HV 6, s3       # HV6 = 5555
     FILL_HV 7, s2       # HV7 = AAAA
-    BCLR 1
-    HBUNDLE4 0x0C       # 3×5555 + 1×AAAA → counter=3 where 5555=1, counter=1 where 5555=0
-    HCLIP 0x2C          # HV4 = 5555 (3 ≥ 2, 1 < 2)
+    HCNTCLR 1
+    HCNTADD 0x14; HCNTADD 0x15; HCNTADD 0x16; HCNTADD 0x17       # 3×5555 + 1×AAAA → counter=3 where 5555=1, counter=1 where 5555=0
+    HCNTCLIP 0x2C          # HV4 = 5555 (3 ≥ 2, 1 < 2)
     HMATCH 0x0404
     srli t1, t0, 11
     andi t1, t1, 0xFF
@@ -148,118 +148,118 @@ main:
 
 # =============================================================================
 # LADDER B: Prototype Build Self-Check
-#   For each class: train 4 samples into acc0, HCLIP to produce prototype,
+#   For each class: train 4 samples into acc0, HCNTCLIP to produce prototype,
 #   then verify prototype matches expected target via HMATCH.
 #   Fail codes: class0=0xB0, class1=0xB1, class2=0xB2, class3=0xB3
 # =============================================================================
 
     # --- Class 0: train 4 samples, prototype into HV0, verify vs HV4=ZERO ---
-    BCLR 0
+    HCNTCLR 0
     # sample 0: noise at pos 0 → (FFFF, ZERO, ZERO, ZERO)
     FILL_HV 4, s1; FILL_HV 5, s0; FILL_HV 6, s0; FILL_HV 7, s0
-    BCLR 1; HBUNDLE4 0x0C; HCLIP 0x2C
+    HCNTCLR 1; HCNTADD 0x14; HCNTADD 0x15; HCNTADD 0x16; HCNTADD 0x17; HCNTCLIP 0x2C
     FILL_HV 5, s0; FILL_HV 6, s0; FILL_HV 7, s0
-    HBUNDLE4 0x04
+    HCNTADD 4; HCNTADD 5; HCNTADD 6; HCNTADD 7
     # sample 1: noise at pos 1 → (ZERO, FFFF, ZERO, ZERO)
     FILL_HV 4, s0; FILL_HV 5, s1; FILL_HV 6, s0; FILL_HV 7, s0
-    BCLR 1; HBUNDLE4 0x0C; HCLIP 0x2C
+    HCNTCLR 1; HCNTADD 0x14; HCNTADD 0x15; HCNTADD 0x16; HCNTADD 0x17; HCNTCLIP 0x2C
     FILL_HV 5, s0; FILL_HV 6, s0; FILL_HV 7, s0
-    HBUNDLE4 0x04
+    HCNTADD 4; HCNTADD 5; HCNTADD 6; HCNTADD 7
     # sample 2: noise at pos 2 → (ZERO, ZERO, FFFF, ZERO)
     FILL_HV 4, s0; FILL_HV 5, s0; FILL_HV 6, s1; FILL_HV 7, s0
-    BCLR 1; HBUNDLE4 0x0C; HCLIP 0x2C
+    HCNTCLR 1; HCNTADD 0x14; HCNTADD 0x15; HCNTADD 0x16; HCNTADD 0x17; HCNTCLIP 0x2C
     FILL_HV 5, s0; FILL_HV 6, s0; FILL_HV 7, s0
-    HBUNDLE4 0x04
+    HCNTADD 4; HCNTADD 5; HCNTADD 6; HCNTADD 7
     # sample 3: noise at pos 3 → (ZERO, ZERO, ZERO, FFFF)
     FILL_HV 4, s0; FILL_HV 5, s0; FILL_HV 6, s0; FILL_HV 7, s1
-    BCLR 1; HBUNDLE4 0x0C; HCLIP 0x2C
+    HCNTCLR 1; HCNTADD 0x14; HCNTADD 0x15; HCNTADD 0x16; HCNTADD 0x17; HCNTCLIP 0x2C
     FILL_HV 5, s0; FILL_HV 6, s0; FILL_HV 7, s0
-    HBUNDLE4 0x04
-    HCLIP 0x20         # HV0 = clip(acc0, t=2)
+    HCNTADD 4; HCNTADD 5; HCNTADD 6; HCNTADD 7
+    HCNTCLIP 0x20         # HV0 = clip(acc0, t=2)
     FILL_HV 4, s0      # HV4 = ZERO (ref)
     HMATCH 0x0140      # query=0, base=4, num=1
     andi t1, t0, 0x7FF
     bnez t1, fail_b0
 
     # --- Class 1: train 4 samples, prototype into HV1, verify vs HV4=FFFF ---
-    BCLR 0
+    HCNTCLR 0
     # sample 0: noise at pos 0 → (ZERO, FFFF, FFFF, FFFF)
     FILL_HV 4, s0; FILL_HV 5, s1; FILL_HV 6, s1; FILL_HV 7, s1
-    BCLR 1; HBUNDLE4 0x0C; HCLIP 0x2C
+    HCNTCLR 1; HCNTADD 0x14; HCNTADD 0x15; HCNTADD 0x16; HCNTADD 0x17; HCNTCLIP 0x2C
     FILL_HV 5, s0; FILL_HV 6, s0; FILL_HV 7, s0
-    HBUNDLE4 0x04
+    HCNTADD 4; HCNTADD 5; HCNTADD 6; HCNTADD 7
     # sample 1: noise at pos 1 → (FFFF, ZERO, FFFF, FFFF)
     FILL_HV 4, s1; FILL_HV 5, s0; FILL_HV 6, s1; FILL_HV 7, s1
-    BCLR 1; HBUNDLE4 0x0C; HCLIP 0x2C
+    HCNTCLR 1; HCNTADD 0x14; HCNTADD 0x15; HCNTADD 0x16; HCNTADD 0x17; HCNTCLIP 0x2C
     FILL_HV 5, s0; FILL_HV 6, s0; FILL_HV 7, s0
-    HBUNDLE4 0x04
+    HCNTADD 4; HCNTADD 5; HCNTADD 6; HCNTADD 7
     # sample 2: noise at pos 2 → (FFFF, FFFF, ZERO, FFFF)
     FILL_HV 4, s1; FILL_HV 5, s1; FILL_HV 6, s0; FILL_HV 7, s1
-    BCLR 1; HBUNDLE4 0x0C; HCLIP 0x2C
+    HCNTCLR 1; HCNTADD 0x14; HCNTADD 0x15; HCNTADD 0x16; HCNTADD 0x17; HCNTCLIP 0x2C
     FILL_HV 5, s0; FILL_HV 6, s0; FILL_HV 7, s0
-    HBUNDLE4 0x04
+    HCNTADD 4; HCNTADD 5; HCNTADD 6; HCNTADD 7
     # sample 3: noise at pos 3 → (FFFF, FFFF, FFFF, ZERO)
     FILL_HV 4, s1; FILL_HV 5, s1; FILL_HV 6, s1; FILL_HV 7, s0
-    BCLR 1; HBUNDLE4 0x0C; HCLIP 0x2C
+    HCNTCLR 1; HCNTADD 0x14; HCNTADD 0x15; HCNTADD 0x16; HCNTADD 0x17; HCNTCLIP 0x2C
     FILL_HV 5, s0; FILL_HV 6, s0; FILL_HV 7, s0
-    HBUNDLE4 0x04
-    HCLIP 0x21         # HV1 = clip(acc0, t=2)
+    HCNTADD 4; HCNTADD 5; HCNTADD 6; HCNTADD 7
+    HCNTCLIP 0x21         # HV1 = clip(acc0, t=2)
     FILL_HV 4, s1      # HV4 = FFFF (ref)
     HMATCH 0x0141      # query=1, base=4, num=1
     andi t1, t0, 0x7FF
     bnez t1, fail_b1
 
     # --- Class 2: train 4 samples, prototype into HV2, verify vs HV4=AAAA ---
-    BCLR 0
+    HCNTCLR 0
     # sample 0: noise at pos 0 → (5555, AAAA, AAAA, AAAA)
     FILL_HV 4, s3; FILL_HV 5, s2; FILL_HV 6, s2; FILL_HV 7, s2
-    BCLR 1; HBUNDLE4 0x0C; HCLIP 0x2C
+    HCNTCLR 1; HCNTADD 0x14; HCNTADD 0x15; HCNTADD 0x16; HCNTADD 0x17; HCNTCLIP 0x2C
     FILL_HV 5, s0; FILL_HV 6, s0; FILL_HV 7, s0
-    HBUNDLE4 0x04
+    HCNTADD 4; HCNTADD 5; HCNTADD 6; HCNTADD 7
     # sample 1: noise at pos 1 → (AAAA, 5555, AAAA, AAAA)
     FILL_HV 4, s2; FILL_HV 5, s3; FILL_HV 6, s2; FILL_HV 7, s2
-    BCLR 1; HBUNDLE4 0x0C; HCLIP 0x2C
+    HCNTCLR 1; HCNTADD 0x14; HCNTADD 0x15; HCNTADD 0x16; HCNTADD 0x17; HCNTCLIP 0x2C
     FILL_HV 5, s0; FILL_HV 6, s0; FILL_HV 7, s0
-    HBUNDLE4 0x04
+    HCNTADD 4; HCNTADD 5; HCNTADD 6; HCNTADD 7
     # sample 2: noise at pos 2 → (AAAA, AAAA, 5555, AAAA)
     FILL_HV 4, s2; FILL_HV 5, s2; FILL_HV 6, s3; FILL_HV 7, s2
-    BCLR 1; HBUNDLE4 0x0C; HCLIP 0x2C
+    HCNTCLR 1; HCNTADD 0x14; HCNTADD 0x15; HCNTADD 0x16; HCNTADD 0x17; HCNTCLIP 0x2C
     FILL_HV 5, s0; FILL_HV 6, s0; FILL_HV 7, s0
-    HBUNDLE4 0x04
+    HCNTADD 4; HCNTADD 5; HCNTADD 6; HCNTADD 7
     # sample 3: noise at pos 3 → (AAAA, AAAA, AAAA, 5555)
     FILL_HV 4, s2; FILL_HV 5, s2; FILL_HV 6, s2; FILL_HV 7, s3
-    BCLR 1; HBUNDLE4 0x0C; HCLIP 0x2C
+    HCNTCLR 1; HCNTADD 0x14; HCNTADD 0x15; HCNTADD 0x16; HCNTADD 0x17; HCNTCLIP 0x2C
     FILL_HV 5, s0; FILL_HV 6, s0; FILL_HV 7, s0
-    HBUNDLE4 0x04
-    HCLIP 0x22         # HV2 = clip(acc0, t=2)
+    HCNTADD 4; HCNTADD 5; HCNTADD 6; HCNTADD 7
+    HCNTCLIP 0x22         # HV2 = clip(acc0, t=2)
     FILL_HV 4, s2      # HV4 = AAAA (ref)
     HMATCH 0x0142      # query=2, base=4, num=1
     andi t1, t0, 0x7FF
     bnez t1, fail_b2
 
     # --- Class 3: train 4 samples, prototype into HV3, verify vs HV4=5555 ---
-    BCLR 0
+    HCNTCLR 0
     # sample 0: noise at pos 0 → (AAAA, 5555, 5555, 5555)
     FILL_HV 4, s2; FILL_HV 5, s3; FILL_HV 6, s3; FILL_HV 7, s3
-    BCLR 1; HBUNDLE4 0x0C; HCLIP 0x2C
+    HCNTCLR 1; HCNTADD 0x14; HCNTADD 0x15; HCNTADD 0x16; HCNTADD 0x17; HCNTCLIP 0x2C
     FILL_HV 5, s0; FILL_HV 6, s0; FILL_HV 7, s0
-    HBUNDLE4 0x04
+    HCNTADD 4; HCNTADD 5; HCNTADD 6; HCNTADD 7
     # sample 1: noise at pos 1 → (5555, AAAA, 5555, 5555)
     FILL_HV 4, s3; FILL_HV 5, s2; FILL_HV 6, s3; FILL_HV 7, s3
-    BCLR 1; HBUNDLE4 0x0C; HCLIP 0x2C
+    HCNTCLR 1; HCNTADD 0x14; HCNTADD 0x15; HCNTADD 0x16; HCNTADD 0x17; HCNTCLIP 0x2C
     FILL_HV 5, s0; FILL_HV 6, s0; FILL_HV 7, s0
-    HBUNDLE4 0x04
+    HCNTADD 4; HCNTADD 5; HCNTADD 6; HCNTADD 7
     # sample 2: noise at pos 2 → (5555, 5555, AAAA, 5555)
     FILL_HV 4, s3; FILL_HV 5, s3; FILL_HV 6, s2; FILL_HV 7, s3
-    BCLR 1; HBUNDLE4 0x0C; HCLIP 0x2C
+    HCNTCLR 1; HCNTADD 0x14; HCNTADD 0x15; HCNTADD 0x16; HCNTADD 0x17; HCNTCLIP 0x2C
     FILL_HV 5, s0; FILL_HV 6, s0; FILL_HV 7, s0
-    HBUNDLE4 0x04
+    HCNTADD 4; HCNTADD 5; HCNTADD 6; HCNTADD 7
     # sample 3: noise at pos 3 → (5555, 5555, 5555, AAAA)
     FILL_HV 4, s3; FILL_HV 5, s3; FILL_HV 6, s3; FILL_HV 7, s2
-    BCLR 1; HBUNDLE4 0x0C; HCLIP 0x2C
+    HCNTCLR 1; HCNTADD 0x14; HCNTADD 0x15; HCNTADD 0x16; HCNTADD 0x17; HCNTCLIP 0x2C
     FILL_HV 5, s0; FILL_HV 6, s0; FILL_HV 7, s0
-    HBUNDLE4 0x04
-    HCLIP 0x23         # HV3 = clip(acc0, t=2)
+    HCNTADD 4; HCNTADD 5; HCNTADD 6; HCNTADD 7
+    HCNTCLIP 0x23         # HV3 = clip(acc0, t=2)
     FILL_HV 4, s3      # HV4 = 5555 (ref)
     HMATCH 0x0143      # query=3, base=4, num=1
     andi t1, t0, 0x7FF
@@ -276,127 +276,127 @@ main:
     # --- Clear working area ---
     FILL_HV 0, s0; FILL_HV 1, s0; FILL_HV 2, s0; FILL_HV 3, s0
     FILL_HV 4, s0; FILL_HV 5, s0; FILL_HV 6, s0; FILL_HV 7, s0
-    BCLR 0; BCLR 1
+    HCNTCLR 0; HCNTCLR 1
 
     # --- Train class 0 → HV0 (same as Ladder B class 0) ---
-    BCLR 0
+    HCNTCLR 0
     FILL_HV 4, s1; FILL_HV 5, s0; FILL_HV 6, s0; FILL_HV 7, s0
-    BCLR 1; HBUNDLE4 0x0C; HCLIP 0x2C
-    FILL_HV 5, s0; FILL_HV 6, s0; FILL_HV 7, s0; HBUNDLE4 0x04
+    HCNTCLR 1; HCNTADD 0x14; HCNTADD 0x15; HCNTADD 0x16; HCNTADD 0x17; HCNTCLIP 0x2C
+    FILL_HV 5, s0; FILL_HV 6, s0; FILL_HV 7, s0; HCNTADD 4; HCNTADD 5; HCNTADD 6; HCNTADD 7
     FILL_HV 4, s0; FILL_HV 5, s1; FILL_HV 6, s0; FILL_HV 7, s0
-    BCLR 1; HBUNDLE4 0x0C; HCLIP 0x2C
-    FILL_HV 5, s0; FILL_HV 6, s0; FILL_HV 7, s0; HBUNDLE4 0x04
+    HCNTCLR 1; HCNTADD 0x14; HCNTADD 0x15; HCNTADD 0x16; HCNTADD 0x17; HCNTCLIP 0x2C
+    FILL_HV 5, s0; FILL_HV 6, s0; FILL_HV 7, s0; HCNTADD 4; HCNTADD 5; HCNTADD 6; HCNTADD 7
     FILL_HV 4, s0; FILL_HV 5, s0; FILL_HV 6, s1; FILL_HV 7, s0
-    BCLR 1; HBUNDLE4 0x0C; HCLIP 0x2C
-    FILL_HV 5, s0; FILL_HV 6, s0; FILL_HV 7, s0; HBUNDLE4 0x04
+    HCNTCLR 1; HCNTADD 0x14; HCNTADD 0x15; HCNTADD 0x16; HCNTADD 0x17; HCNTCLIP 0x2C
+    FILL_HV 5, s0; FILL_HV 6, s0; FILL_HV 7, s0; HCNTADD 4; HCNTADD 5; HCNTADD 6; HCNTADD 7
     FILL_HV 4, s0; FILL_HV 5, s0; FILL_HV 6, s0; FILL_HV 7, s1
-    BCLR 1; HBUNDLE4 0x0C; HCLIP 0x2C
-    FILL_HV 5, s0; FILL_HV 6, s0; FILL_HV 7, s0; HBUNDLE4 0x04
-    HCLIP 0x20
+    HCNTCLR 1; HCNTADD 0x14; HCNTADD 0x15; HCNTADD 0x16; HCNTADD 0x17; HCNTCLIP 0x2C
+    FILL_HV 5, s0; FILL_HV 6, s0; FILL_HV 7, s0; HCNTADD 4; HCNTADD 5; HCNTADD 6; HCNTADD 7
+    HCNTCLIP 0x20
 
     # --- Train class 1 → HV1 ---
-    BCLR 0
+    HCNTCLR 0
     FILL_HV 4, s0; FILL_HV 5, s1; FILL_HV 6, s1; FILL_HV 7, s1
-    BCLR 1; HBUNDLE4 0x0C; HCLIP 0x2C
-    FILL_HV 5, s0; FILL_HV 6, s0; FILL_HV 7, s0; HBUNDLE4 0x04
+    HCNTCLR 1; HCNTADD 0x14; HCNTADD 0x15; HCNTADD 0x16; HCNTADD 0x17; HCNTCLIP 0x2C
+    FILL_HV 5, s0; FILL_HV 6, s0; FILL_HV 7, s0; HCNTADD 4; HCNTADD 5; HCNTADD 6; HCNTADD 7
     FILL_HV 4, s1; FILL_HV 5, s0; FILL_HV 6, s1; FILL_HV 7, s1
-    BCLR 1; HBUNDLE4 0x0C; HCLIP 0x2C
-    FILL_HV 5, s0; FILL_HV 6, s0; FILL_HV 7, s0; HBUNDLE4 0x04
+    HCNTCLR 1; HCNTADD 0x14; HCNTADD 0x15; HCNTADD 0x16; HCNTADD 0x17; HCNTCLIP 0x2C
+    FILL_HV 5, s0; FILL_HV 6, s0; FILL_HV 7, s0; HCNTADD 4; HCNTADD 5; HCNTADD 6; HCNTADD 7
     FILL_HV 4, s1; FILL_HV 5, s1; FILL_HV 6, s0; FILL_HV 7, s1
-    BCLR 1; HBUNDLE4 0x0C; HCLIP 0x2C
-    FILL_HV 5, s0; FILL_HV 6, s0; FILL_HV 7, s0; HBUNDLE4 0x04
+    HCNTCLR 1; HCNTADD 0x14; HCNTADD 0x15; HCNTADD 0x16; HCNTADD 0x17; HCNTCLIP 0x2C
+    FILL_HV 5, s0; FILL_HV 6, s0; FILL_HV 7, s0; HCNTADD 4; HCNTADD 5; HCNTADD 6; HCNTADD 7
     FILL_HV 4, s1; FILL_HV 5, s1; FILL_HV 6, s1; FILL_HV 7, s0
-    BCLR 1; HBUNDLE4 0x0C; HCLIP 0x2C
-    FILL_HV 5, s0; FILL_HV 6, s0; FILL_HV 7, s0; HBUNDLE4 0x04
-    HCLIP 0x21
+    HCNTCLR 1; HCNTADD 0x14; HCNTADD 0x15; HCNTADD 0x16; HCNTADD 0x17; HCNTCLIP 0x2C
+    FILL_HV 5, s0; FILL_HV 6, s0; FILL_HV 7, s0; HCNTADD 4; HCNTADD 5; HCNTADD 6; HCNTADD 7
+    HCNTCLIP 0x21
 
     # --- Train class 2 → HV2 ---
-    BCLR 0
+    HCNTCLR 0
     FILL_HV 4, s3; FILL_HV 5, s2; FILL_HV 6, s2; FILL_HV 7, s2
-    BCLR 1; HBUNDLE4 0x0C; HCLIP 0x2C
-    FILL_HV 5, s0; FILL_HV 6, s0; FILL_HV 7, s0; HBUNDLE4 0x04
+    HCNTCLR 1; HCNTADD 0x14; HCNTADD 0x15; HCNTADD 0x16; HCNTADD 0x17; HCNTCLIP 0x2C
+    FILL_HV 5, s0; FILL_HV 6, s0; FILL_HV 7, s0; HCNTADD 4; HCNTADD 5; HCNTADD 6; HCNTADD 7
     FILL_HV 4, s2; FILL_HV 5, s3; FILL_HV 6, s2; FILL_HV 7, s2
-    BCLR 1; HBUNDLE4 0x0C; HCLIP 0x2C
-    FILL_HV 5, s0; FILL_HV 6, s0; FILL_HV 7, s0; HBUNDLE4 0x04
+    HCNTCLR 1; HCNTADD 0x14; HCNTADD 0x15; HCNTADD 0x16; HCNTADD 0x17; HCNTCLIP 0x2C
+    FILL_HV 5, s0; FILL_HV 6, s0; FILL_HV 7, s0; HCNTADD 4; HCNTADD 5; HCNTADD 6; HCNTADD 7
     FILL_HV 4, s2; FILL_HV 5, s2; FILL_HV 6, s3; FILL_HV 7, s2
-    BCLR 1; HBUNDLE4 0x0C; HCLIP 0x2C
-    FILL_HV 5, s0; FILL_HV 6, s0; FILL_HV 7, s0; HBUNDLE4 0x04
+    HCNTCLR 1; HCNTADD 0x14; HCNTADD 0x15; HCNTADD 0x16; HCNTADD 0x17; HCNTCLIP 0x2C
+    FILL_HV 5, s0; FILL_HV 6, s0; FILL_HV 7, s0; HCNTADD 4; HCNTADD 5; HCNTADD 6; HCNTADD 7
     FILL_HV 4, s2; FILL_HV 5, s2; FILL_HV 6, s2; FILL_HV 7, s3
-    BCLR 1; HBUNDLE4 0x0C; HCLIP 0x2C
-    FILL_HV 5, s0; FILL_HV 6, s0; FILL_HV 7, s0; HBUNDLE4 0x04
-    HCLIP 0x22
+    HCNTCLR 1; HCNTADD 0x14; HCNTADD 0x15; HCNTADD 0x16; HCNTADD 0x17; HCNTCLIP 0x2C
+    FILL_HV 5, s0; FILL_HV 6, s0; FILL_HV 7, s0; HCNTADD 4; HCNTADD 5; HCNTADD 6; HCNTADD 7
+    HCNTCLIP 0x22
 
     # --- Train class 3 → HV3 ---
-    BCLR 0
+    HCNTCLR 0
     FILL_HV 4, s2; FILL_HV 5, s3; FILL_HV 6, s3; FILL_HV 7, s3
-    BCLR 1; HBUNDLE4 0x0C; HCLIP 0x2C
-    FILL_HV 5, s0; FILL_HV 6, s0; FILL_HV 7, s0; HBUNDLE4 0x04
+    HCNTCLR 1; HCNTADD 0x14; HCNTADD 0x15; HCNTADD 0x16; HCNTADD 0x17; HCNTCLIP 0x2C
+    FILL_HV 5, s0; FILL_HV 6, s0; FILL_HV 7, s0; HCNTADD 4; HCNTADD 5; HCNTADD 6; HCNTADD 7
     FILL_HV 4, s3; FILL_HV 5, s2; FILL_HV 6, s3; FILL_HV 7, s3
-    BCLR 1; HBUNDLE4 0x0C; HCLIP 0x2C
-    FILL_HV 5, s0; FILL_HV 6, s0; FILL_HV 7, s0; HBUNDLE4 0x04
+    HCNTCLR 1; HCNTADD 0x14; HCNTADD 0x15; HCNTADD 0x16; HCNTADD 0x17; HCNTCLIP 0x2C
+    FILL_HV 5, s0; FILL_HV 6, s0; FILL_HV 7, s0; HCNTADD 4; HCNTADD 5; HCNTADD 6; HCNTADD 7
     FILL_HV 4, s3; FILL_HV 5, s3; FILL_HV 6, s2; FILL_HV 7, s3
-    BCLR 1; HBUNDLE4 0x0C; HCLIP 0x2C
-    FILL_HV 5, s0; FILL_HV 6, s0; FILL_HV 7, s0; HBUNDLE4 0x04
+    HCNTCLR 1; HCNTADD 0x14; HCNTADD 0x15; HCNTADD 0x16; HCNTADD 0x17; HCNTCLIP 0x2C
+    FILL_HV 5, s0; FILL_HV 6, s0; FILL_HV 7, s0; HCNTADD 4; HCNTADD 5; HCNTADD 6; HCNTADD 7
     FILL_HV 4, s3; FILL_HV 5, s3; FILL_HV 6, s3; FILL_HV 7, s2
-    BCLR 1; HBUNDLE4 0x0C; HCLIP 0x2C
-    FILL_HV 5, s0; FILL_HV 6, s0; FILL_HV 7, s0; HBUNDLE4 0x04
-    HCLIP 0x23
+    HCNTCLR 1; HCNTADD 0x14; HCNTADD 0x15; HCNTADD 0x16; HCNTADD 0x17; HCNTCLIP 0x2C
+    FILL_HV 5, s0; FILL_HV 6, s0; FILL_HV 7, s0; HCNTADD 4; HCNTADD 5; HCNTADD 6; HCNTADD 7
+    HCNTCLIP 0x23
 
     # --- Inference: 8 test samples ---
     # expected labels: 0, 0, 1, 1, 2, 2, 3, 3
 
     # sample 0: class 0, noise at pos 0 → (FFFF, ZERO, ZERO, ZERO)
     FILL_HV 4, s1; FILL_HV 5, s0; FILL_HV 6, s0; FILL_HV 7, s0
-    BCLR 1; HBUNDLE4 0x0C; HCLIP 0x2C; HMATCH 0x0404
+    HCNTCLR 1; HCNTADD 0x14; HCNTADD 0x15; HCNTADD 0x16; HCNTADD 0x17; HCNTCLIP 0x2C; HMATCH 0x0404
     srli t1, t0, 11; andi t1, t1, 0xFF
     bnez t1, fail_c0
     andi t1, t0, 0x7FF; bnez t1, fail_c0
 
     # sample 1: class 0, noise at pos 2 → (ZERO, ZERO, FFFF, ZERO)
     FILL_HV 4, s0; FILL_HV 5, s0; FILL_HV 6, s1; FILL_HV 7, s0
-    BCLR 1; HBUNDLE4 0x0C; HCLIP 0x2C; HMATCH 0x0404
+    HCNTCLR 1; HCNTADD 0x14; HCNTADD 0x15; HCNTADD 0x16; HCNTADD 0x17; HCNTCLIP 0x2C; HMATCH 0x0404
     srli t1, t0, 11; andi t1, t1, 0xFF
     bnez t1, fail_c1
     andi t1, t0, 0x7FF; bnez t1, fail_c1
 
     # sample 2: class 1, noise at pos 0 → (ZERO, FFFF, FFFF, FFFF)
     FILL_HV 4, s0; FILL_HV 5, s1; FILL_HV 6, s1; FILL_HV 7, s1
-    BCLR 1; HBUNDLE4 0x0C; HCLIP 0x2C; HMATCH 0x0404
+    HCNTCLR 1; HCNTADD 0x14; HCNTADD 0x15; HCNTADD 0x16; HCNTADD 0x17; HCNTCLIP 0x2C; HMATCH 0x0404
     srli t1, t0, 11; andi t1, t1, 0xFF
     li   t2, 1; bne t1, t2, fail_c2
     andi t1, t0, 0x7FF; bnez t1, fail_c2
 
     # sample 3: class 1, noise at pos 3 → (FFFF, FFFF, FFFF, ZERO)
     FILL_HV 4, s1; FILL_HV 5, s1; FILL_HV 6, s1; FILL_HV 7, s0
-    BCLR 1; HBUNDLE4 0x0C; HCLIP 0x2C; HMATCH 0x0404
+    HCNTCLR 1; HCNTADD 0x14; HCNTADD 0x15; HCNTADD 0x16; HCNTADD 0x17; HCNTCLIP 0x2C; HMATCH 0x0404
     srli t1, t0, 11; andi t1, t1, 0xFF
     li   t2, 1; bne t1, t2, fail_c3
     andi t1, t0, 0x7FF; bnez t1, fail_c3
 
     # sample 4: class 2, noise at pos 0 → (5555, AAAA, AAAA, AAAA)
     FILL_HV 4, s3; FILL_HV 5, s2; FILL_HV 6, s2; FILL_HV 7, s2
-    BCLR 1; HBUNDLE4 0x0C; HCLIP 0x2C; HMATCH 0x0404
+    HCNTCLR 1; HCNTADD 0x14; HCNTADD 0x15; HCNTADD 0x16; HCNTADD 0x17; HCNTCLIP 0x2C; HMATCH 0x0404
     srli t1, t0, 11; andi t1, t1, 0xFF
     li   t2, 2; bne t1, t2, fail_c4
     andi t1, t0, 0x7FF; bnez t1, fail_c4
 
     # sample 5: class 2, noise at pos 3 → (AAAA, AAAA, AAAA, 5555)
     FILL_HV 4, s2; FILL_HV 5, s2; FILL_HV 6, s2; FILL_HV 7, s3
-    BCLR 1; HBUNDLE4 0x0C; HCLIP 0x2C; HMATCH 0x0404
+    HCNTCLR 1; HCNTADD 0x14; HCNTADD 0x15; HCNTADD 0x16; HCNTADD 0x17; HCNTCLIP 0x2C; HMATCH 0x0404
     srli t1, t0, 11; andi t1, t1, 0xFF
     li   t2, 2; bne t1, t2, fail_c5
     andi t1, t0, 0x7FF; bnez t1, fail_c5
 
     # sample 6: class 3, noise at pos 0 → (AAAA, 5555, 5555, 5555)
     FILL_HV 4, s2; FILL_HV 5, s3; FILL_HV 6, s3; FILL_HV 7, s3
-    BCLR 1; HBUNDLE4 0x0C; HCLIP 0x2C; HMATCH 0x0404
+    HCNTCLR 1; HCNTADD 0x14; HCNTADD 0x15; HCNTADD 0x16; HCNTADD 0x17; HCNTCLIP 0x2C; HMATCH 0x0404
     srli t1, t0, 11; andi t1, t1, 0xFF
     li   t2, 3; bne t1, t2, fail_c6
     andi t1, t0, 0x7FF; bnez t1, fail_c6
 
     # sample 7: class 3, noise at pos 1 → (5555, AAAA, 5555, 5555)
     FILL_HV 4, s3; FILL_HV 5, s2; FILL_HV 6, s3; FILL_HV 7, s3
-    BCLR 1; HBUNDLE4 0x0C; HCLIP 0x2C; HMATCH 0x0404
+    HCNTCLR 1; HCNTADD 0x14; HCNTADD 0x15; HCNTADD 0x16; HCNTADD 0x17; HCNTCLIP 0x2C; HMATCH 0x0404
     srli t1, t0, 11; andi t1, t1, 0xFF
     li   t2, 3; bne t1, t2, fail_c7
     andi t1, t0, 0x7FF; bnez t1, fail_c7

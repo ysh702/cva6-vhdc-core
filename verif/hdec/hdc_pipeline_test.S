@@ -24,7 +24,7 @@
     .insn r 0x0B, 2, 2, t0, a0, zero
     .endm
 
-    .macro BCLR acc
+    .macro HCNTCLR acc
     li a0, \acc
     .insn r 0x0B, 3, 2, t0, a0, zero
     .endm
@@ -34,12 +34,12 @@
     .insn r 0x0B, 5, 2, t0, a0, zero
     .endm
 
-    .macro HBUNDLE4 param
+    .macro HCNTADD param
     li a0, \param
-    .insn r 0x0B, 4, 3, t0, a0, zero
+    .insn r 0x0B, 4, 2, t0, a0, zero
     .endm
 
-    .macro HCLIP param
+    .macro HCNTCLIP param
     li a0, \param
     .insn r 0x0B, 0, 3, t0, a0, zero
     .endm
@@ -62,7 +62,7 @@ main:
     HCLR 4
     HCLR 5
     HCLR 6
-    BCLR 0
+    HCNTCLR 0
 
     # HV1 and HV3 are all ones. HV0, HV4, HV5 stay zero.
     li a2, 0
@@ -95,13 +95,13 @@ fill_bank_loop:
     VCHECK 8, 0xFFFFFFFFFFFFFFFF
 
     # HBundle4 base=HV2 accumulates HV2/HV3/HV4/HV5, so every counter becomes 2.
-    HBUNDLE4 2
+    HCNTADD 2; HCNTADD 3; HCNTADD 4; HCNTADD 5
     bnez t0, fail
     VCHECK 32, 0x2222222222222222
     VCHECK 47, 0x2222222222222222
 
     # HClip threshold=2 writes HV6 = all ones.
-    HCLIP 0x26
+    HCNTCLIP 0x26
     bnez t0, fail
     VCHECK 24, 0xFFFFFFFFFFFFFFFF
     VCHECK 27, 0xFFFFFFFFFFFFFFFF

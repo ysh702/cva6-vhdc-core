@@ -24,16 +24,16 @@ module hdec_cvxif_wrapper import hdec_pkg::*; #(
         if      (instr[31:25]==7'b0000010 && instr[14:12]==3'b000) decoded_op = HDEC_VWR64;
         else if (instr[31:25]==7'b0000010 && instr[14:12]==3'b001) decoded_op = HDEC_VRD64;
         else if (instr[31:25]==7'b0000010 && instr[14:12]==3'b010) decoded_op = HDEC_HCLR;
-        else if (instr[31:25]==7'b0000010 && instr[14:12]==3'b011) decoded_op = HDEC_BCLR;
-        else if (instr[31:25]==7'b0000010 && instr[14:12]==3'b100) decoded_op = HDEC_BADD;
+        else if (instr[31:25]==7'b0000010 && instr[14:12]==3'b011) decoded_op = HDEC_HCNTCLR;
+        else if (instr[31:25]==7'b0000010 && instr[14:12]==3'b100) decoded_op = HDEC_HCNTADD;
         else if (instr[31:25]==7'b0000010 && instr[14:12]==3'b101) decoded_op = HDEC_HBIND;
         else if (instr[31:25]==7'b0000010 && instr[14:12]==3'b110) decoded_op = HDEC_HPERM;
         else if (instr[31:25]==7'b0000010 && instr[14:12]==3'b111) decoded_op = HDEC_HSIM;
-        else if (instr[31:25]==7'b0000011 && instr[14:12]==3'b000) decoded_op = HDEC_CLIP;
-        else if (instr[31:25]==7'b0000011 && instr[14:12]==3'b001) decoded_op = HDEC_HSEARCH;
+        else if (instr[31:25]==7'b0000011 && instr[14:12]==3'b000) decoded_op = HDEC_HCNTCLIP;
+        else if (instr[31:25]==7'b0000011 && instr[14:12]==3'b001) decoded_op = HDEC_HMATCH;
         else if (instr[31:25]==7'b0000011 && instr[14:12]==3'b010) decoded_op = HDEC_VADDR;
-        else if (instr[31:25]==7'b0000011 && instr[14:12]==3'b011) decoded_op = HDEC_HBUNDLE3;
-        else if (instr[31:25]==7'b0000011 && instr[14:12]==3'b100) decoded_op = HDEC_HBUNDLE4;
+        else if (instr[31:25]==7'b0000011 && instr[14:12]==3'b011) decoded_op = HDEC_RSVD_B3;
+        else if (instr[31:25]==7'b0000011 && instr[14:12]==3'b100) decoded_op = HDEC_RSVD_B4;
     end
     assign matched = (instr[6:0]==OPCODE_HDEC) && ((instr[31:25]==F7_PHASE1_BASE)||(instr[31:25]==F7_PHASE1_EXT));
 
@@ -82,16 +82,16 @@ module hdec_cvxif_wrapper import hdec_pkg::*; #(
             HDEC_VWR64:    perf_op_name = "VWR64";
             HDEC_VRD64:    perf_op_name = "VRD64";
             HDEC_HCLR:     perf_op_name = "HCLR";
-            HDEC_BCLR:     perf_op_name = "BCLR";
-            HDEC_BADD:     perf_op_name = "BADD";
+            HDEC_HCNTCLR:  perf_op_name = "HCNTCLR";
+            HDEC_HCNTADD:  perf_op_name = "HCNTADD";
             HDEC_HBIND:    perf_op_name = "HBIND";
             HDEC_HPERM:    perf_op_name = "HPERM";
             HDEC_HSIM:     perf_op_name = "HSIM";
-            HDEC_CLIP:     perf_op_name = "HCLIP";
-            HDEC_HSEARCH:  perf_op_name = "HMATCH";
+            HDEC_HCNTCLIP: perf_op_name = "HCNTCLIP";
+            HDEC_HMATCH:   perf_op_name = "HMATCH";
             HDEC_VADDR:    perf_op_name = "VADDR";
-            HDEC_HBUNDLE3: perf_op_name = "HBUNDLE3";
-            HDEC_HBUNDLE4: perf_op_name = "HBUNDLE4";
+            HDEC_RSVD_B3:  perf_op_name = "RSVD_B3";
+            HDEC_RSVD_B4:  perf_op_name = "RSVD_B4";
             default:       perf_op_name = "UNKNOWN";
         endcase
     endfunction

@@ -3,7 +3,7 @@
 # VWR64: funct7=2, funct3=0,  opcode=0x0B
 # VRD64: funct7=2, funct3=1,  opcode=0x0B
 # HCLR:  funct7=2, funct3=2,  opcode=0x0B
-# BCLR:  funct7=2, funct3=3,  opcode=0x0B
+# HCNTCLR: funct7=2, funct3=3, opcode=0x0B
 # HBIND: funct7=2, funct3=5,  opcode=0x0B
 # =============================================================================
 
@@ -62,7 +62,7 @@ main:
     # Test 3: hclr
     .insn r 0x0B, 2, 2, t0, zero, zero
 
-    # Test 4: bclr
+    # Test 4: hcntclr
     .insn r 0x0B, 3, 2, t0, zero, zero
 
     # Test 5: HDC placeholder (hbind)

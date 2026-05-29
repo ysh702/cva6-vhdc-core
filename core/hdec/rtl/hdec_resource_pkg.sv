@@ -37,9 +37,9 @@ package hdec_resource_pkg;
     // hclr clears one HDC vector slot: base index + 4 entries
     localparam int HCLR_CLEAR_ENTRIES = HDC_VEC_ENTRIES;        // 4
 
-    // ── bclr Parameters ─────────────────────────────────────────────────────
-    // bclr clears one bundle accumulator slot: base index + 16 entries
-    localparam int BCLR_CLEAR_ENTRIES = BUNDLE_ENTRIES;         // 16
+    // ── hcntclr Parameters ──────────────────────────────────────────────────
+    // hcntclr clears one CNT accumulator bank: base index + 16 entries
+    localparam int HCNTCLR_CLEAR_ENTRIES = BUNDLE_ENTRIES;      // 16
 
     // ── Bank Mapping ───────────────────────────────────────────────────────
     // Each Lane[0:3] corresponds to one VRF bank:

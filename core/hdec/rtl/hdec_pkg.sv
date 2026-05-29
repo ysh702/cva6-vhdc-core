@@ -31,19 +31,19 @@ package hdec_pkg;
 
     // ── Opcode Enum ─────────────────────────────────────────────────────────
     typedef enum logic [3:0] {
-        HDEC_VWR64   = 4'd0,
-        HDEC_VRD64   = 4'd1,
-        HDEC_HCLR    = 4'd2,
-        HDEC_BCLR    = 4'd3,
-        HDEC_BADD    = 4'd4,
-        HDEC_HBIND   = 4'd5,
-        HDEC_HPERM   = 4'd6,
-        HDEC_HSIM    = 4'd7,
-        HDEC_CLIP    = 4'd8,
-        HDEC_HSEARCH = 4'd9,
-        HDEC_VADDR    = 4'd10,
-        HDEC_HBUNDLE3 = 4'd11,
-        HDEC_HBUNDLE4 = 4'd12
+        HDEC_VWR64     = 4'd0,
+        HDEC_VRD64     = 4'd1,
+        HDEC_HCLR      = 4'd2,
+        HDEC_HCNTCLR   = 4'd3,    // was HDEC_BCLR
+        HDEC_HCNTADD   = 4'd4,    // was HDEC_BADD
+        HDEC_HBIND     = 4'd5,
+        HDEC_HPERM     = 4'd6,
+        HDEC_HSIM      = 4'd7,
+        HDEC_HCNTCLIP  = 4'd8,    // was HDEC_CLIP
+        HDEC_HMATCH    = 4'd9,    // was HDEC_HSEARCH
+        HDEC_VADDR     = 4'd10,
+        HDEC_RSVD_B3   = 4'd11,   // was HDEC_HBUNDLE3 (unsupported)
+        HDEC_RSVD_B4   = 4'd12    // was HDEC_HBUNDLE4 (unsupported)
     } hdec_op_t;
 
     // ── RISC-V Custom-0 Opcode ──────────────────────────────────────────────
@@ -54,19 +54,17 @@ package hdec_pkg;
     localparam logic [6:0] F7_PHASE1_EXT    = 7'b000_0011;  // clip, hsearch
 
     // ── funct3 Values ───────────────────────────────────────────────────────
-    localparam logic [2:0] F3_VWR64   = 3'b000;
-    localparam logic [2:0] F3_VRD64   = 3'b001;
-    localparam logic [2:0] F3_HCLR    = 3'b010;
-    localparam logic [2:0] F3_BCLR    = 3'b011;
-    localparam logic [2:0] F3_BADD    = 3'b100;
-    localparam logic [2:0] F3_HBIND   = 3'b101;
-    localparam logic [2:0] F3_HPERM   = 3'b110;
-    localparam logic [2:0] F3_HSIM    = 3'b111;
-    localparam logic [2:0] F3_CLIP    = 3'b000;   // funct7=000_0011
-    localparam logic [2:0] F3_HSEARCH = 3'b001;   // funct7=000_0011
-    localparam logic [2:0] F3_VADDR   = 3'b010;   // funct7=000_0011
-    localparam logic [2:0] F3_HBUNDLE3 = 3'b011;  // funct7=000_0011
-    localparam logic [2:0] F3_HBUNDLE4 = 3'b100;  // funct7=000_0011
+    localparam logic [2:0] F3_VWR64    = 3'b000;
+    localparam logic [2:0] F3_VRD64    = 3'b001;
+    localparam logic [2:0] F3_HCLR     = 3'b010;
+    localparam logic [2:0] F3_HCNTCLR  = 3'b011;
+    localparam logic [2:0] F3_HCNTADD  = 3'b100;
+    localparam logic [2:0] F3_HBIND    = 3'b101;
+    localparam logic [2:0] F3_HPERM    = 3'b110;
+    localparam logic [2:0] F3_HSIM     = 3'b111;
+    localparam logic [2:0] F3_HCNTCLIP = 3'b000;   // funct7=000_0011
+    localparam logic [2:0] F3_HMATCH   = 3'b001;   // funct7=000_0011
+    localparam logic [2:0] F3_VADDR    = 3'b010;   // funct7=000_0011
 
     // ── CV-X-IF Issue Response Struct ───────────────────────────────────────
     typedef struct packed {
@@ -104,23 +102,23 @@ package hdec_pkg;
         tbl[1].resp   = '{accept:1'b1, writeback:1'b1, register_read:2'b01};
         tbl[1].opcode = HDEC_VRD64;
 
-        // 2: hdec_hclr   (funct7=000_0010, funct3=010, no reg read)
+        // 2: hdec_hclr     (funct7=000_0010, funct3=010, no reg read)
         tbl[2].mask   = mask;
         tbl[2].instr  = base | (F7_PHASE1_BASE << 25) | (F3_HCLR << 12);
         tbl[2].resp   = '{accept:1'b1, writeback:1'b1, register_read:2'b00};
         tbl[2].opcode = HDEC_HCLR;
 
-        // 3: hdec_bclr   (funct7=000_0010, funct3=011, no reg read)
+        // 3: hdec_hcntclr  (funct7=000_0010, funct3=011, no reg read)
         tbl[3].mask   = mask;
-        tbl[3].instr  = base | (F7_PHASE1_BASE << 25) | (F3_BCLR << 12);
+        tbl[3].instr  = base | (F7_PHASE1_BASE << 25) | (F3_HCNTCLR << 12);
         tbl[3].resp   = '{accept:1'b1, writeback:1'b1, register_read:2'b00};
-        tbl[3].opcode = HDEC_BCLR;
+        tbl[3].opcode = HDEC_HCNTCLR;
 
-        // 4: hdec_badd   (funct7=000_0010, funct3=100, rs1)
+        // 4: hdec_hcntadd  (funct7=000_0010, funct3=100, rs1)
         tbl[4].mask   = mask;
-        tbl[4].instr  = base | (F7_PHASE1_BASE << 25) | (F3_BADD << 12);
+        tbl[4].instr  = base | (F7_PHASE1_BASE << 25) | (F3_HCNTADD << 12);
         tbl[4].resp   = '{accept:1'b1, writeback:1'b1, register_read:2'b01};
-        tbl[4].opcode = HDEC_BADD;
+        tbl[4].opcode = HDEC_HCNTADD;
 
         // 5: hdec_hbind  (funct7=000_0010, funct3=101, rs1)
         tbl[5].mask   = mask;
@@ -140,17 +138,17 @@ package hdec_pkg;
         tbl[7].resp   = '{accept:1'b1, writeback:1'b1, register_read:2'b01};
         tbl[7].opcode = HDEC_HSIM;
 
-        // 8: hdec_clip   (funct7=000_0011, funct3=000, rs1)
+        // 8: hdec_hcntclip (funct7=000_0011, funct3=000, rs1)
         tbl[8].mask   = mask;
-        tbl[8].instr  = base | (F7_PHASE1_EXT << 25) | (F3_CLIP << 12);
+        tbl[8].instr  = base | (F7_PHASE1_EXT << 25) | (F3_HCNTCLIP << 12);
         tbl[8].resp   = '{accept:1'b1, writeback:1'b1, register_read:2'b01};
-        tbl[8].opcode = HDEC_CLIP;
+        tbl[8].opcode = HDEC_HCNTCLIP;
 
-        // 9: hdec_hsearch (funct7=000_0011, funct3=001, rs1)
+        // 9: hdec_hmatch   (funct7=000_0011, funct3=001, rs1)
         tbl[9].mask   = mask;
-        tbl[9].instr  = base | (F7_PHASE1_EXT << 25) | (F3_HSEARCH << 12);
+        tbl[9].instr  = base | (F7_PHASE1_EXT << 25) | (F3_HMATCH << 12);
         tbl[9].resp   = '{accept:1'b1, writeback:1'b1, register_read:2'b01};
-        tbl[9].opcode = HDEC_HSEARCH;
+        tbl[9].opcode = HDEC_HMATCH;
 
         // 10: hdec_vaddr  (funct7=000_0011, funct3=010, rs1)
         tbl[10].mask   = mask;
@@ -158,17 +156,17 @@ package hdec_pkg;
         tbl[10].resp   = '{accept:1'b1, writeback:1'b1, register_read:2'b01};
         tbl[10].opcode = HDEC_VADDR;
 
-        // 11: hdec_hbundle3 (funct7=000_0011, funct3=011, rs1)
+        // 11: reserved (was hdec_hbundle3) — unsupported hole
         tbl[11].mask   = mask;
-        tbl[11].instr  = base | (F7_PHASE1_EXT << 25) | (F3_HBUNDLE3 << 12);
-        tbl[11].resp   = '{accept:1'b1, writeback:1'b1, register_read:2'b01};
-        tbl[11].opcode = HDEC_HBUNDLE3;
+        tbl[11].instr  = base | (F7_PHASE1_EXT << 25) | (3'b011 << 12);
+        tbl[11].resp   = '{accept:1'b0, writeback:1'b0, register_read:2'b00};
+        tbl[11].opcode = HDEC_RSVD_B3;
 
-        // 12: hdec_hbundle4 (funct7=000_0011, funct3=100, rs1)
+        // 12: reserved (was hdec_hbundle4) — unsupported hole
         tbl[12].mask   = mask;
-        tbl[12].instr  = base | (F7_PHASE1_EXT << 25) | (F3_HBUNDLE4 << 12);
-        tbl[12].resp   = '{accept:1'b1, writeback:1'b1, register_read:2'b01};
-        tbl[12].opcode = HDEC_HBUNDLE4;
+        tbl[12].instr  = base | (F7_PHASE1_EXT << 25) | (3'b100 << 12);
+        tbl[12].resp   = '{accept:1'b0, writeback:1'b0, register_read:2'b00};
+        tbl[12].opcode = HDEC_RSVD_B4;
 
         return tbl;
     endfunction
