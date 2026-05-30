@@ -63,7 +63,7 @@ module hdec_lane_4x64
     input  logic [LANE_WIDTH-1:0]             bool_src_b_i,
     output logic [LANE_WIDTH-1:0]             bool_result_o,
 
-    // ── HDC popcount path ───────────────────────────────────────────────────
+    // ── HDC-only popcount path ──────────────────────────────────────────────
     output logic [6:0]                        popcount_count_o,
 
     // ── HDCU CNT array update path ─────────────────────────────────────────
@@ -101,27 +101,21 @@ module hdec_lane_4x64
     );
 
     assign bool_result_o = bool_result;
-
-    // ── HDC popcount over XOR diff ─────────────────────────────────────────
-    hdec_lane_popcount_compressor i_popcount (
-        .mode_i      (1'b0),
-        .diff_i      (bool_result),
-        .a_i         ('0),
-        .b_i         ('0),
-        .c_i         ('0),
-        .count_o     (popcount_count_o),
-        .csa_sum_o   (),
-        .csa_carry_o (),
-        .csa_cout_o  ()
-    );
+    assign popcount_count_o = 7'($countones(bool_result));
 
     // ── HDCU CNT array update ──────────────────────────────────────────────
+    logic [LANE_WIDTH-1:0] cnt_hv_word, cnt_old_counter;
+    logic [1:0]            cnt_subgroup;
+    assign cnt_hv_word     = cnt_valid_i ? cnt_hv_word_i     : '0;
+    assign cnt_old_counter = cnt_valid_i ? cnt_old_counter_i : '0;
+    assign cnt_subgroup    = cnt_valid_i ? cnt_subgroup_i    : '0;
+
     hdec_cnt_array i_cnt_array (
         .clear_i         (1'b0),
         .update_i        (cnt_valid_i),
-        .old_counter_i   (cnt_old_counter_i),
-        .hv_word_i       (cnt_hv_word_i),
-        .subgroup_i      (cnt_subgroup_i),
+        .old_counter_i   (cnt_old_counter),
+        .hv_word_i       (cnt_hv_word),
+        .subgroup_i      (cnt_subgroup),
         .clip_threshold_i('0),
         .new_counter_o   (cnt_new_counter_o),
         .clip_bits_o     ()
@@ -195,6 +189,7 @@ module hdec_lane_4x64
         neighbor_out_o = neighbor_in_i;   // passthrough
         carry_out_o    = '0;  borrow_out_o = '0;  count_out_o = '0;  flag_out_o = '0;
         local_wb_data_o = '0; local_wb_addr_o = '0; local_wb_we_o = '0;
+        res_data_o      = '0; res_owner_o = OWNER_NONE;
 
         // ── FSM ────────────────────────────────────────────────────────────
         case (lane_state_q)

@@ -46,6 +46,53 @@ package hdec_pkg;
         HDEC_RSVD_B4   = 4'd12    // was HDEC_HBUNDLE4 (unsupported)
     } hdec_op_t;
 
+    // ── UOP Pipeline Types ─────────────────────────────────────────────────
+    typedef enum logic [3:0] {
+        UOP_IDLE             = 4'd0,
+        UOP_HBIND_CHUNK      = 4'd1,
+        UOP_HSIM_CHUNK       = 4'd2,
+        UOP_HMATCH_CHUNK     = 4'd3,
+        UOP_HCNTADD_SUBGROUP = 4'd4,
+        UOP_HCNTCLIP_READ    = 4'd5,
+        UOP_HPERM_CHUNK      = 4'd6
+    } hdec_uop_type_e;
+
+    typedef struct packed {
+        // ── Control ──
+        logic                   valid;
+        hdec_uop_type_e         op_type;
+        hdec_op_t               arch_op;
+
+        // ── VRF Addressing ──
+        logic [VRF_IDX_W-1:0]   src0_addr;
+        logic [VRF_IDX_W-1:0]   src1_addr;
+        logic [VRF_IDX_W-1:0]   dst_addr;
+        logic [VRF_IDX_W-1:0]   src0_base;
+        logic [VRF_IDX_W-1:0]   src1_base;
+        logic [VRF_IDX_W-1:0]   dst_base;
+
+        // ── Iteration ──
+        logic [1:0]             chunk_idx;
+        logic [1:0]             subgroup_idx;
+
+        // ── Class / Search ──
+        logic [7:0]             class_idx;
+        logic [7:0]             class_count;
+
+        // ── Compute Parameters ──
+        logic [3:0]             perm_nibble;
+
+        // ── Compute Enables ──
+        logic                   use_xor;
+        logic                   use_popcount;
+        logic                   use_counter;
+        logic                   use_clip;
+        logic                   use_shift;
+
+        // ── Op Type Tags ──
+        logic                   is_last_class;
+    } hdec_uop_t;
+
     // ── RISC-V Custom-0 Opcode ──────────────────────────────────────────────
     localparam logic [6:0] OPCODE_HDEC = 7'b0001011;   // 0x0B
 

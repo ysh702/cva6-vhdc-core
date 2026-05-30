@@ -13,13 +13,10 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
     logic [VRF_BNK_W-1:0] vaddr_bank_q,vaddr_bank_n; logic [VRF_IDX_W-1:0] vaddr_idx_q,vaddr_idx_n;
 
     // ── State Machine ───────────────────────────────────────────────────────
-    typedef enum logic [5:0] {
+    typedef enum logic [4:0] {
         S_IDLE, S_EXEC, S_RD_WAIT, S_RESULT, S_CLR,
-        S_HBIND_RD0, S_HBIND_RD1, S_HBIND_XOR_WR,
-        S_HSIM_CLEAR, S_HSIM_RD0, S_HSIM_RD1, S_HSIM_LOAD,
-        S_HPERM_RD_A, S_HPERM_RD_B, S_HPERM_SHIFT_WR,
-        S_HCNTADD_RD_HV, S_HCNTADD_RD_ACC, S_HCNTADD_UPDATE_WR,
-        S_HCNTCLIP_RD_ACC, S_HCNTCLIP_PACK, S_HCNTCLIP_WRITE
+        S_UOP_P1_RD0, S_UOP_P1_RD1, S_UOP_P2_LANE, S_UOP_P3_GLOBAL, S_UOP_P4_RESP,
+        S_UOP_CLIP_WRITE
     } st_t;
     st_t st_q, st_n;
 
@@ -34,11 +31,9 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
     // ── HSIM / HMATCH registers ─────────────────────────────────────────────
     logic [VRF_IDX_W-1:0] hsim_src0_base_q,hsim_src0_base_n, hsim_src1_base_q,hsim_src1_base_n;
     logic [10:0] hsim_total_q,hsim_total_n;
-    logic [10:0] hsim_group_distance;
-    logic [1:0] hsim_row_q,hsim_row_n;
-    logic [7:0] hmatch_num_q,hmatch_num_n,hmatch_idx_q,hmatch_idx_n,hmatch_best_idx_q,hmatch_best_idx_n;
+    logic [7:0] hmatch_num_q,hmatch_num_n,hmatch_best_idx_q,hmatch_best_idx_n;
     logic [3:0] hmatch_class_slot_q,hmatch_class_slot_n;
-    logic [10:0] hmatch_best_dist_q,hmatch_best_dist_n,hmatch_class_distance;
+    logic [10:0] hmatch_best_dist_q,hmatch_best_dist_n;
 
     // ── HPERM registers ─────────────────────────────────────────────────────
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] hperm_a_q,hperm_a_n;
@@ -53,7 +48,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
     logic [2:0] hcntadd_hv_slot_q,hcntadd_hv_slot_n;
     logic [1:0] hcntadd_chunk_q,hcntadd_chunk_n, hcntadd_subgroup_q,hcntadd_subgroup_n;
     logic hcntadd_acc_sel_q,hcntadd_acc_sel_n;
-    logic [VRF_IDX_W-1:0] hcntadd_hv_entry,hcntadd_acc_entry,hcntadd_acc_base,hcntadd_next_acc_entry;
+    logic [VRF_IDX_W-1:0] hcntadd_acc_base;
 
     // ── HCNTCLIP registers ──────────────────────────────────────────────────
     logic [VRF_IDX_W-1:0] hcntclip_dst_base_q,hcntclip_dst_base_n,hcntclip_acc_base;
@@ -61,10 +56,18 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
     logic [3:0] hcntclip_threshold_q,hcntclip_threshold_n;
     logic [1:0] hcntclip_chunk_q,hcntclip_chunk_n,hcntclip_subgroup_q,hcntclip_subgroup_n;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] hcntclip_word_q,hcntclip_word_n,hcntclip_word_with_result;
-    logic [VRF_IDX_W-1:0] hcntclip_acc_entry;
+    // hcntclip_acc_base selects the active counter bank; per-entry addresses are
+    // formed locally in the uop stages.
+
+    // ── UOP Pipeline Registers ──────────────────────────────────────────────
+    // P0: decode + uop issue
+    // P1: VRF read address / read wait / uop alignment (VRF output latched in vrf_rd)
+    // P2: VRF read data (vrf_rd) directly feeds Lane local compute
+    // P2/P3 boundary: lane_*_q registers cut the critical combinational path
+    hdec_uop_t uop_p0_q, uop_p0_n, uop_p1_q, uop_p1_n, uop_p2_q, uop_p2_n, uop_p3_q, uop_p3_n;
 
     // ── Lane compute wires ──────────────────────────────────────────────────
-    logic [LANE_NUM-1:0]                 lane_bool_valid;
+    logic [LANE_NUM-1:0]                 uop_lane_bool_valid; // uop path XOR enable
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] lane_bool_result;
     logic [LANE_NUM-1:0][6:0]            lane_popcount_count;
     logic [LANE_NUM-1:0]                 lane_cnt_valid;
@@ -75,17 +78,32 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
     logic [LANE_NUM-1:0]                 lane_clip_valid;
     logic [LANE_NUM-1:0][15:0]           lane_clip_bits;
 
+    // ── Lane Boundary Register (P2→P3 cut, unified) ─────────────────────────
+    // Single shared 4×64-bit register for all Lane compute outputs.
+    // uop_p3_q.op_type determines interpretation:
+    //   HBIND/HPERM/HCNTADD: full 64-bit per lane
+    //   HCNTCLIP: lane_result_q[lid][15:0] = clip bits
+    //   HSIM/HMATCH: lane_result_q[lid][6:0] = popcount
+    // HDC is single-uop: only one kind of result is live at a time.
+    //
+    // Future evaluation: HBIND fast bypass
+    //   HBIND XOR is shallow; skipping lane_result_q and writing directly to
+    //   VRF could save 1 cycle per chunk. Requires Vivado OOC timing proof
+    //   that HBIND path is not the critical path before enabling.
+    //   Do NOT implement now — keep single active writeback path.
+    logic [LANE_NUM-1:0][LANE_WIDTH-1:0] lane_result_q, lane_result_n;
+
+    // ── Scalar Response Registers (P4) ──────────────────────────────────────
+    logic [63:0] scalar_response_q, scalar_response_n;
+    logic        response_valid_q, response_valid_n;
+    hdec_op_t    p4_arch_op_q, p4_arch_op_n;  // saved arch_op for P4 response pack
+    logic [10:0] group_dist;
+
     // ── Combinational helpers ───────────────────────────────────────────────
-    assign hsim_group_distance = {4'b0,lane_popcount_count[0]} + {4'b0,lane_popcount_count[1]} + {4'b0,lane_popcount_count[2]} + {4'b0,lane_popcount_count[3]};
-    assign hmatch_class_distance = hsim_total_q + hsim_group_distance;
     assign hperm_word0 = {1'b0,chunk_cnt_q,2'b00} + {1'b0,hperm_word_off_q};
     assign hperm_next_chunk = hperm_word0[3:2] + 2'd1;
     assign hcntadd_acc_base = hcntadd_acc_sel_q ? 6'd48 : 6'd32;
-    assign hcntadd_hv_entry = {1'b0, hcntadd_hv_slot_q, 2'b00} + {4'b0, hcntadd_chunk_q};
-    assign hcntadd_acc_entry = hcntadd_acc_base + {2'b00, hcntadd_chunk_q, 2'b00} + {4'b0, hcntadd_subgroup_q};
-    assign hcntadd_next_acc_entry = hcntadd_acc_base + {2'b00, hcntadd_chunk_q, 2'b00} + {4'b0, (hcntadd_subgroup_q + 2'd1)};
     assign hcntclip_acc_base = hcntclip_acc_sel_q ? 6'd48 : 6'd32;
-    assign hcntclip_acc_entry = hcntclip_acc_base + {2'b00, hcntclip_chunk_q, 2'b00} + {4'b0, hcntclip_subgroup_q};
 
     function automatic logic [63:0] hperm_pick_word(input logic [2:0] sel, input logic [3:0][63:0] blk_a, input logic [3:0][63:0] blk_b);
         case(sel)
@@ -114,7 +132,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             .neighbor_in_i('0), .neighbor_out_o(), .carry_in_i('0), .carry_out_o(),
             .borrow_in_i('0), .borrow_out_o(), .count_in_i('0), .count_out_o(),
             .flag_in_i('0), .flag_out_o(), .local_wb_data_o(), .local_wb_addr_o(), .local_wb_we_o(),
-            .bool_valid_i(lane_bool_valid[lid]),
+            .bool_valid_i(uop_lane_bool_valid[lid]),
             .bool_src_a_i(src0_q[lid]),
             .bool_src_b_i(vrf_rd[lid]),
             .bool_result_o(lane_bool_result[lid]),
@@ -138,18 +156,22 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
 
     // ── Main FSM ────────────────────────────────────────────────────────────
     always_comb begin
-        st_n=st_q; ready_o=(st_q==S_IDLE); valid_o=(st_q==S_RESULT); result_o=res_q;
+        st_n=st_q; ready_o=(st_q==S_IDLE); valid_o=(st_q==S_RESULT); result_o=response_valid_q?scalar_response_q:res_q;
         res_n=res_q; op_n=op_q; a_n=a_q; b_n=b_q; bk_n=bk_q; vaddr_bank_n=vaddr_bank_q; vaddr_idx_n=vaddr_idx_q;
         clr_cnt_n=clr_cnt_q; clr_base_n=clr_base_q;
         src0_n=src0_q; chunk_cnt_n=chunk_cnt_q;
         hb_dst_base_n=hb_dst_base_q; hb_src0_base_n=hb_src0_base_q; hb_src1_base_n=hb_src1_base_q;
-        hsim_src0_base_n=hsim_src0_base_q; hsim_src1_base_n=hsim_src1_base_q; hsim_total_n=hsim_total_q; hsim_row_n=hsim_row_q;
-        hmatch_num_n=hmatch_num_q; hmatch_idx_n=hmatch_idx_q; hmatch_best_idx_n=hmatch_best_idx_q; hmatch_class_slot_n=hmatch_class_slot_q; hmatch_best_dist_n=hmatch_best_dist_q;
+        hsim_src0_base_n=hsim_src0_base_q; hsim_src1_base_n=hsim_src1_base_q; hsim_total_n=hsim_total_q;
+        hmatch_num_n=hmatch_num_q; hmatch_best_idx_n=hmatch_best_idx_q; hmatch_class_slot_n=hmatch_class_slot_q; hmatch_best_dist_n=hmatch_best_dist_q;
         hperm_a_n=hperm_a_q; hperm_dst_base_n=hperm_dst_base_q; hperm_src_base_n=hperm_src_base_q;
         hperm_word_off_n=hperm_word_off_q; hperm_nibble_n=hperm_nibble_q; hperm_lane_base_n=hperm_lane_base_q;
         hcntadd_hv_n=hcntadd_hv_q; hcntadd_hv_slot_n=hcntadd_hv_slot_q; hcntadd_chunk_n=hcntadd_chunk_q; hcntadd_subgroup_n=hcntadd_subgroup_q; hcntadd_acc_sel_n=hcntadd_acc_sel_q;
         hcntclip_dst_base_n=hcntclip_dst_base_q; hcntclip_acc_sel_n=hcntclip_acc_sel_q; hcntclip_threshold_n=hcntclip_threshold_q; hcntclip_chunk_n=hcntclip_chunk_q; hcntclip_subgroup_n=hcntclip_subgroup_q; hcntclip_word_n=hcntclip_word_q; hcntclip_word_with_result=hcntclip_word_q;
-        lane_bool_valid='0;
+        uop_p0_n=uop_p0_q; uop_p1_n=uop_p1_q; uop_p2_n=uop_p2_q; uop_p3_n=uop_p3_q;
+        lane_result_n=lane_result_q;
+        scalar_response_n=scalar_response_q; response_valid_n=response_valid_q; p4_arch_op_n=p4_arch_op_q;
+        group_dist='0;
+        uop_lane_bool_valid='0;
         lane_cnt_valid='0;
         lane_shift_valid='0;
         lane_shift_a='0; lane_shift_b='0; lane_shift_nibble=hperm_nibble_q;
@@ -159,7 +181,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
         case(st_q)
         S_IDLE: if(valid_i&&ready_o)begin op_n=operator_i;a_n=operand_a_i;b_n=operand_b_i;st_n=S_EXEC;end
 
-        S_EXEC: unique case(op_q)
+        S_EXEC: begin uop_p0_n='0; unique case(op_q)
             HDEC_VADDR: begin vaddr_bank_n=a_q[7:6];vaddr_idx_n=a_q[5:0];res_n='0;st_n=S_RESULT;end
             HDEC_VWR64: begin vrf_we[vaddr_bank_q]=1'b1;vrf_wa[vaddr_bank_q]=vaddr_idx_q;vrf_wd[vaddr_bank_q]=a_q;res_n='0;st_n=S_RESULT;end
             HDEC_VRD64: begin vrf_ra[vaddr_bank_q]=vaddr_idx_q;bk_n=vaddr_bank_q;st_n=S_RD_WAIT;end
@@ -179,7 +201,15 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                     hcntadd_acc_sel_n=a_q[4];
                     hcntadd_chunk_n=2'd0;
                     hcntadd_subgroup_n=2'd0;
-                    st_n=S_HCNTADD_RD_HV;
+                    uop_p0_n.valid       = 1'b1;
+                    uop_p0_n.op_type     = UOP_HCNTADD_SUBGROUP;
+                    uop_p0_n.arch_op     = HDEC_HCNTADD;
+                    uop_p0_n.chunk_idx   = 2'd0;
+                    uop_p0_n.subgroup_idx= 2'd0;
+                    uop_p0_n.src0_addr   = {1'b0, a_q[2:0], 2'b00};
+                    uop_p0_n.src1_addr   = a_q[4] ? 6'd48 : 6'd32;
+                    uop_p0_n.use_counter = 1'b1;
+                    st_n=S_UOP_P1_RD0;
                 end
             end
 
@@ -187,13 +217,36 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                 hb_dst_base_n ={a_q[3:0], 2'b00};
                 hb_src0_base_n={a_q[7:4], 2'b00};
                 hb_src1_base_n={a_q[11:8],2'b00};
-                chunk_cnt_n=2'd0; st_n=S_HBIND_RD0;
+                chunk_cnt_n=2'd0;
+                uop_p0_n.valid        = 1'b1;
+                uop_p0_n.op_type      = UOP_HBIND_CHUNK;
+                uop_p0_n.arch_op      = HDEC_HBIND;
+                uop_p0_n.src0_addr    = hb_src0_base_n;
+                uop_p0_n.src1_addr    = hb_src1_base_n;
+                uop_p0_n.dst_addr     = hb_dst_base_n;
+                uop_p0_n.src0_base    = hb_src0_base_n;
+                uop_p0_n.src1_base    = hb_src1_base_n;
+                uop_p0_n.dst_base     = hb_dst_base_n;
+                uop_p0_n.chunk_idx    = 2'd0;
+                uop_p0_n.use_xor      = 1'b1;
+                st_n=S_UOP_P1_RD0;
             end
 
             HDEC_HSIM: begin
                 hsim_src0_base_n={a_q[3:0],2'b00};
                 hsim_src1_base_n={a_q[7:4],2'b00};
-                hsim_total_n='0; chunk_cnt_n=2'd0; hsim_row_n=2'd0; st_n=S_HSIM_CLEAR;
+                hsim_total_n='0;
+                uop_p0_n.valid        = 1'b1;
+                uop_p0_n.op_type      = UOP_HSIM_CHUNK;
+                uop_p0_n.arch_op      = HDEC_HSIM;
+                uop_p0_n.src0_addr    = hsim_src0_base_n;
+                uop_p0_n.src1_addr    = hsim_src1_base_n;
+                uop_p0_n.src0_base    = hsim_src0_base_n;
+                uop_p0_n.src1_base    = hsim_src1_base_n;
+                uop_p0_n.chunk_idx    = 2'd0;
+                uop_p0_n.use_xor      = 1'b1;
+                uop_p0_n.use_popcount = 1'b1;
+                st_n=S_UOP_P1_RD0;
             end
 
             HDEC_HMATCH: begin
@@ -204,10 +257,23 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                     hsim_src1_base_n={a_q[7:4],2'b00};
                     hmatch_class_slot_n=a_q[7:4];
                     hmatch_num_n=a_q[15:8];
-                    hmatch_idx_n=8'd0;
                     hmatch_best_idx_n=8'd0;
                     hmatch_best_dist_n=11'd1025;
-                    hsim_total_n='0; chunk_cnt_n=2'd0; hsim_row_n=2'd0; st_n=S_HSIM_CLEAR;
+                    hsim_total_n='0;
+                    uop_p0_n.valid        = 1'b1;
+                    uop_p0_n.op_type      = UOP_HMATCH_CHUNK;
+                    uop_p0_n.arch_op      = HDEC_HMATCH;
+                    uop_p0_n.src0_addr    = hsim_src0_base_n;
+                    uop_p0_n.src1_addr    = hsim_src1_base_n;
+                    uop_p0_n.src0_base    = hsim_src0_base_n;
+                    uop_p0_n.src1_base    = hsim_src1_base_n;
+                    uop_p0_n.chunk_idx    = 2'd0;
+                    uop_p0_n.class_idx    = 8'd0;
+                    uop_p0_n.class_count  = hmatch_num_n;
+                    uop_p0_n.use_xor      = 1'b1;
+                    uop_p0_n.use_popcount = 1'b1;
+                    uop_p0_n.is_last_class = (hmatch_num_n == 8'd1);
+                    st_n=S_UOP_P1_RD0;
                 end
             end
 
@@ -218,7 +284,15 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                 hcntclip_chunk_n=2'd0;
                 hcntclip_subgroup_n=2'd0;
                 hcntclip_word_n='0;
-                st_n=S_HCNTCLIP_RD_ACC;
+                uop_p0_n.valid       = 1'b1;
+                uop_p0_n.op_type     = UOP_HCNTCLIP_READ;
+                uop_p0_n.arch_op     = HDEC_HCNTCLIP;
+                uop_p0_n.chunk_idx   = 2'd0;
+                uop_p0_n.subgroup_idx= 2'd0;
+                uop_p0_n.src0_addr   = (a_q[3] ? 6'd48 : 6'd32);
+                uop_p0_n.dst_base    = hcntclip_dst_base_n;
+                uop_p0_n.use_clip    = 1'b1;
+                st_n=S_UOP_P1_RD0;
             end
 
             HDEC_HPERM: begin
@@ -228,12 +302,21 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                     hperm_src_base_n={a_q[7:4],2'b00};
                     hperm_word_off_n=a_q[17:14];
                     hperm_nibble_n=a_q[13:10];
-                    chunk_cnt_n=2'd0; st_n=S_HPERM_RD_A;
+                    chunk_cnt_n=2'd0;
+                    uop_p0_n.valid       = 1'b1;
+                    uop_p0_n.op_type     = UOP_HPERM_CHUNK;
+                    uop_p0_n.arch_op     = HDEC_HPERM;
+                    uop_p0_n.chunk_idx   = 2'd0;
+                    uop_p0_n.src0_base   = hperm_src_base_n;
+                    uop_p0_n.dst_base    = hperm_dst_base_n;
+                    uop_p0_n.perm_nibble = hperm_nibble_n;
+                    uop_p0_n.use_shift   = 1'b1;
+                    st_n=S_UOP_P1_RD0;
                 end
             end
 
             default: begin res_n={62'b0,STATUS_NOT_IMPLEMENTED};st_n=S_RESULT;end
-        endcase
+        endcase end
 
         S_RD_WAIT: begin res_n=vrf_rd[bk_q];st_n=S_RESULT;end
 
@@ -247,168 +330,244 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             else clr_cnt_n=clr_cnt_q+4'd1;
         end
 
-        // ── HBIND ────────────────────────────────────────────────────────────
-        S_HBIND_RD0: begin
-            vrf_ra[0]=hb_src0_base_q+chunk_cnt_q; vrf_ra[1]=hb_src0_base_q+chunk_cnt_q;
-            vrf_ra[2]=hb_src0_base_q+chunk_cnt_q; vrf_ra[3]=hb_src0_base_q+chunk_cnt_q;
-            st_n=S_HBIND_RD1;
-        end
-        S_HBIND_RD1: begin
-            src0_n=vrf_rd;
-            vrf_ra[0]=hb_src1_base_q+chunk_cnt_q; vrf_ra[1]=hb_src1_base_q+chunk_cnt_q;
-            vrf_ra[2]=hb_src1_base_q+chunk_cnt_q; vrf_ra[3]=hb_src1_base_q+chunk_cnt_q;
-            st_n=S_HBIND_XOR_WR;
-        end
-        S_HBIND_XOR_WR: begin
-            lane_bool_valid='1;
-            vrf_we='1;
-            vrf_wa[0]=hb_dst_base_q+chunk_cnt_q; vrf_wa[1]=hb_dst_base_q+chunk_cnt_q;
-            vrf_wa[2]=hb_dst_base_q+chunk_cnt_q; vrf_wa[3]=hb_dst_base_q+chunk_cnt_q;
-            vrf_wd=lane_bool_result;
-            if(chunk_cnt_q==2'd3)begin res_n='0;st_n=S_RESULT;end
-            else begin chunk_cnt_n=chunk_cnt_q+2'd1;st_n=S_HBIND_RD0;end
+        // ── UOP Pipeline ─────────────────────────────────────────────────────
+        S_UOP_P1_RD0: begin
+            uop_p1_n       = uop_p0_q;
+            uop_p0_n.valid = 1'b0;
+            if (uop_p0_q.op_type == UOP_HPERM_CHUNK) begin
+                chunk_cnt_n = uop_p0_q.chunk_idx;
+                hperm_lane_base_n = hperm_word0[1:0];
+                vrf_ra[0]=hperm_src_base_q+hperm_word0[3:2]; vrf_ra[1]=hperm_src_base_q+hperm_word0[3:2];
+                vrf_ra[2]=hperm_src_base_q+hperm_word0[3:2]; vrf_ra[3]=hperm_src_base_q+hperm_word0[3:2];
+            end else begin
+                vrf_ra[0]=uop_p0_q.src0_addr; vrf_ra[1]=uop_p0_q.src0_addr;
+                vrf_ra[2]=uop_p0_q.src0_addr; vrf_ra[3]=uop_p0_q.src0_addr;
+            end
+            st_n=S_UOP_P1_RD1;
         end
 
-        // ── HSIM / HMATCH ────────────────────────────────────────────────────
-        S_HSIM_CLEAR: begin
-            hsim_row_n=2'd0;
-            st_n=S_HSIM_RD0;
-        end
-        S_HSIM_RD0: begin
-            vrf_ra[0]=hsim_src0_base_q+chunk_cnt_q; vrf_ra[1]=hsim_src0_base_q+chunk_cnt_q;
-            vrf_ra[2]=hsim_src0_base_q+chunk_cnt_q; vrf_ra[3]=hsim_src0_base_q+chunk_cnt_q;
-            st_n=S_HSIM_RD1;
-        end
-        S_HSIM_RD1: begin
-            src0_n=vrf_rd;
-            vrf_ra[0]=hsim_src1_base_q+chunk_cnt_q; vrf_ra[1]=hsim_src1_base_q+chunk_cnt_q;
-            vrf_ra[2]=hsim_src1_base_q+chunk_cnt_q; vrf_ra[3]=hsim_src1_base_q+chunk_cnt_q;
-            st_n=S_HSIM_LOAD;
-        end
-        S_HSIM_LOAD: begin
-            lane_bool_valid='1;
-            if(chunk_cnt_q==2'd3)begin
-                if(op_q==HDEC_HMATCH)begin
-                    if(hmatch_class_distance < hmatch_best_dist_q)begin
-                        hmatch_best_dist_n=hmatch_class_distance;
-                        hmatch_best_idx_n=hmatch_idx_q;
-                    end
-                    if(hmatch_idx_q == (hmatch_num_q - 8'd1))begin
-                        res_n={45'b0,hmatch_best_idx_n,hmatch_best_dist_n};
-                        st_n=S_RESULT;
-                    end else begin
-                        hmatch_idx_n=hmatch_idx_q+8'd1;
-                        hmatch_class_slot_n=hmatch_class_slot_q+4'd1;
-                        hsim_src1_base_n={hmatch_class_slot_q+4'd1,2'b00};
-                        hsim_total_n='0; chunk_cnt_n=2'd0; hsim_row_n=2'd0; st_n=S_HSIM_CLEAR;
-                    end
+        S_UOP_P1_RD1: begin
+            uop_p2_n       = uop_p1_q;
+            uop_p1_n.valid = 1'b0;
+            if (uop_p1_q.op_type == UOP_HPERM_CHUNK) begin
+                hperm_a_n = vrf_rd;
+                vrf_ra[0]=hperm_src_base_q+hperm_next_chunk; vrf_ra[1]=hperm_src_base_q+hperm_next_chunk;
+                vrf_ra[2]=hperm_src_base_q+hperm_next_chunk; vrf_ra[3]=hperm_src_base_q+hperm_next_chunk;
+            end else begin
+                src0_n = vrf_rd;
+                if (uop_p1_q.op_type == UOP_HCNTADD_SUBGROUP) hcntadd_hv_n = vrf_rd;
+                if (uop_p1_q.op_type != UOP_HCNTCLIP_READ) begin
+                    vrf_ra[0]=uop_p1_q.src1_addr; vrf_ra[1]=uop_p1_q.src1_addr;
+                    vrf_ra[2]=uop_p1_q.src1_addr; vrf_ra[3]=uop_p1_q.src1_addr;
                 end else begin
-                    res_n={53'b0,(hsim_total_q+{1'b0,hsim_group_distance})};st_n=S_RESULT;
+                    vrf_ra[0]=uop_p1_q.src0_addr; vrf_ra[1]=uop_p1_q.src0_addr;
+                    vrf_ra[2]=uop_p1_q.src0_addr; vrf_ra[3]=uop_p1_q.src0_addr;
                 end
             end
-            else begin
-                hsim_total_n=hsim_total_q+{1'b0,hsim_group_distance};
-                chunk_cnt_n=chunk_cnt_q+2'd1;
-                hsim_row_n=hsim_row_q+2'd1;
-                st_n=S_HSIM_RD0;
-            end
+            st_n=S_UOP_P2_LANE;
         end
 
-        // ── HCNTADD ──────────────────────────────────────────────────────────
-        S_HCNTADD_RD_HV: begin
-            vrf_ra[0]=hcntadd_hv_entry; vrf_ra[1]=hcntadd_hv_entry;
-            vrf_ra[2]=hcntadd_hv_entry; vrf_ra[3]=hcntadd_hv_entry;
-            st_n=S_HCNTADD_RD_ACC;
-        end
-        S_HCNTADD_RD_ACC: begin
-            hcntadd_hv_n=vrf_rd;
-            vrf_ra[0]=hcntadd_acc_entry; vrf_ra[1]=hcntadd_acc_entry;
-            vrf_ra[2]=hcntadd_acc_entry; vrf_ra[3]=hcntadd_acc_entry;
-            st_n=S_HCNTADD_UPDATE_WR;
-        end
-        S_HCNTADD_UPDATE_WR: begin
-            lane_cnt_valid='1;
-            vrf_we='1;
-            vrf_wa[0]=hcntadd_acc_entry; vrf_wa[1]=hcntadd_acc_entry;
-            vrf_wa[2]=hcntadd_acc_entry; vrf_wa[3]=hcntadd_acc_entry;
-            vrf_wd=lane_cnt_new_counter;
-            if(hcntadd_subgroup_q==2'd3)begin
-                hcntadd_subgroup_n=2'd0;
-                if(hcntadd_chunk_q==2'd3)begin res_n='0;st_n=S_RESULT;end
-                else begin hcntadd_chunk_n=hcntadd_chunk_q+2'd1;st_n=S_HCNTADD_RD_HV;end
-            end else begin
-                vrf_ra[0]=hcntadd_next_acc_entry; vrf_ra[1]=hcntadd_next_acc_entry;
-                vrf_ra[2]=hcntadd_next_acc_entry; vrf_ra[3]=hcntadd_next_acc_entry;
-                hcntadd_subgroup_n=hcntadd_subgroup_q+2'd1;
-                st_n=S_HCNTADD_UPDATE_WR;
+        S_UOP_P2_LANE: begin
+            uop_p3_n           = uop_p2_q;
+            uop_p2_n.valid     = 1'b0;
+`ifndef SYNTHESIS
+            assert ($onehot0({
+                    uop_p2_q.use_popcount,
+                    uop_p2_q.use_counter,
+                    uop_p2_q.use_shift,
+                    uop_p2_q.use_clip,
+                    (uop_p2_q.use_xor && !uop_p2_q.use_popcount)
+                }))
+                else $error("HDEC P2 invalid compute mode flags: op_type=%0d",
+                            uop_p2_q.op_type);
+`endif
+            if (uop_p2_q.use_xor || uop_p2_q.use_popcount)
+                uop_lane_bool_valid = '1;
+            if (uop_p2_q.use_counter)
+                lane_cnt_valid = '1;
+            if (uop_p2_q.use_shift) begin
+                lane_shift_valid = '1;
+                lane_shift_nibble = uop_p2_q.perm_nibble;
+                lane_shift_a[0]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd0,hperm_a_q,vrf_rd);
+                lane_shift_a[1]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd1,hperm_a_q,vrf_rd);
+                lane_shift_a[2]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd2,hperm_a_q,vrf_rd);
+                lane_shift_a[3]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd3,hperm_a_q,vrf_rd);
+                lane_shift_b[0]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd1,hperm_a_q,vrf_rd);
+                lane_shift_b[1]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd2,hperm_a_q,vrf_rd);
+                lane_shift_b[2]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd3,hperm_a_q,vrf_rd);
+                lane_shift_b[3]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd4,hperm_a_q,vrf_rd);
             end
+            if (uop_p2_q.use_clip)
+                lane_clip_valid = '1;
+            if (uop_p2_q.use_popcount) begin
+                lane_result_n[0] = {57'b0, lane_popcount_count[0]};
+                lane_result_n[1] = {57'b0, lane_popcount_count[1]};
+                lane_result_n[2] = {57'b0, lane_popcount_count[2]};
+                lane_result_n[3] = {57'b0, lane_popcount_count[3]};
+            end else if (uop_p2_q.use_counter)
+                lane_result_n = lane_cnt_new_counter;
+            else if (uop_p2_q.use_shift)
+                lane_result_n = lane_shift_result;
+            else if (uop_p2_q.use_clip) begin
+                lane_result_n[0] = {48'b0, lane_clip_bits[0]};
+                lane_result_n[1] = {48'b0, lane_clip_bits[1]};
+                lane_result_n[2] = {48'b0, lane_clip_bits[2]};
+                lane_result_n[3] = {48'b0, lane_clip_bits[3]};
+            end else
+                lane_result_n = lane_bool_result;
+            st_n=S_UOP_P3_GLOBAL;
         end
 
-        // ── HCNTCLIP ─────────────────────────────────────────────────────────
-        S_HCNTCLIP_RD_ACC: begin
-            vrf_ra[0]=hcntclip_acc_entry; vrf_ra[1]=hcntclip_acc_entry;
-            vrf_ra[2]=hcntclip_acc_entry; vrf_ra[3]=hcntclip_acc_entry;
-            st_n=S_HCNTCLIP_PACK;
-        end
-        S_HCNTCLIP_PACK: begin
-            lane_clip_valid='1;
-            hcntclip_word_with_result=hcntclip_word_q;
-            hcntclip_word_with_result[0][{hcntclip_subgroup_q,4'b0000} +: 16]=lane_clip_bits[0];
-            hcntclip_word_with_result[1][{hcntclip_subgroup_q,4'b0000} +: 16]=lane_clip_bits[1];
-            hcntclip_word_with_result[2][{hcntclip_subgroup_q,4'b0000} +: 16]=lane_clip_bits[2];
-            hcntclip_word_with_result[3][{hcntclip_subgroup_q,4'b0000} +: 16]=lane_clip_bits[3];
-            hcntclip_word_n=hcntclip_word_with_result;
-            if(hcntclip_subgroup_q==2'd3)begin
-                st_n=S_HCNTCLIP_WRITE;
-            end else begin
-                hcntclip_subgroup_n=hcntclip_subgroup_q+2'd1;
-                st_n=S_HCNTCLIP_RD_ACC;
+        S_UOP_P3_GLOBAL: begin
+            uop_p3_n.valid  = 1'b0;
+            p4_arch_op_n    = uop_p3_q.arch_op;
+            unique case (uop_p3_q.op_type)
+            UOP_HBIND_CHUNK: begin
+                vrf_we = '1;
+                vrf_wa[0]=uop_p3_q.dst_addr; vrf_wa[1]=uop_p3_q.dst_addr;
+                vrf_wa[2]=uop_p3_q.dst_addr; vrf_wa[3]=uop_p3_q.dst_addr;
+                vrf_wd = lane_result_q;
+                if (uop_p3_q.chunk_idx == 2'd3) st_n = S_UOP_P4_RESP;
+                else begin
+                    uop_p0_n = uop_p3_q; uop_p0_n.valid = 1'b1;
+                    uop_p0_n.chunk_idx = uop_p3_q.chunk_idx + 2'd1;
+                    uop_p0_n.src0_addr = uop_p3_q.src0_base + (uop_p3_q.chunk_idx + 2'd1);
+                    uop_p0_n.src1_addr = uop_p3_q.src1_base + (uop_p3_q.chunk_idx + 2'd1);
+                    uop_p0_n.dst_addr  = uop_p3_q.dst_base  + (uop_p3_q.chunk_idx + 2'd1);
+                    st_n = S_UOP_P1_RD0;
+                end
             end
+            UOP_HSIM_CHUNK, UOP_HMATCH_CHUNK: begin
+                group_dist = {4'b0, lane_result_q[0][6:0]} + {4'b0, lane_result_q[1][6:0]}
+                           + {4'b0, lane_result_q[2][6:0]} + {4'b0, lane_result_q[3][6:0]};
+                hsim_total_n = hsim_total_q + {1'b0, group_dist};
+                if (uop_p3_q.chunk_idx == 2'd3) begin
+                    if (uop_p3_q.op_type == UOP_HMATCH_CHUNK) begin
+                        if (hsim_total_n < hmatch_best_dist_q) begin
+                            hmatch_best_dist_n = hsim_total_n;
+                            hmatch_best_idx_n  = uop_p3_q.class_idx;
+                        end
+                        if (uop_p3_q.is_last_class) begin
+                            st_n = S_UOP_P4_RESP;
+                        end else begin
+                            hsim_total_n        = '0;
+                            hmatch_class_slot_n  = hmatch_class_slot_q + 4'd1;
+                            uop_p0_n = uop_p3_q; uop_p0_n.valid = 1'b1;
+                            uop_p0_n.chunk_idx   = 2'd0;
+                            uop_p0_n.class_idx   = uop_p3_q.class_idx + 8'd1;
+                            uop_p0_n.is_last_class = (uop_p3_q.class_idx + 8'd1 == uop_p3_q.class_count - 8'd1);
+                            uop_p0_n.src1_addr   = {hmatch_class_slot_n, 2'b00};
+                            uop_p0_n.src1_base   = {hmatch_class_slot_n, 2'b00};
+                            st_n = S_UOP_P1_RD0;
+                        end
+                    end else st_n = S_UOP_P4_RESP;
+                end else begin
+                    uop_p0_n = uop_p3_q; uop_p0_n.valid = 1'b1;
+                    uop_p0_n.chunk_idx = uop_p3_q.chunk_idx + 2'd1;
+                    uop_p0_n.src0_addr = uop_p3_q.src0_base + (uop_p3_q.chunk_idx + 2'd1);
+                    uop_p0_n.src1_addr = uop_p3_q.src1_base + (uop_p3_q.chunk_idx + 2'd1);
+                    if (uop_p3_q.op_type == UOP_HMATCH_CHUNK) uop_p0_n.is_last_class = uop_p3_q.is_last_class;
+                    st_n = S_UOP_P1_RD0;
+                end
+            end
+            UOP_HCNTADD_SUBGROUP: begin
+                vrf_we = '1;
+                vrf_wa[0]=hcntadd_acc_base+{2'b00,uop_p3_q.chunk_idx,2'b00}+{4'b0,uop_p3_q.subgroup_idx};
+                vrf_wa[1]=vrf_wa[0]; vrf_wa[2]=vrf_wa[0]; vrf_wa[3]=vrf_wa[0];
+                vrf_wd = lane_result_q;
+                if (uop_p3_q.subgroup_idx < 2'd3) begin
+                    hcntadd_subgroup_n = uop_p3_q.subgroup_idx + 2'd1;
+                    vrf_ra[0]=hcntadd_acc_base+{2'b00,uop_p3_q.chunk_idx,2'b00}+{4'b0,hcntadd_subgroup_n};
+                    vrf_ra[1]=vrf_ra[0]; vrf_ra[2]=vrf_ra[0]; vrf_ra[3]=vrf_ra[0];
+                    // Advance uop to P2 directly (skip P1_RD0/P1_RD1)
+                    uop_p2_n = uop_p3_q; uop_p2_n.valid = 1'b1;
+                    uop_p2_n.subgroup_idx = hcntadd_subgroup_n;
+                    uop_p1_n.valid = 1'b0; uop_p0_n.valid = 1'b0;
+                    st_n = S_UOP_P2_LANE;
+                end else if (uop_p3_q.chunk_idx < 2'd3) begin
+                    hcntadd_subgroup_n = 2'd0;
+                    hcntadd_chunk_n    = uop_p3_q.chunk_idx + 2'd1;
+                    uop_p0_n = uop_p3_q; uop_p0_n.valid = 1'b1;
+                    uop_p0_n.chunk_idx    = hcntadd_chunk_n;
+                    uop_p0_n.subgroup_idx = 2'd0;
+                    uop_p0_n.src0_addr = {1'b0,hcntadd_hv_slot_q,2'b00}+{4'b0,hcntadd_chunk_n};
+                    uop_p0_n.src1_addr = hcntadd_acc_base+{2'b00,hcntadd_chunk_n,2'b00};
+                    st_n = S_UOP_P1_RD0;
+                end else st_n = S_UOP_P4_RESP;
+            end
+            UOP_HCNTCLIP_READ: begin
+                hcntclip_word_with_result = hcntclip_word_q;
+                hcntclip_word_with_result[0][{uop_p3_q.subgroup_idx,4'b0000} +: 16] = lane_result_q[0][15:0];
+                hcntclip_word_with_result[1][{uop_p3_q.subgroup_idx,4'b0000} +: 16] = lane_result_q[1][15:0];
+                hcntclip_word_with_result[2][{uop_p3_q.subgroup_idx,4'b0000} +: 16] = lane_result_q[2][15:0];
+                hcntclip_word_with_result[3][{uop_p3_q.subgroup_idx,4'b0000} +: 16] = lane_result_q[3][15:0];
+                hcntclip_word_n = hcntclip_word_with_result;
+                if (uop_p3_q.subgroup_idx < 2'd3) begin
+                    hcntclip_subgroup_n = uop_p3_q.subgroup_idx + 2'd1;
+                    vrf_ra[0]=hcntclip_acc_base+{2'b00,uop_p3_q.chunk_idx,2'b00}+{4'b0,hcntclip_subgroup_n};
+                    vrf_ra[1]=vrf_ra[0]; vrf_ra[2]=vrf_ra[0]; vrf_ra[3]=vrf_ra[0];
+                    uop_p2_n = uop_p3_q; uop_p2_n.valid = 1'b1;
+                    uop_p2_n.subgroup_idx = hcntclip_subgroup_n;
+                    uop_p1_n.valid = 1'b0; uop_p0_n.valid = 1'b0;
+                    st_n = S_UOP_P2_LANE;
+                end else begin
+                    // word complete; go to dedicated write state
+                    hcntclip_subgroup_n = 2'd0;
+                    st_n = S_UOP_CLIP_WRITE;
+                end
+            end
+            UOP_HPERM_CHUNK: begin
+                vrf_we = '1;
+                vrf_wa[0]=hperm_dst_base_q+uop_p3_q.chunk_idx; vrf_wa[1]=hperm_dst_base_q+uop_p3_q.chunk_idx;
+                vrf_wa[2]=hperm_dst_base_q+uop_p3_q.chunk_idx; vrf_wa[3]=hperm_dst_base_q+uop_p3_q.chunk_idx;
+                vrf_wd = lane_result_q;
+                if (uop_p3_q.chunk_idx == 2'd3) st_n = S_UOP_P4_RESP;
+                else begin
+                    chunk_cnt_n = uop_p3_q.chunk_idx + 2'd1;
+                    uop_p0_n = uop_p3_q; uop_p0_n.valid = 1'b1;
+                    uop_p0_n.chunk_idx = chunk_cnt_n;
+                    st_n = S_UOP_P1_RD0;
+                end
+            end
+            default: st_n = S_UOP_P4_RESP;
+            endcase
         end
-        S_HCNTCLIP_WRITE: begin
-            vrf_we='1;
+
+        // ── HCNTCLIP writeback (dedicated state, avoids pipeline timing issues) ─
+        S_UOP_CLIP_WRITE: begin
+            vrf_we = '1;
             vrf_wa[0]=hcntclip_dst_base_q+hcntclip_chunk_q; vrf_wa[1]=hcntclip_dst_base_q+hcntclip_chunk_q;
             vrf_wa[2]=hcntclip_dst_base_q+hcntclip_chunk_q; vrf_wa[3]=hcntclip_dst_base_q+hcntclip_chunk_q;
-            vrf_wd=hcntclip_word_q;
-            hcntclip_word_n='0;
-            hcntclip_subgroup_n=2'd0;
-            if(hcntclip_chunk_q==2'd3)begin res_n='0;st_n=S_RESULT;end
-            else begin hcntclip_chunk_n=hcntclip_chunk_q+2'd1;st_n=S_HCNTCLIP_RD_ACC;end
+            vrf_wd = hcntclip_word_q;
+            hcntclip_word_n = '0;
+            hcntclip_subgroup_n = 2'd0;
+            p4_arch_op_n = HDEC_HCNTCLIP;
+            if (hcntclip_chunk_q == 2'd3) st_n = S_UOP_P4_RESP;
+            else begin
+                hcntclip_chunk_n = hcntclip_chunk_q + 2'd1;
+                uop_p0_n = '0;
+                uop_p0_n.valid = 1'b1;
+                uop_p0_n.op_type = UOP_HCNTCLIP_READ;
+                uop_p0_n.arch_op = HDEC_HCNTCLIP;
+                uop_p0_n.chunk_idx = hcntclip_chunk_n;
+                uop_p0_n.subgroup_idx = 2'd0;
+                uop_p0_n.src0_addr = hcntclip_acc_base+{2'b00,hcntclip_chunk_n,2'b00};
+                uop_p0_n.use_clip = 1'b1;
+                st_n = S_UOP_P1_RD0;
+            end
         end
 
-        // ── HPERM ────────────────────────────────────────────────────────────
-        S_HPERM_RD_A: begin
-            vrf_ra[0]=hperm_src_base_q+hperm_word0[3:2]; vrf_ra[1]=hperm_src_base_q+hperm_word0[3:2];
-            vrf_ra[2]=hperm_src_base_q+hperm_word0[3:2]; vrf_ra[3]=hperm_src_base_q+hperm_word0[3:2];
-            hperm_lane_base_n=hperm_word0[1:0];
-            st_n=S_HPERM_RD_B;
-        end
-        S_HPERM_RD_B: begin
-            hperm_a_n=vrf_rd;
-            vrf_ra[0]=hperm_src_base_q+hperm_next_chunk; vrf_ra[1]=hperm_src_base_q+hperm_next_chunk;
-            vrf_ra[2]=hperm_src_base_q+hperm_next_chunk; vrf_ra[3]=hperm_src_base_q+hperm_next_chunk;
-            st_n=S_HPERM_SHIFT_WR;
-        end
-        S_HPERM_SHIFT_WR: begin
-            lane_shift_valid='1;
-            lane_shift_nibble=hperm_nibble_q;
-            lane_shift_a[0]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd0,hperm_a_q,vrf_rd);
-            lane_shift_a[1]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd1,hperm_a_q,vrf_rd);
-            lane_shift_a[2]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd2,hperm_a_q,vrf_rd);
-            lane_shift_a[3]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd3,hperm_a_q,vrf_rd);
-            lane_shift_b[0]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd1,hperm_a_q,vrf_rd);
-            lane_shift_b[1]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd2,hperm_a_q,vrf_rd);
-            lane_shift_b[2]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd3,hperm_a_q,vrf_rd);
-            lane_shift_b[3]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd4,hperm_a_q,vrf_rd);
-            vrf_we='1;
-            vrf_wa[0]=hperm_dst_base_q+chunk_cnt_q; vrf_wa[1]=hperm_dst_base_q+chunk_cnt_q;
-            vrf_wa[2]=hperm_dst_base_q+chunk_cnt_q; vrf_wa[3]=hperm_dst_base_q+chunk_cnt_q;
-            vrf_wd=lane_shift_result;
-            if(chunk_cnt_q==2'd3)begin res_n='0;st_n=S_RESULT;end
-            else begin chunk_cnt_n=chunk_cnt_q+2'd1;st_n=S_HPERM_RD_A;end
+        S_UOP_P4_RESP: begin
+            scalar_response_n = '0;
+            response_valid_n  = 1'b1;
+            if (p4_arch_op_q == HDEC_HSIM)
+                scalar_response_n = {53'b0, hsim_total_q};
+            else if (p4_arch_op_q == HDEC_HMATCH)
+                scalar_response_n = {45'b0, hmatch_best_idx_q, hmatch_best_dist_q};
+            st_n = S_RESULT;
         end
 
-        S_RESULT: st_n=S_IDLE;
+        S_RESULT: begin response_valid_n=1'b0;st_n=S_IDLE;end
         default: st_n=S_IDLE;
         endcase
     end
@@ -420,22 +579,28 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             vaddr_bank_q<='0;vaddr_idx_q<='0;clr_cnt_q<='0;clr_base_q<='0;
             src0_q<='0;chunk_cnt_q<='0;
             hb_dst_base_q<='0;hb_src0_base_q<='0;hb_src1_base_q<='0;
-            hsim_src0_base_q<='0;hsim_src1_base_q<='0;hsim_total_q<='0;hsim_row_q<='0;
-            hmatch_num_q<='0;hmatch_idx_q<='0;hmatch_best_idx_q<='0;hmatch_class_slot_q<='0;hmatch_best_dist_q<='0;
+            hsim_src0_base_q<='0;hsim_src1_base_q<='0;hsim_total_q<='0;
+            hmatch_num_q<='0;hmatch_best_idx_q<='0;hmatch_class_slot_q<='0;hmatch_best_dist_q<='0;
             hperm_a_q<='0;hperm_dst_base_q<='0;hperm_src_base_q<='0;hperm_word_off_q<='0;hperm_nibble_q<='0;hperm_lane_base_q<='0;
             hcntadd_hv_q<='0;hcntadd_hv_slot_q<='0;hcntadd_chunk_q<='0;hcntadd_subgroup_q<='0;hcntadd_acc_sel_q<='0;
             hcntclip_dst_base_q<='0;hcntclip_acc_sel_q<='0;hcntclip_threshold_q<='0;hcntclip_chunk_q<='0;hcntclip_subgroup_q<='0;hcntclip_word_q<='0;
+            uop_p0_q<='0;uop_p1_q<='0;uop_p2_q<='0;uop_p3_q<='0;
+            lane_result_q<='0;
+            scalar_response_q<='0;response_valid_q<='0;p4_arch_op_q<=HDEC_VWR64;
         end
         else begin
             st_q<=st_n;res_q<=res_n;op_q<=op_n;a_q<=a_n;b_q<=b_n;bk_q<=bk_n;
             vaddr_bank_q<=vaddr_bank_n;vaddr_idx_q<=vaddr_idx_n;clr_cnt_q<=clr_cnt_n;clr_base_q<=clr_base_n;
             src0_q<=src0_n;chunk_cnt_q<=chunk_cnt_n;
             hb_dst_base_q<=hb_dst_base_n;hb_src0_base_q<=hb_src0_base_n;hb_src1_base_q<=hb_src1_base_n;
-            hsim_src0_base_q<=hsim_src0_base_n;hsim_src1_base_q<=hsim_src1_base_n;hsim_total_q<=hsim_total_n;hsim_row_q<=hsim_row_n;
-            hmatch_num_q<=hmatch_num_n;hmatch_idx_q<=hmatch_idx_n;hmatch_best_idx_q<=hmatch_best_idx_n;hmatch_class_slot_q<=hmatch_class_slot_n;hmatch_best_dist_q<=hmatch_best_dist_n;
+            hsim_src0_base_q<=hsim_src0_base_n;hsim_src1_base_q<=hsim_src1_base_n;hsim_total_q<=hsim_total_n;
+            hmatch_num_q<=hmatch_num_n;hmatch_best_idx_q<=hmatch_best_idx_n;hmatch_class_slot_q<=hmatch_class_slot_n;hmatch_best_dist_q<=hmatch_best_dist_n;
             hperm_a_q<=hperm_a_n;hperm_dst_base_q<=hperm_dst_base_n;hperm_src_base_q<=hperm_src_base_n;hperm_word_off_q<=hperm_word_off_n;hperm_nibble_q<=hperm_nibble_n;hperm_lane_base_q<=hperm_lane_base_n;
             hcntadd_hv_q<=hcntadd_hv_n;hcntadd_hv_slot_q<=hcntadd_hv_slot_n;hcntadd_chunk_q<=hcntadd_chunk_n;hcntadd_subgroup_q<=hcntadd_subgroup_n;hcntadd_acc_sel_q<=hcntadd_acc_sel_n;
             hcntclip_dst_base_q<=hcntclip_dst_base_n;hcntclip_acc_sel_q<=hcntclip_acc_sel_n;hcntclip_threshold_q<=hcntclip_threshold_n;hcntclip_chunk_q<=hcntclip_chunk_n;hcntclip_subgroup_q<=hcntclip_subgroup_n;hcntclip_word_q<=hcntclip_word_n;
+            uop_p0_q<=uop_p0_n;uop_p1_q<=uop_p1_n;uop_p2_q<=uop_p2_n;uop_p3_q<=uop_p3_n;
+            lane_result_q<=lane_result_n;
+            scalar_response_q<=scalar_response_n;response_valid_q<=response_valid_n;p4_arch_op_q<=p4_arch_op_n;
         end
     end
 endmodule
