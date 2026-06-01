@@ -57,6 +57,11 @@ module hdec_lane_4x64
     output logic [VRF_IDX_W-1:0]              local_wb_addr_o,
     output logic                              local_wb_we_o,
 
+    // ── Lane-local Typed Result Fabric ─────────────────────────────────────
+    input  hdec_lane_mode_e                   lane_mode_i,
+    output logic [LANE_WIDTH-1:0]             lane_vec_result_o,
+    output logic [15:0]                       lane_narrow_result_o,
+
     // ── XOR Front-End Compute Path ──────────────────────────────────────────
     input  logic                              bool_valid_i,
     input  logic [LANE_WIDTH-1:0]             bool_src_a_i,
@@ -88,9 +93,13 @@ module hdec_lane_4x64
 );
 
     // ── XOR Front-End Core ──────────────────────────────────────────────────
+    logic bool_active;
     logic [LANE_WIDTH-1:0] bool_src_a, bool_src_b;
-    assign bool_src_a = bool_valid_i ? bool_src_a_i : '0;
-    assign bool_src_b = bool_valid_i ? bool_src_b_i : '0;
+    assign bool_active = bool_valid_i &&
+                         ((lane_mode_i == HDEC_LANE_MODE_XOR) ||
+                          (lane_mode_i == HDEC_LANE_MODE_POPCOUNT));
+    assign bool_src_a = bool_active ? bool_src_a_i : '0;
+    assign bool_src_b = bool_active ? bool_src_b_i : '0;
 
     logic [LANE_WIDTH-1:0] bool_result;
 
@@ -101,51 +110,87 @@ module hdec_lane_4x64
     );
 
     assign bool_result_o = bool_result;
-    assign popcount_count_o = 7'($countones(bool_result));
+    logic [6:0] popcount_count;
+    assign popcount_count = 7'($countones(bool_result));
+    assign popcount_count_o = popcount_count;
 
     // ── HDCU CNT array update ──────────────────────────────────────────────
+    logic cnt_active;
     logic [LANE_WIDTH-1:0] cnt_hv_word, cnt_old_counter;
     logic [1:0]            cnt_subgroup;
-    assign cnt_hv_word     = cnt_valid_i ? cnt_hv_word_i     : '0;
-    assign cnt_old_counter = cnt_valid_i ? cnt_old_counter_i : '0;
-    assign cnt_subgroup    = cnt_valid_i ? cnt_subgroup_i    : '0;
+    logic [LANE_WIDTH-1:0] cnt_new_counter;
+    assign cnt_active      = cnt_valid_i && (lane_mode_i == HDEC_LANE_MODE_COUNTER);
+    assign cnt_hv_word     = cnt_active ? cnt_hv_word_i     : '0;
+    assign cnt_old_counter = cnt_active ? cnt_old_counter_i : '0;
+    assign cnt_subgroup    = cnt_active ? cnt_subgroup_i    : '0;
 
     hdec_cnt_array i_cnt_array (
         .clear_i         (1'b0),
-        .update_i        (cnt_valid_i),
+        .update_i        (cnt_active),
         .old_counter_i   (cnt_old_counter),
         .hv_word_i       (cnt_hv_word),
         .subgroup_i      (cnt_subgroup),
         .clip_threshold_i('0),
-        .new_counter_o   (cnt_new_counter_o),
+        .new_counter_o   (cnt_new_counter),
         .clip_bits_o     ()
     );
+    assign cnt_new_counter_o = cnt_new_counter;
 
     // ── Shift-Align Core ───────────────────────────────────────────────────
+    logic shift_active;
     logic [LANE_WIDTH-1:0] shift_src_a, shift_src_b;
     logic [3:0]            shift_nibble;
-    assign shift_src_a  = shift_valid_i ? shift_src_a_i  : '0;
-    assign shift_src_b  = shift_valid_i ? shift_src_b_i  : '0;
-    assign shift_nibble = shift_valid_i ? shift_nibble_i : '0;
+    logic [LANE_WIDTH-1:0] shift_result;
+    assign shift_active = shift_valid_i && (lane_mode_i == HDEC_LANE_MODE_SHIFT);
+    assign shift_src_a  = shift_active ? shift_src_a_i  : '0;
+    assign shift_src_b  = shift_active ? shift_src_b_i  : '0;
+    assign shift_nibble = shift_active ? shift_nibble_i : '0;
 
     hdec_lane_shift_align i_shift_align (
         .src_a_i       (shift_src_a),
         .src_b_i       (shift_src_b),
         .nibble_shift_i(shift_nibble),
-        .result_o      (shift_result_o)
+        .result_o      (shift_result)
     );
+    assign shift_result_o = shift_result;
 
     // ── Clip Core ──────────────────────────────────────────────────────────
+    logic clip_active;
     logic [LANE_WIDTH-1:0] clip_counter;
     logic [3:0]            clip_threshold;
-    assign clip_counter   = clip_valid_i ? clip_counter_i   : '0;
-    assign clip_threshold = clip_valid_i ? clip_threshold_i : '0;
+    logic [15:0]           clip_bits;
+    assign clip_active    = clip_valid_i && (lane_mode_i == HDEC_LANE_MODE_CLIP);
+    assign clip_counter   = clip_active ? clip_counter_i   : '0;
+    assign clip_threshold = clip_active ? clip_threshold_i : '0;
 
     hdec_lane_clip i_clip (
         .counter_i  (clip_counter),
         .threshold_i(clip_threshold),
-        .bits_o     (clip_bits_o)
+        .bits_o     (clip_bits)
     );
+    assign clip_bits_o = clip_bits;
+
+    // ── Lane-local Typed Result Selection ──────────────────────────────────
+    always_comb begin
+        lane_vec_result_o    = '0;
+        lane_narrow_result_o = '0;
+        unique case (lane_mode_i)
+        HDEC_LANE_MODE_XOR:
+            lane_vec_result_o = bool_result;
+        HDEC_LANE_MODE_POPCOUNT:
+            lane_narrow_result_o = {9'b0, popcount_count};
+        HDEC_LANE_MODE_COUNTER:
+            lane_vec_result_o = cnt_new_counter;
+        HDEC_LANE_MODE_CLIP:
+            lane_narrow_result_o = clip_bits;
+        HDEC_LANE_MODE_SHIFT:
+            lane_vec_result_o = shift_result;
+        default: begin
+            lane_vec_result_o    = '0;
+            lane_narrow_result_o = '0;
+        end
+        endcase
+    end
 
     // ── Legacy Passthrough Shell Registers ──────────────────────────────────
     typedef enum logic [2:0] { LS_IDLE, LS_P0, LS_P1, LS_P2, LS_P3 } lane_state_t;

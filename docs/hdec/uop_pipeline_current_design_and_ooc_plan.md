@@ -41,8 +41,8 @@ The current control flow is:
 | `S_EXEC` / P0 | Decode instruction and clean-construct a new uop. New uop construction starts from `uop_p0_n = '0`. |
 | `S_UOP_P1_RD0` | Issue first VRF read address. For HPERM, compute the wrapped source word address. |
 | `S_UOP_P1_RD1` | Capture operand A (`src0_q` or `hperm_a_q`) and issue the second read address. HCNTCLIP is single-source and reuses the same source address. |
-| `S_UOP_P2_LANE` | Drive lane-local compute blocks and register their result into `lane_result_q`. |
-| `S_UOP_P3_GLOBAL` | Perform global finish: VRF writeback, HSIM/HMATCH accumulation, best update, HCNTADD pre-read, or HCNTCLIP subgroup pack. |
+| `S_UOP_P2_LANE` | Drive lane-local compute blocks and register typed vector or narrow results. |
+| `S_UOP_P3_GLOBAL` | Consume typed results using `p3_action`: VRF writeback, HSIM/HMATCH accumulation, best update, HCNTADD pre-read, or HCNTCLIP subgroup pack. |
 | `S_UOP_P4_RESP` | Pack registered scalar response for HSIM/HMATCH or zero response for vector ops. |
 | `S_UOP_CLIP_WRITE` | Dedicated HCNTCLIP writeback state after all four subgroups for one output word are packed. |
 
@@ -60,21 +60,41 @@ All real compute datapaths are Lane-local:
 lane-local `popcount_count_o` output and stores it into `lane_result_q[lid][6:0]`
 for HSIM/HMATCH.
 
-## 4. Unified `lane_result_q`
+## 4. ISA-guided Lane-local Typed Result Fabric
 
-`lane_result_q` is the 4-lane, 256-bit P2-to-P3 boundary register. Its
-interpretation depends on `uop_p3_q.op_type`:
+G++ replaces the previous unified `lane_result_q` boundary with an
+ISA-guided typed result fabric. In `S_EXEC`, each HDC custom instruction is
+decoded into a compact instruction template carried by `hdec_uop_t`:
 
-| op_type | `lane_result_q[lid]` content |
-|---------|------------------------------|
-| HBIND | 64-bit XOR result |
-| HSIM/HMATCH | low 7-bit popcount, high bits zero |
-| HCNTADD | 64-bit updated packed counter word |
-| HCNTCLIP | low 16-bit `clip_bits`, high bits zero |
-| HPERM | 64-bit shift-align result |
+- `lane_mode`: selects the lane-local compute result.
+- `result_type`: selects the P2 boundary channel.
+- `p3_action`: selects how P3 consumes the result.
 
-Only one HDC uop is active at a time in the current controller, so this shared
-register does not need tags beyond the uop pipeline registers.
+The template mapping is:
+
+| Instruction | `lane_mode` | `result_type` | `p3_action` |
+|-------------|-------------|---------------|-------------|
+| HBIND | `HDEC_LANE_MODE_XOR` | `HDEC_RESULT_VECTOR` | `HDEC_P3_VRF_WRITE` |
+| HSIM | `HDEC_LANE_MODE_POPCOUNT` | `HDEC_RESULT_NARROW` | `HDEC_P3_SIM_ACCUM` |
+| HMATCH | `HDEC_LANE_MODE_POPCOUNT` | `HDEC_RESULT_NARROW` | `HDEC_P3_MATCH_BEST` |
+| HCNTADD | `HDEC_LANE_MODE_COUNTER` | `HDEC_RESULT_VECTOR` | `HDEC_P3_VRF_WRITE` |
+| HCNTCLIP | `HDEC_LANE_MODE_CLIP` | `HDEC_RESULT_NARROW` | `HDEC_P3_CLIP_PACK` |
+| HPERM | `HDEC_LANE_MODE_SHIFT` | `HDEC_RESULT_VECTOR` | `HDEC_P3_VRF_WRITE` |
+
+Each lane produces two typed outputs:
+
+- vector channel: 64-bit XOR, CNT update, or shift-align result.
+- narrow channel: 7-bit popcount zero-extended to 16 bits, or 16-bit clip bits.
+
+P2 holds both channels by default and updates only the channel selected by
+`result_type`:
+
+- `lane_vec_result_q[4][64]` for vector results.
+- `lane_narrow_result_q[4][16]` for narrow results.
+
+P2 no longer contains a top-level multi-operator result mux. P3 no longer
+interprets one shared result register; it consumes vector or narrow data
+according to `p3_action`.
 
 ## 5. `src0_q`
 
@@ -115,7 +135,7 @@ to use an explicit compressor tree, carry-cut, or parity mode.
 |------|----------------|
 | Unified uop pipeline | Implemented for HBIND/HSIM/HMATCH/HCNTADD/HCNTCLIP/HPERM. |
 | Clean uop construction | Implemented: new uops are constructed from zero in `S_EXEC`; HCNTCLIP next-chunk uop is also clean-built. |
-| P2-to-P3 `lane_result_q` cut | Implemented as one shared 256-bit register. |
+| P2-to-P3 typed result cut | Implemented as vector/narrow result registers; no shared top-level result mux. |
 | Lane-local compute boundary | Implemented after review fix; popcount is back in the lane wrapper. |
 | Stale flag protection | Initial fix implemented with clean construction; simulation onehot assertion added in P2. |
 | HCNTADD pre-read optimization | Implemented as first version: P3 writes current subgroup and pre-reads next subgroup, then skips P1 for the next subgroup. |
@@ -123,7 +143,7 @@ to use an explicit compressor tree, carry-cut, or parity mode.
 
 ## 8. Stale UOP Flag Bug Record
 
-The previous bug was:
+The previous bug was in the pre-G++ `use_*` control scheme:
 
 1. `always_comb` defaulted `uop_p0_n = uop_p0_q`.
 2. HCNTADD set `use_counter = 1`.
@@ -132,12 +152,17 @@ The previous bug was:
 4. P2 selected the counter result before clip result because of priority order.
 5. HCNTCLIP packed counter data instead of clip bits.
 
-The fix is:
+The original fix was:
 
 - New uop construction starts with `uop_p0_n = '0`.
 - HCNTCLIP next-chunk uop construction also starts from zero.
 - P2 has a simulation-only onehot0 assertion over popcount, counter, shift,
   clip, and XOR-only modes.
+
+G++ removes `use_xor/use_popcount/use_counter/use_clip/use_shift` from
+`hdec_uop_t`. The active control is now the decode-generated template:
+`lane_mode`, `result_type`, and `p3_action`. P2 assertions check template
+consistency instead of one-hot `use_*` flags.
 
 ## 9. Latency Table
 
@@ -228,3 +253,50 @@ The current version does not modify:
 - HPERM 4-bit-granularity semantics.
 - ECC datapath.
 
+## 14. G++ OOC Follow-up Notes
+
+G++ targets the current Vivado OOC worst path through `S_UOP_P2_LANE` into the
+low bits of the old shared result register. The root cause was not only
+popcount arithmetic depth; the old top-level result boundary forced XOR,
+popcount, CNT, clip, and shift results through one 4×64-bit result selection
+network, and narrow popcount/clip results were mixed into the full vector path.
+
+The new structure keeps the same instruction latency and pipeline staging:
+
+- Custom instruction decode creates an instruction template once in `S_EXEC`.
+- The template travels with the uop through P1/P2/P3.
+- Lane-local typed result selection uses only `lane_mode`.
+- P2 captures either vector or narrow results according to `result_type`.
+- P3 consumes the selected channel according to `p3_action`.
+
+Low-power measures:
+
+- Lane inputs are operand-isolated by `lane_mode`.
+- Non-active P2 result channel holds its previous value.
+- Narrow ops do not update the 4×64-bit vector result registers.
+- Vector ops do not update the 4×16-bit narrow result registers.
+
+Small-area measures:
+
+- The previous shared vector-width result register is replaced by
+  `lane_vec_result_q[4][64]`.
+- Only `lane_narrow_result_q[4][16]` is added for narrow popcount/clip data.
+- No per-op 4×64-bit result register sets are introduced.
+- No duplicate popcount, CNT, shift-align, or clip compute units are added.
+
+Unchanged boundaries:
+
+- ISA encoding is unchanged.
+- CV-X-IF wrapper is unchanged.
+- VRF structure is unchanged.
+- Counter bit-width is unchanged.
+- HPERM remains 4-bit granular.
+- ECC mux/carry-cut/parity behavior is not implemented.
+
+Post-G++ OOC should check:
+
+- Whether 150 MHz passes.
+- LUT/FF delta from the extra narrow result channel and template bits.
+- Dynamic-power change from channel holds and operand isolation.
+- Whether the worst path moved out of P2 result capture.
+- Whether cycles and Fmax improve without changing instruction latency.

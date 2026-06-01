@@ -57,11 +57,36 @@ package hdec_pkg;
         UOP_HPERM_CHUNK      = 4'd6
     } hdec_uop_type_e;
 
+    typedef enum logic [2:0] {
+        HDEC_LANE_MODE_NONE     = 3'd0,
+        HDEC_LANE_MODE_XOR      = 3'd1,
+        HDEC_LANE_MODE_POPCOUNT = 3'd2,
+        HDEC_LANE_MODE_COUNTER  = 3'd3,
+        HDEC_LANE_MODE_CLIP     = 3'd4,
+        HDEC_LANE_MODE_SHIFT    = 3'd5
+    } hdec_lane_mode_e;
+
+    typedef enum logic {
+        HDEC_RESULT_VECTOR = 1'b0,
+        HDEC_RESULT_NARROW = 1'b1
+    } hdec_result_type_e;
+
+    typedef enum logic [2:0] {
+        HDEC_P3_NONE       = 3'd0,
+        HDEC_P3_VRF_WRITE  = 3'd1,
+        HDEC_P3_SIM_ACCUM  = 3'd2,
+        HDEC_P3_MATCH_BEST = 3'd3,
+        HDEC_P3_CLIP_PACK  = 3'd4
+    } hdec_p3_action_e;
+
     typedef struct packed {
         // ── Control ──
         logic                   valid;
         hdec_uop_type_e         op_type;
         hdec_op_t               arch_op;
+        hdec_lane_mode_e        lane_mode;
+        hdec_result_type_e      result_type;
+        hdec_p3_action_e        p3_action;
 
         // ── VRF Addressing ──
         logic [VRF_IDX_W-1:0]   src0_addr;
@@ -81,13 +106,6 @@ package hdec_pkg;
 
         // ── Compute Parameters ──
         logic [3:0]             perm_nibble;
-
-        // ── Compute Enables ──
-        logic                   use_xor;
-        logic                   use_popcount;
-        logic                   use_counter;
-        logic                   use_clip;
-        logic                   use_shift;
 
         // ── Op Type Tags ──
         logic                   is_last_class;
