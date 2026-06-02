@@ -178,6 +178,48 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
         lane_clip_valid='0;
         vrf_ra='0; vrf_we='0; vrf_wa='0; vrf_wd='0;
 
+        // ── Lane Compute Control & Result Capture ──────────────────────────
+        // Gated by registered uop_p2_q.valid, not FSM state.
+        // uop_p2_q.valid is 1 during S_UOP_P2_LANE (set in P1_RD1,
+        // cleared in P2_LANE for the next cycle).
+        if (uop_p2_q.valid) begin
+            if (uop_p2_q.use_xor || uop_p2_q.use_popcount)
+                uop_lane_bool_valid = '1;
+            if (uop_p2_q.use_counter)
+                lane_cnt_valid = '1;
+            if (uop_p2_q.use_shift) begin
+                lane_shift_valid = '1;
+                lane_shift_nibble = uop_p2_q.perm_nibble;
+                lane_shift_a[0]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd0,hperm_a_q,vrf_rd);
+                lane_shift_a[1]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd1,hperm_a_q,vrf_rd);
+                lane_shift_a[2]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd2,hperm_a_q,vrf_rd);
+                lane_shift_a[3]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd3,hperm_a_q,vrf_rd);
+                lane_shift_b[0]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd1,hperm_a_q,vrf_rd);
+                lane_shift_b[1]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd2,hperm_a_q,vrf_rd);
+                lane_shift_b[2]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd3,hperm_a_q,vrf_rd);
+                lane_shift_b[3]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd4,hperm_a_q,vrf_rd);
+            end
+            if (uop_p2_q.use_clip)
+                lane_clip_valid = '1;
+
+            if (uop_p2_q.use_popcount) begin
+                lane_result_n[0] = {57'b0, lane_popcount_count[0]};
+                lane_result_n[1] = {57'b0, lane_popcount_count[1]};
+                lane_result_n[2] = {57'b0, lane_popcount_count[2]};
+                lane_result_n[3] = {57'b0, lane_popcount_count[3]};
+            end else if (uop_p2_q.use_counter)
+                lane_result_n = lane_cnt_new_counter;
+            else if (uop_p2_q.use_shift)
+                lane_result_n = lane_shift_result;
+            else if (uop_p2_q.use_clip) begin
+                lane_result_n[0] = {48'b0, lane_clip_bits[0]};
+                lane_result_n[1] = {48'b0, lane_clip_bits[1]};
+                lane_result_n[2] = {48'b0, lane_clip_bits[2]};
+                lane_result_n[3] = {48'b0, lane_clip_bits[3]};
+            end else
+                lane_result_n = lane_bool_result;
+        end
+
         case(st_q)
         S_IDLE: if(valid_i&&ready_o)begin op_n=operator_i;a_n=operand_a_i;b_n=operand_b_i;st_n=S_EXEC;end
 
@@ -368,8 +410,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
         end
 
         S_UOP_P2_LANE: begin
-            uop_p3_n           = uop_p2_q;
-            uop_p2_n.valid     = 1'b0;
+            uop_p3_n       = uop_p2_q;
+            uop_p2_n.valid = 1'b0;
 `ifndef SYNTHESIS
             assert ($onehot0({
                     uop_p2_q.use_popcount,
@@ -381,41 +423,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                 else $error("HDEC P2 invalid compute mode flags: op_type=%0d",
                             uop_p2_q.op_type);
 `endif
-            if (uop_p2_q.use_xor || uop_p2_q.use_popcount)
-                uop_lane_bool_valid = '1;
-            if (uop_p2_q.use_counter)
-                lane_cnt_valid = '1;
-            if (uop_p2_q.use_shift) begin
-                lane_shift_valid = '1;
-                lane_shift_nibble = uop_p2_q.perm_nibble;
-                lane_shift_a[0]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd0,hperm_a_q,vrf_rd);
-                lane_shift_a[1]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd1,hperm_a_q,vrf_rd);
-                lane_shift_a[2]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd2,hperm_a_q,vrf_rd);
-                lane_shift_a[3]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd3,hperm_a_q,vrf_rd);
-                lane_shift_b[0]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd1,hperm_a_q,vrf_rd);
-                lane_shift_b[1]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd2,hperm_a_q,vrf_rd);
-                lane_shift_b[2]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd3,hperm_a_q,vrf_rd);
-                lane_shift_b[3]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd4,hperm_a_q,vrf_rd);
-            end
-            if (uop_p2_q.use_clip)
-                lane_clip_valid = '1;
-            if (uop_p2_q.use_popcount) begin
-                lane_result_n[0] = {57'b0, lane_popcount_count[0]};
-                lane_result_n[1] = {57'b0, lane_popcount_count[1]};
-                lane_result_n[2] = {57'b0, lane_popcount_count[2]};
-                lane_result_n[3] = {57'b0, lane_popcount_count[3]};
-            end else if (uop_p2_q.use_counter)
-                lane_result_n = lane_cnt_new_counter;
-            else if (uop_p2_q.use_shift)
-                lane_result_n = lane_shift_result;
-            else if (uop_p2_q.use_clip) begin
-                lane_result_n[0] = {48'b0, lane_clip_bits[0]};
-                lane_result_n[1] = {48'b0, lane_clip_bits[1]};
-                lane_result_n[2] = {48'b0, lane_clip_bits[2]};
-                lane_result_n[3] = {48'b0, lane_clip_bits[3]};
-            end else
-                lane_result_n = lane_bool_result;
-            st_n=S_UOP_P3_GLOBAL;
+            st_n = S_UOP_P3_GLOBAL;
         end
 
         S_UOP_P3_GLOBAL: begin
