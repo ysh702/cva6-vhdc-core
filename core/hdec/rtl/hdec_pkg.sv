@@ -57,6 +57,31 @@ package hdec_pkg;
         UOP_HPERM_CHUNK      = 4'd6
     } hdec_uop_type_e;
 
+    typedef enum logic [2:0] {
+        HDEC_LANE_NOP           = 3'd0,
+        HDEC_LANE_XOR           = 3'd1,
+        HDEC_LANE_POPCOUNT_DIFF = 3'd2,
+        HDEC_LANE_CNTADD        = 3'd3,
+        HDEC_LANE_CLIP          = 3'd4,
+        HDEC_LANE_SHIFT         = 3'd5
+    } hdec_lane_op_e;
+
+    typedef enum logic [1:0] {
+        HDEC_CAPTURE_NONE  = 2'd0,
+        HDEC_CAPTURE_VEC64 = 2'd1,
+        HDEC_CAPTURE_POP7  = 2'd2,
+        HDEC_CAPTURE_CLIP16= 2'd3
+    } hdec_lane_capture_kind_e;
+
+    typedef struct packed {
+        logic                    valid;
+        hdec_lane_op_e           op;
+        hdec_lane_capture_kind_e capture_kind;
+        logic [1:0]              subgroup;
+        logic [3:0]              threshold;
+        logic [3:0]              perm;
+    } hdec_lane_ctrl_t;
+
     typedef struct packed {
         // ── Control ──
         logic                   valid;
@@ -79,15 +104,8 @@ package hdec_pkg;
         logic [7:0]             class_idx;
         logic [7:0]             class_count;
 
-        // ── Compute Parameters ──
-        logic [3:0]             perm_nibble;
-
-        // ── Compute Enables ──
-        logic                   use_xor;
-        logic                   use_popcount;
-        logic                   use_counter;
-        logic                   use_clip;
-        logic                   use_shift;
+        // ── Lane-local Compute Control ──
+        hdec_lane_ctrl_t        lane_ctrl;
 
         // ── Op Type Tags ──
         logic                   is_last_class;
