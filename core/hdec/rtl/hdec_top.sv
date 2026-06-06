@@ -63,38 +63,15 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
     // P0: decode + uop issue
     // P1: VRF read address / read wait / uop alignment (VRF output latched in vrf_rd)
     // P2: VRF read data (vrf_rd) directly feeds Lane local compute
-    // P2/P3 boundary: lane_*_q registers cut the critical combinational path
+    // P2/P3 boundary: each lane slice owns its registered payload outputs
     hdec_uop_t uop_p0_q, uop_p0_n, uop_p1_q, uop_p1_n, uop_p2_q, uop_p2_n, uop_p3_q, uop_p3_n;
 
-    // ── Lane compute wires ──────────────────────────────────────────────────
-    logic [LANE_NUM-1:0]                 uop_lane_bool_valid; // uop path XOR enable
-    logic [LANE_NUM-1:0][LANE_WIDTH-1:0] lane_bool_result;
-    logic [LANE_NUM-1:0][6:0]            lane_popcount_count;
-    logic [LANE_NUM-1:0]                 lane_cnt_valid;
-    logic [LANE_NUM-1:0][LANE_WIDTH-1:0] lane_cnt_new_counter;
-    logic [LANE_NUM-1:0]                 lane_shift_valid;
-    logic [LANE_NUM-1:0][LANE_WIDTH-1:0] lane_shift_a,lane_shift_b,lane_shift_result;
-    logic [3:0]                          lane_shift_nibble;
-    logic [LANE_NUM-1:0]                 lane_clip_valid;
-    logic [LANE_NUM-1:0][15:0]           lane_clip_bits;
-
-    // ── Lane Boundary Registers (P2→P3 cut, split by payload width) ─────────
-    // Keep full-width lane_result_q only for true 64-bit lane payloads:
-    //   HBIND/HPERM/HCNTADD.
-    // Narrow payloads use dedicated registers to avoid feeding zero-extended
-    // popcount/clip results into the shared 4×64-bit result mux:
-    //   HSIM/HMATCH: lane_popcnt_q[lid]
-    //   HCNTCLIP:    lane_clip_q[lid]
-    // HDC is single-uop: uop_p3_q determines which payload is live.
-    //
-    // Future evaluation: HBIND fast bypass
-    //   HBIND XOR is shallow; skipping lane_result_q and writing directly to
-    //   VRF could save 1 cycle per chunk. Requires Vivado OOC timing proof
-    //   that HBIND path is not the critical path before enabling.
-    //   Do NOT implement now — keep single active writeback path.
-    logic [LANE_NUM-1:0][LANE_WIDTH-1:0] lane_result_q, lane_result_n;
-    logic [LANE_NUM-1:0][6:0]            lane_popcnt_q, lane_popcnt_n;
-    logic [LANE_NUM-1:0][15:0]           lane_clip_q, lane_clip_n;
+    // ── Per-lane P2 slices ──────────────────────────────────────────────────
+    hdec_p2_lane_ctrl_t                   p2_lane_ctrl_d[LANE_NUM];
+    logic [LANE_NUM-1:0][LANE_WIDTH-1:0] lane_shift_a, lane_shift_b;
+    logic [LANE_NUM-1:0][LANE_WIDTH-1:0] lane_vec64_q;
+    logic [LANE_NUM-1:0][6:0]            lane_pop7_q;
+    logic [LANE_NUM-1:0][15:0]           lane_clip16_q;
 
     // ── Scalar Response Registers (P4) ──────────────────────────────────────
     logic [63:0] scalar_response_q, scalar_response_n;
@@ -122,38 +99,22 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
         endcase
     endfunction
 
-    // ── 4× Lane instances ───────────────────────────────────────────────────
+    // ── 4× lane-local P2 slices ─────────────────────────────────────────────
     for (genvar lid = 0; lid < LANE_NUM; lid++) begin : gen_lane
-        hdec_lane_4x64 #(.LANE_ID(lid)) i_lane (
-            .clk_i, .rst_ni,
-            .vrf_ra_addr_o(), .vrf_ra_data_i('0),
-            .vrf_we_o(), .vrf_wa_addr_o(), .vrf_wdata_o(),
-            .ctrl_valid_i('0), .ctrl_ready_o(), .ctrl_owner_i('0), .ctrl_op_i(HDEC_VWR64),
-            .ctrl_rd_reg_i('0), .ctrl_wr_reg_i('0), .ctrl_wr_data_i('0),
-            .ctrl_is_write_i('0), .ctrl_is_read_i('0),
-            .res_valid_o(), .res_ready_i('0), .res_data_o(), .res_owner_o(),
-            .neighbor_in_i('0), .neighbor_out_o(), .carry_in_i('0), .carry_out_o(),
-            .borrow_in_i('0), .borrow_out_o(), .count_in_i('0), .count_out_o(),
-            .flag_in_i('0), .flag_out_o(), .local_wb_data_o(), .local_wb_addr_o(), .local_wb_we_o(),
-            .bool_valid_i(uop_lane_bool_valid[lid]),
+        hdec_p2_lane_slice #(.LANE_ID(lid)) i_p2_lane_slice (
+            .clk_i,
+            .rst_ni,
+            .p2_lane_ctrl_d_i(p2_lane_ctrl_d[lid]),
             .bool_src_a_i(src0_q[lid]),
             .bool_src_b_i(vrf_rd[lid]),
-            .bool_result_o(lane_bool_result[lid]),
-            .popcount_count_o(lane_popcount_count[lid]),
-            .cnt_valid_i(lane_cnt_valid[lid]),
             .cnt_hv_word_i(hcntadd_hv_q[lid]),
             .cnt_old_counter_i(vrf_rd[lid]),
-            .cnt_subgroup_i(hcntadd_subgroup_q),
-            .cnt_new_counter_o(lane_cnt_new_counter[lid]),
-            .shift_valid_i(lane_shift_valid[lid]),
             .shift_src_a_i(lane_shift_a[lid]),
             .shift_src_b_i(lane_shift_b[lid]),
-            .shift_nibble_i(lane_shift_nibble),
-            .shift_result_o(lane_shift_result[lid]),
-            .clip_valid_i(lane_clip_valid[lid]),
             .clip_counter_i(vrf_rd[lid]),
-            .clip_threshold_i(hcntclip_threshold_q),
-            .clip_bits_o(lane_clip_bits[lid])
+            .lane_vec64_q_o(lane_vec64_q[lid]),
+            .lane_pop7_q_o(lane_pop7_q[lid]),
+            .lane_clip16_q_o(lane_clip16_q[lid])
         );
     end
 
@@ -171,14 +132,11 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
         hcntadd_hv_n=hcntadd_hv_q; hcntadd_hv_slot_n=hcntadd_hv_slot_q; hcntadd_chunk_n=hcntadd_chunk_q; hcntadd_subgroup_n=hcntadd_subgroup_q; hcntadd_acc_sel_n=hcntadd_acc_sel_q;
         hcntclip_dst_base_n=hcntclip_dst_base_q; hcntclip_acc_sel_n=hcntclip_acc_sel_q; hcntclip_threshold_n=hcntclip_threshold_q; hcntclip_chunk_n=hcntclip_chunk_q; hcntclip_subgroup_n=hcntclip_subgroup_q; hcntclip_word_n=hcntclip_word_q; hcntclip_word_with_result=hcntclip_word_q;
         uop_p0_n=uop_p0_q; uop_p1_n=uop_p1_q; uop_p2_n=uop_p2_q; uop_p3_n=uop_p3_q;
-        lane_result_n=lane_result_q; lane_popcnt_n=lane_popcnt_q; lane_clip_n=lane_clip_q;
         scalar_response_n=scalar_response_q; response_valid_n=response_valid_q; p4_arch_op_n=p4_arch_op_q;
         group_dist='0;
-        uop_lane_bool_valid='0;
-        lane_cnt_valid='0;
-        lane_shift_valid='0;
-        lane_shift_a='0; lane_shift_b='0; lane_shift_nibble=hperm_nibble_q;
-        lane_clip_valid='0;
+        for (int lid = 0; lid < LANE_NUM; lid++)
+            p2_lane_ctrl_d[lid] = '0;
+        lane_shift_a='0; lane_shift_b='0;
         vrf_ra='0; vrf_we='0; vrf_wa='0; vrf_wd='0;
 
         case(st_q)
@@ -211,7 +169,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                     uop_p0_n.subgroup_idx= 2'd0;
                     uop_p0_n.src0_addr   = {1'b0, a_q[2:0], 2'b00};
                     uop_p0_n.src1_addr   = a_q[4] ? 6'd48 : 6'd32;
-                    uop_p0_n.use_counter = 1'b1;
                     st_n=S_UOP_P1_RD0;
                 end
             end
@@ -231,7 +188,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                 uop_p0_n.src1_base    = hb_src1_base_n;
                 uop_p0_n.dst_base     = hb_dst_base_n;
                 uop_p0_n.chunk_idx    = 2'd0;
-                uop_p0_n.use_xor      = 1'b1;
                 st_n=S_UOP_P1_RD0;
             end
 
@@ -247,8 +203,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                 uop_p0_n.src0_base    = hsim_src0_base_n;
                 uop_p0_n.src1_base    = hsim_src1_base_n;
                 uop_p0_n.chunk_idx    = 2'd0;
-                uop_p0_n.use_xor      = 1'b1;
-                uop_p0_n.use_popcount = 1'b1;
                 st_n=S_UOP_P1_RD0;
             end
 
@@ -273,8 +227,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                     uop_p0_n.chunk_idx    = 2'd0;
                     uop_p0_n.class_idx    = 8'd0;
                     uop_p0_n.class_count  = hmatch_num_n;
-                    uop_p0_n.use_xor      = 1'b1;
-                    uop_p0_n.use_popcount = 1'b1;
                     uop_p0_n.is_last_class = (hmatch_num_n == 8'd1);
                     st_n=S_UOP_P1_RD0;
                 end
@@ -294,7 +246,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                 uop_p0_n.subgroup_idx= 2'd0;
                 uop_p0_n.src0_addr   = (a_q[3] ? 6'd48 : 6'd32);
                 uop_p0_n.dst_base    = hcntclip_dst_base_n;
-                uop_p0_n.use_clip    = 1'b1;
                 st_n=S_UOP_P1_RD0;
             end
 
@@ -313,7 +264,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                     uop_p0_n.src0_base   = hperm_src_base_n;
                     uop_p0_n.dst_base    = hperm_dst_base_n;
                     uop_p0_n.perm_nibble = hperm_nibble_n;
-                    uop_p0_n.use_shift   = 1'b1;
                     st_n=S_UOP_P1_RD0;
                 end
             end
@@ -352,6 +302,34 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
         S_UOP_P1_RD1: begin
             uop_p2_n       = uop_p1_q;
             uop_p1_n.valid = 1'b0;
+            for (int lid = 0; lid < LANE_NUM; lid++) begin
+                unique case (uop_p1_q.op_type)
+                    UOP_HBIND_CHUNK: begin
+                        p2_lane_ctrl_d[lid].do_xor_only = 1'b1;
+                        p2_lane_ctrl_d[lid].capture_vec = 1'b1;
+                    end
+                    UOP_HSIM_CHUNK, UOP_HMATCH_CHUNK: begin
+                        p2_lane_ctrl_d[lid].do_popcount_diff = 1'b1;
+                        p2_lane_ctrl_d[lid].capture_pop = 1'b1;
+                    end
+                    UOP_HCNTADD_SUBGROUP: begin
+                        p2_lane_ctrl_d[lid].do_counter = 1'b1;
+                        p2_lane_ctrl_d[lid].capture_vec = 1'b1;
+                        p2_lane_ctrl_d[lid].subgroup = uop_p1_q.subgroup_idx;
+                    end
+                    UOP_HCNTCLIP_READ: begin
+                        p2_lane_ctrl_d[lid].do_clip = 1'b1;
+                        p2_lane_ctrl_d[lid].capture_clip = 1'b1;
+                        p2_lane_ctrl_d[lid].threshold = hcntclip_threshold_q;
+                    end
+                    UOP_HPERM_CHUNK: begin
+                        p2_lane_ctrl_d[lid].do_shift = 1'b1;
+                        p2_lane_ctrl_d[lid].capture_vec = 1'b1;
+                        p2_lane_ctrl_d[lid].perm_nibble = uop_p1_q.perm_nibble;
+                    end
+                    default: p2_lane_ctrl_d[lid] = '0;
+                endcase
+            end
             if (uop_p1_q.op_type == UOP_HPERM_CHUNK) begin
                 hperm_a_n = vrf_rd;
                 vrf_ra[0]=hperm_src_base_q+hperm_next_chunk; vrf_ra[1]=hperm_src_base_q+hperm_next_chunk;
@@ -373,51 +351,14 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
         S_UOP_P2_LANE: begin
             uop_p3_n           = uop_p2_q;
             uop_p2_n.valid     = 1'b0;
-`ifndef SYNTHESIS
-            assert ($onehot0({
-                    uop_p2_q.use_popcount,
-                    uop_p2_q.use_counter,
-                    uop_p2_q.use_shift,
-                    uop_p2_q.use_clip,
-                    (uop_p2_q.use_xor && !uop_p2_q.use_popcount)
-                }))
-                else $error("HDEC P2 invalid compute mode flags: op_type=%0d",
-                            uop_p2_q.op_type);
-`endif
-            if (uop_p2_q.use_xor || uop_p2_q.use_popcount)
-                uop_lane_bool_valid = '1;
-            if (uop_p2_q.use_counter)
-                lane_cnt_valid = '1;
-            if (uop_p2_q.use_shift) begin
-                lane_shift_valid = '1;
-                lane_shift_nibble = uop_p2_q.perm_nibble;
-                lane_shift_a[0]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd0,hperm_a_q,vrf_rd);
-                lane_shift_a[1]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd1,hperm_a_q,vrf_rd);
-                lane_shift_a[2]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd2,hperm_a_q,vrf_rd);
-                lane_shift_a[3]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd3,hperm_a_q,vrf_rd);
-                lane_shift_b[0]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd1,hperm_a_q,vrf_rd);
-                lane_shift_b[1]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd2,hperm_a_q,vrf_rd);
-                lane_shift_b[2]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd3,hperm_a_q,vrf_rd);
-                lane_shift_b[3]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd4,hperm_a_q,vrf_rd);
-            end
-            if (uop_p2_q.use_clip)
-                lane_clip_valid = '1;
-            if (uop_p2_q.valid && uop_p2_q.use_popcount) begin
-                lane_popcnt_n[0] = lane_popcount_count[0];
-                lane_popcnt_n[1] = lane_popcount_count[1];
-                lane_popcnt_n[2] = lane_popcount_count[2];
-                lane_popcnt_n[3] = lane_popcount_count[3];
-            end else if (uop_p2_q.valid && uop_p2_q.use_counter)
-                lane_result_n = lane_cnt_new_counter;
-            else if (uop_p2_q.valid && uop_p2_q.use_shift)
-                lane_result_n = lane_shift_result;
-            else if (uop_p2_q.valid && uop_p2_q.use_clip) begin
-                lane_clip_n[0] = lane_clip_bits[0];
-                lane_clip_n[1] = lane_clip_bits[1];
-                lane_clip_n[2] = lane_clip_bits[2];
-                lane_clip_n[3] = lane_clip_bits[3];
-            end else if (uop_p2_q.valid && uop_p2_q.use_xor)
-                lane_result_n = lane_bool_result;
+            lane_shift_a[0]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd0,hperm_a_q,vrf_rd);
+            lane_shift_a[1]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd1,hperm_a_q,vrf_rd);
+            lane_shift_a[2]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd2,hperm_a_q,vrf_rd);
+            lane_shift_a[3]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd3,hperm_a_q,vrf_rd);
+            lane_shift_b[0]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd1,hperm_a_q,vrf_rd);
+            lane_shift_b[1]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd2,hperm_a_q,vrf_rd);
+            lane_shift_b[2]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd3,hperm_a_q,vrf_rd);
+            lane_shift_b[3]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd4,hperm_a_q,vrf_rd);
             st_n=S_UOP_P3_GLOBAL;
         end
 
@@ -429,7 +370,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                 vrf_we = '1;
                 vrf_wa[0]=uop_p3_q.dst_addr; vrf_wa[1]=uop_p3_q.dst_addr;
                 vrf_wa[2]=uop_p3_q.dst_addr; vrf_wa[3]=uop_p3_q.dst_addr;
-                vrf_wd = lane_result_q;
+                vrf_wd = lane_vec64_q;
                 if (uop_p3_q.chunk_idx == 2'd3) st_n = S_UOP_P4_RESP;
                 else begin
                     uop_p0_n = uop_p3_q; uop_p0_n.valid = 1'b1;
@@ -441,8 +382,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                 end
             end
             UOP_HSIM_CHUNK, UOP_HMATCH_CHUNK: begin
-                group_dist = {4'b0, lane_popcnt_q[0]} + {4'b0, lane_popcnt_q[1]}
-                           + {4'b0, lane_popcnt_q[2]} + {4'b0, lane_popcnt_q[3]};
+                group_dist = {4'b0, lane_pop7_q[0]} + {4'b0, lane_pop7_q[1]}
+                           + {4'b0, lane_pop7_q[2]} + {4'b0, lane_pop7_q[3]};
                 hsim_total_n = hsim_total_q + {1'b0, group_dist};
                 if (uop_p3_q.chunk_idx == 2'd3) begin
                     if (uop_p3_q.op_type == UOP_HMATCH_CHUNK) begin
@@ -477,7 +418,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                 vrf_we = '1;
                 vrf_wa[0]=hcntadd_acc_base+{2'b00,uop_p3_q.chunk_idx,2'b00}+{4'b0,uop_p3_q.subgroup_idx};
                 vrf_wa[1]=vrf_wa[0]; vrf_wa[2]=vrf_wa[0]; vrf_wa[3]=vrf_wa[0];
-                vrf_wd = lane_result_q;
+                vrf_wd = lane_vec64_q;
                 if (uop_p3_q.subgroup_idx < 2'd3) begin
                     hcntadd_subgroup_n = uop_p3_q.subgroup_idx + 2'd1;
                     vrf_ra[0]=hcntadd_acc_base+{2'b00,uop_p3_q.chunk_idx,2'b00}+{4'b0,hcntadd_subgroup_n};
@@ -485,6 +426,11 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                     // Advance uop to P2 directly (skip P1_RD0/P1_RD1)
                     uop_p2_n = uop_p3_q; uop_p2_n.valid = 1'b1;
                     uop_p2_n.subgroup_idx = hcntadd_subgroup_n;
+                    for (int lid = 0; lid < LANE_NUM; lid++) begin
+                        p2_lane_ctrl_d[lid].do_counter = 1'b1;
+                        p2_lane_ctrl_d[lid].capture_vec = 1'b1;
+                        p2_lane_ctrl_d[lid].subgroup = hcntadd_subgroup_n;
+                    end
                     uop_p1_n.valid = 1'b0; uop_p0_n.valid = 1'b0;
                     st_n = S_UOP_P2_LANE;
                 end else if (uop_p3_q.chunk_idx < 2'd3) begin
@@ -500,10 +446,10 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             end
             UOP_HCNTCLIP_READ: begin
                 hcntclip_word_with_result = hcntclip_word_q;
-                hcntclip_word_with_result[0][{uop_p3_q.subgroup_idx,4'b0000} +: 16] = lane_clip_q[0];
-                hcntclip_word_with_result[1][{uop_p3_q.subgroup_idx,4'b0000} +: 16] = lane_clip_q[1];
-                hcntclip_word_with_result[2][{uop_p3_q.subgroup_idx,4'b0000} +: 16] = lane_clip_q[2];
-                hcntclip_word_with_result[3][{uop_p3_q.subgroup_idx,4'b0000} +: 16] = lane_clip_q[3];
+                hcntclip_word_with_result[0][{uop_p3_q.subgroup_idx,4'b0000} +: 16] = lane_clip16_q[0];
+                hcntclip_word_with_result[1][{uop_p3_q.subgroup_idx,4'b0000} +: 16] = lane_clip16_q[1];
+                hcntclip_word_with_result[2][{uop_p3_q.subgroup_idx,4'b0000} +: 16] = lane_clip16_q[2];
+                hcntclip_word_with_result[3][{uop_p3_q.subgroup_idx,4'b0000} +: 16] = lane_clip16_q[3];
                 hcntclip_word_n = hcntclip_word_with_result;
                 if (uop_p3_q.subgroup_idx < 2'd3) begin
                     hcntclip_subgroup_n = uop_p3_q.subgroup_idx + 2'd1;
@@ -511,6 +457,11 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                     vrf_ra[1]=vrf_ra[0]; vrf_ra[2]=vrf_ra[0]; vrf_ra[3]=vrf_ra[0];
                     uop_p2_n = uop_p3_q; uop_p2_n.valid = 1'b1;
                     uop_p2_n.subgroup_idx = hcntclip_subgroup_n;
+                    for (int lid = 0; lid < LANE_NUM; lid++) begin
+                        p2_lane_ctrl_d[lid].do_clip = 1'b1;
+                        p2_lane_ctrl_d[lid].capture_clip = 1'b1;
+                        p2_lane_ctrl_d[lid].threshold = hcntclip_threshold_q;
+                    end
                     uop_p1_n.valid = 1'b0; uop_p0_n.valid = 1'b0;
                     st_n = S_UOP_P2_LANE;
                 end else begin
@@ -523,7 +474,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                 vrf_we = '1;
                 vrf_wa[0]=hperm_dst_base_q+uop_p3_q.chunk_idx; vrf_wa[1]=hperm_dst_base_q+uop_p3_q.chunk_idx;
                 vrf_wa[2]=hperm_dst_base_q+uop_p3_q.chunk_idx; vrf_wa[3]=hperm_dst_base_q+uop_p3_q.chunk_idx;
-                vrf_wd = lane_result_q;
+                vrf_wd = lane_vec64_q;
                 if (uop_p3_q.chunk_idx == 2'd3) st_n = S_UOP_P4_RESP;
                 else begin
                     chunk_cnt_n = uop_p3_q.chunk_idx + 2'd1;
@@ -555,7 +506,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                 uop_p0_n.chunk_idx = hcntclip_chunk_n;
                 uop_p0_n.subgroup_idx = 2'd0;
                 uop_p0_n.src0_addr = hcntclip_acc_base+{2'b00,hcntclip_chunk_n,2'b00};
-                uop_p0_n.use_clip = 1'b1;
                 st_n = S_UOP_P1_RD0;
             end
         end
@@ -588,7 +538,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             hcntadd_hv_q<='0;hcntadd_hv_slot_q<='0;hcntadd_chunk_q<='0;hcntadd_subgroup_q<='0;hcntadd_acc_sel_q<='0;
             hcntclip_dst_base_q<='0;hcntclip_acc_sel_q<='0;hcntclip_threshold_q<='0;hcntclip_chunk_q<='0;hcntclip_subgroup_q<='0;hcntclip_word_q<='0;
             uop_p0_q<='0;uop_p1_q<='0;uop_p2_q<='0;uop_p3_q<='0;
-            lane_result_q<='0;lane_popcnt_q<='0;lane_clip_q<='0;
             scalar_response_q<='0;response_valid_q<='0;p4_arch_op_q<=HDEC_VWR64;
         end
         else begin
@@ -602,7 +551,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             hcntadd_hv_q<=hcntadd_hv_n;hcntadd_hv_slot_q<=hcntadd_hv_slot_n;hcntadd_chunk_q<=hcntadd_chunk_n;hcntadd_subgroup_q<=hcntadd_subgroup_n;hcntadd_acc_sel_q<=hcntadd_acc_sel_n;
             hcntclip_dst_base_q<=hcntclip_dst_base_n;hcntclip_acc_sel_q<=hcntclip_acc_sel_n;hcntclip_threshold_q<=hcntclip_threshold_n;hcntclip_chunk_q<=hcntclip_chunk_n;hcntclip_subgroup_q<=hcntclip_subgroup_n;hcntclip_word_q<=hcntclip_word_n;
             uop_p0_q<=uop_p0_n;uop_p1_q<=uop_p1_n;uop_p2_q<=uop_p2_n;uop_p3_q<=uop_p3_n;
-            lane_result_q<=lane_result_n;lane_popcnt_q<=lane_popcnt_n;lane_clip_q<=lane_clip_n;
             scalar_response_q<=scalar_response_n;response_valid_q<=response_valid_n;p4_arch_op_q<=p4_arch_op_n;
         end
     end

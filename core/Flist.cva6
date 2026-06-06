@@ -209,5 +209,6 @@ ${CVA6_REPO_DIR}/core/hdec/rtl/hdec_cnt_array.sv
 ${CVA6_REPO_DIR}/core/hdec/rtl/hdec_lane_shift_align.sv
 ${CVA6_REPO_DIR}/core/hdec/rtl/hdec_lane_clip.sv
 ${CVA6_REPO_DIR}/core/hdec/rtl/hdec_lane_4x64.sv
+${CVA6_REPO_DIR}/core/hdec/rtl/hdec_p2_lane_slice.sv
 ${CVA6_REPO_DIR}/core/hdec/rtl/hdec_top.sv
 ${CVA6_REPO_DIR}/core/hdec/rtl/hdec_cvxif_wrapper.sv

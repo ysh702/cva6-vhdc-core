@@ -58,6 +58,20 @@ package hdec_pkg;
     } hdec_uop_type_e;
 
     typedef struct packed {
+        logic       do_xor_only;
+        logic       do_popcount_diff;
+        logic       do_counter;
+        logic       do_clip;
+        logic       do_shift;
+        logic       capture_vec;
+        logic       capture_pop;
+        logic       capture_clip;
+        logic [1:0] subgroup;
+        logic [3:0] threshold;
+        logic [3:0] perm_nibble;
+    } hdec_p2_lane_ctrl_t;
+
+    typedef struct packed {
         // ── Control ──
         logic                   valid;
         hdec_uop_type_e         op_type;
@@ -81,13 +95,6 @@ package hdec_pkg;
 
         // ── Compute Parameters ──
         logic [3:0]             perm_nibble;
-
-        // ── Compute Enables ──
-        logic                   use_xor;
-        logic                   use_popcount;
-        logic                   use_counter;
-        logic                   use_clip;
-        logic                   use_shift;
 
         // ── Op Type Tags ──
         logic                   is_last_class;
