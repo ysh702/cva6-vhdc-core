@@ -1,0 +1,2 @@
+label,slack_ns,data_path_delay_ns,logic_delay_ns,route_delay_ns,logic_levels,startpoint,endpoint,fmax_est_mhz
+"pop_q_to_popcount_any",3.932,0.730,0.433,0.297,0,"gen_lane[0].i_p2_pop_slice/pop_q_reg/C","gen_lane[0].i_p2_pop_slice/popcount_q_o_reg[0]/CE",936.330

@@ -1,0 +1,11 @@
+commit_sha=9f1142cfed4e99a894c486368107b6bd3785d22b plus local KEEP/gating fix
+git_describe=hdec-p2-popcount-local-keep-v1
+branch_ref=origin/hdec-p2-popcount-microtag-p1
+vivado_version=2024.2
+top_module=hdec_top
+fpga_part=xc7z020clg400-2
+target_clock_period_ns=5.000
+ooc_tcl_script_path=scripts/hdec/ooc_hdec_p2_popcount_local_keep_v1.tcl
+source_filelist_path=core/Flist.cva6
+hdec_p2_pop_slice_included=1
+note=Tracked with the local KEEP V1 report package.

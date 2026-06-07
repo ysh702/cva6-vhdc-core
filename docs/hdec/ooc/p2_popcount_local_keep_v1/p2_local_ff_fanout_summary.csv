@@ -1,0 +1,7 @@
+object,count,real_q_fanout,scope,notes
+pop_q_reg,4,8,lane-local,one preserved copy per lane
+xor_q_reg,4,1,lane-local,one preserved copy per lane
+p1_pop_d,1,4,top-to-lanes,drives only four lane-local pop_q registers
+p1_xor_d,1,4,top-to-lanes,drives only four lane-local xor_q registers
+old_pop_q_to_popcount_D,0,0,removed,exact from-to query reports NO_PATH
+pop_q_to_popcount_CE,1,0.730 ns delay,lane-local,slack +3.932 ns at 200 MHz and conservative Fmax 936.330 MHz

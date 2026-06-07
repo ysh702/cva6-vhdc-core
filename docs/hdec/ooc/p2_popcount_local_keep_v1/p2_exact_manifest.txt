@@ -1,0 +1,5 @@
+popq_cells=4
+popq_pins=4
+popcnt_cells=28
+popcnt_d=28
+popcnt_ce=28
