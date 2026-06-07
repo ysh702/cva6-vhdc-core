@@ -67,9 +67,9 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
     hdec_uop_t uop_p0_q, uop_p0_n, uop_p1_q, uop_p1_n, uop_p2_q, uop_p2_n, uop_p3_q, uop_p3_n;
 
     // ── Lane compute wires ──────────────────────────────────────────────────
-    logic [LANE_NUM-1:0]                 uop_lane_bool_valid; // uop path XOR enable
+    logic                                p1_pop_d, p1_xor_d;
+    logic [LANE_NUM-1:0]                 lane_xor_only_valid;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] lane_bool_result;
-    logic [LANE_NUM-1:0][6:0]            lane_popcount_count;
     logic [LANE_NUM-1:0]                 lane_cnt_valid;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] lane_cnt_new_counter;
     logic [LANE_NUM-1:0]                 lane_shift_valid;
@@ -93,7 +93,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
     //   that HBIND path is not the critical path before enabling.
     //   Do NOT implement now — keep single active writeback path.
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] lane_result_q, lane_result_n;
-    logic [LANE_NUM-1:0][6:0]            lane_popcnt_q, lane_popcnt_n;
+    logic [LANE_NUM-1:0][6:0]            lane_popcnt_q;
     logic [LANE_NUM-1:0][15:0]           lane_clip_q, lane_clip_n;
 
     // ── Scalar Response Registers (P4) ──────────────────────────────────────
@@ -107,6 +107,13 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
     assign hperm_next_chunk = hperm_word0[3:2] + 2'd1;
     assign hcntadd_acc_base = hcntadd_acc_sel_q ? 6'd48 : 6'd32;
     assign hcntclip_acc_base = hcntclip_acc_sel_q ? 6'd48 : 6'd32;
+    assign p1_pop_d = uop_p1_q.valid
+                    && ((uop_p1_q.op_type == UOP_HSIM_CHUNK)
+                     || (uop_p1_q.op_type == UOP_HMATCH_CHUNK));
+    assign p1_xor_d = uop_p1_q.valid
+                    && ((uop_p1_q.op_type == UOP_HBIND_CHUNK)
+                     || (uop_p1_q.op_type == UOP_HSIM_CHUNK)
+                     || (uop_p1_q.op_type == UOP_HMATCH_CHUNK));
 
     function automatic logic [63:0] hperm_pick_word(input logic [2:0] sel, input logic [3:0][63:0] blk_a, input logic [3:0][63:0] blk_b);
         case(sel)
@@ -124,6 +131,18 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
 
     // ── 4× Lane instances ───────────────────────────────────────────────────
     for (genvar lid = 0; lid < LANE_NUM; lid++) begin : gen_lane
+        hdec_p2_pop_slice i_p2_pop_slice (
+            .clk_i,
+            .rst_ni,
+            .pop_d_i          (p1_pop_d),
+            .xor_d_i          (p1_xor_d),
+            .src_a_i          (src0_q[lid]),
+            .src_b_i          (vrf_rd[lid]),
+            .xor_only_valid_o (lane_xor_only_valid[lid]),
+            .xor_result_o     (lane_bool_result[lid]),
+            .popcount_q_o     (lane_popcnt_q[lid])
+        );
+
         hdec_lane_4x64 #(.LANE_ID(lid)) i_lane (
             .clk_i, .rst_ni,
             .vrf_ra_addr_o(), .vrf_ra_data_i('0),
@@ -135,11 +154,11 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             .neighbor_in_i('0), .neighbor_out_o(), .carry_in_i('0), .carry_out_o(),
             .borrow_in_i('0), .borrow_out_o(), .count_in_i('0), .count_out_o(),
             .flag_in_i('0), .flag_out_o(), .local_wb_data_o(), .local_wb_addr_o(), .local_wb_we_o(),
-            .bool_valid_i(uop_lane_bool_valid[lid]),
-            .bool_src_a_i(src0_q[lid]),
-            .bool_src_b_i(vrf_rd[lid]),
-            .bool_result_o(lane_bool_result[lid]),
-            .popcount_count_o(lane_popcount_count[lid]),
+            .bool_valid_i(1'b0),
+            .bool_src_a_i('0),
+            .bool_src_b_i('0),
+            .bool_result_o(),
+            .popcount_count_o(),
             .cnt_valid_i(lane_cnt_valid[lid]),
             .cnt_hv_word_i(hcntadd_hv_q[lid]),
             .cnt_old_counter_i(vrf_rd[lid]),
@@ -171,10 +190,9 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
         hcntadd_hv_n=hcntadd_hv_q; hcntadd_hv_slot_n=hcntadd_hv_slot_q; hcntadd_chunk_n=hcntadd_chunk_q; hcntadd_subgroup_n=hcntadd_subgroup_q; hcntadd_acc_sel_n=hcntadd_acc_sel_q;
         hcntclip_dst_base_n=hcntclip_dst_base_q; hcntclip_acc_sel_n=hcntclip_acc_sel_q; hcntclip_threshold_n=hcntclip_threshold_q; hcntclip_chunk_n=hcntclip_chunk_q; hcntclip_subgroup_n=hcntclip_subgroup_q; hcntclip_word_n=hcntclip_word_q; hcntclip_word_with_result=hcntclip_word_q;
         uop_p0_n=uop_p0_q; uop_p1_n=uop_p1_q; uop_p2_n=uop_p2_q; uop_p3_n=uop_p3_q;
-        lane_result_n=lane_result_q; lane_popcnt_n=lane_popcnt_q; lane_clip_n=lane_clip_q;
+        lane_result_n=lane_result_q; lane_clip_n=lane_clip_q;
         scalar_response_n=scalar_response_q; response_valid_n=response_valid_q; p4_arch_op_n=p4_arch_op_q;
         group_dist='0;
-        uop_lane_bool_valid='0;
         lane_cnt_valid='0;
         lane_shift_valid='0;
         lane_shift_a='0; lane_shift_b='0; lane_shift_nibble=hperm_nibble_q;
@@ -231,7 +249,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                 uop_p0_n.src1_base    = hb_src1_base_n;
                 uop_p0_n.dst_base     = hb_dst_base_n;
                 uop_p0_n.chunk_idx    = 2'd0;
-                uop_p0_n.use_xor      = 1'b1;
                 st_n=S_UOP_P1_RD0;
             end
 
@@ -247,8 +264,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                 uop_p0_n.src0_base    = hsim_src0_base_n;
                 uop_p0_n.src1_base    = hsim_src1_base_n;
                 uop_p0_n.chunk_idx    = 2'd0;
-                uop_p0_n.use_xor      = 1'b1;
-                uop_p0_n.use_popcount = 1'b1;
                 st_n=S_UOP_P1_RD0;
             end
 
@@ -273,8 +288,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                     uop_p0_n.chunk_idx    = 2'd0;
                     uop_p0_n.class_idx    = 8'd0;
                     uop_p0_n.class_count  = hmatch_num_n;
-                    uop_p0_n.use_xor      = 1'b1;
-                    uop_p0_n.use_popcount = 1'b1;
                     uop_p0_n.is_last_class = (hmatch_num_n == 8'd1);
                     st_n=S_UOP_P1_RD0;
                 end
@@ -375,17 +388,16 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             uop_p2_n.valid     = 1'b0;
 `ifndef SYNTHESIS
             assert ($onehot0({
-                    uop_p2_q.use_popcount,
+                    ((uop_p2_q.op_type == UOP_HSIM_CHUNK)
+                  || (uop_p2_q.op_type == UOP_HMATCH_CHUNK)),
                     uop_p2_q.use_counter,
                     uop_p2_q.use_shift,
                     uop_p2_q.use_clip,
-                    (uop_p2_q.use_xor && !uop_p2_q.use_popcount)
+                    (uop_p2_q.op_type == UOP_HBIND_CHUNK)
                 }))
                 else $error("HDEC P2 invalid compute mode flags: op_type=%0d",
                             uop_p2_q.op_type);
 `endif
-            if (uop_p2_q.use_xor || uop_p2_q.use_popcount)
-                uop_lane_bool_valid = '1;
             if (uop_p2_q.use_counter)
                 lane_cnt_valid = '1;
             if (uop_p2_q.use_shift) begin
@@ -402,12 +414,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             end
             if (uop_p2_q.use_clip)
                 lane_clip_valid = '1;
-            if (uop_p2_q.valid && uop_p2_q.use_popcount) begin
-                lane_popcnt_n[0] = lane_popcount_count[0];
-                lane_popcnt_n[1] = lane_popcount_count[1];
-                lane_popcnt_n[2] = lane_popcount_count[2];
-                lane_popcnt_n[3] = lane_popcount_count[3];
-            end else if (uop_p2_q.valid && uop_p2_q.use_counter)
+            if (uop_p2_q.valid && uop_p2_q.use_counter)
                 lane_result_n = lane_cnt_new_counter;
             else if (uop_p2_q.valid && uop_p2_q.use_shift)
                 lane_result_n = lane_shift_result;
@@ -416,8 +423,12 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                 lane_clip_n[1] = lane_clip_bits[1];
                 lane_clip_n[2] = lane_clip_bits[2];
                 lane_clip_n[3] = lane_clip_bits[3];
-            end else if (uop_p2_q.valid && uop_p2_q.use_xor)
-                lane_result_n = lane_bool_result;
+            end else begin
+                for (int unsigned lid = 0; lid < LANE_NUM; lid++) begin
+                    if (lane_xor_only_valid[lid])
+                        lane_result_n[lid] = lane_bool_result[lid];
+                end
+            end
             st_n=S_UOP_P3_GLOBAL;
         end
 
@@ -588,7 +599,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             hcntadd_hv_q<='0;hcntadd_hv_slot_q<='0;hcntadd_chunk_q<='0;hcntadd_subgroup_q<='0;hcntadd_acc_sel_q<='0;
             hcntclip_dst_base_q<='0;hcntclip_acc_sel_q<='0;hcntclip_threshold_q<='0;hcntclip_chunk_q<='0;hcntclip_subgroup_q<='0;hcntclip_word_q<='0;
             uop_p0_q<='0;uop_p1_q<='0;uop_p2_q<='0;uop_p3_q<='0;
-            lane_result_q<='0;lane_popcnt_q<='0;lane_clip_q<='0;
+            lane_result_q<='0;lane_clip_q<='0;
             scalar_response_q<='0;response_valid_q<='0;p4_arch_op_q<=HDEC_VWR64;
         end
         else begin
@@ -602,7 +613,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             hcntadd_hv_q<=hcntadd_hv_n;hcntadd_hv_slot_q<=hcntadd_hv_slot_n;hcntadd_chunk_q<=hcntadd_chunk_n;hcntadd_subgroup_q<=hcntadd_subgroup_n;hcntadd_acc_sel_q<=hcntadd_acc_sel_n;
             hcntclip_dst_base_q<=hcntclip_dst_base_n;hcntclip_acc_sel_q<=hcntclip_acc_sel_n;hcntclip_threshold_q<=hcntclip_threshold_n;hcntclip_chunk_q<=hcntclip_chunk_n;hcntclip_subgroup_q<=hcntclip_subgroup_n;hcntclip_word_q<=hcntclip_word_n;
             uop_p0_q<=uop_p0_n;uop_p1_q<=uop_p1_n;uop_p2_q<=uop_p2_n;uop_p3_q<=uop_p3_n;
-            lane_result_q<=lane_result_n;lane_popcnt_q<=lane_popcnt_n;lane_clip_q<=lane_clip_n;
+            lane_result_q<=lane_result_n;lane_clip_q<=lane_clip_n;
             scalar_response_q<=scalar_response_n;response_valid_q<=response_valid_n;p4_arch_op_q<=p4_arch_op_n;
         end
     end

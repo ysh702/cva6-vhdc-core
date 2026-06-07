@@ -83,8 +83,6 @@ package hdec_pkg;
         logic [3:0]             perm_nibble;
 
         // ── Compute Enables ──
-        logic                   use_xor;
-        logic                   use_popcount;
         logic                   use_counter;
         logic                   use_clip;
         logic                   use_shift;
