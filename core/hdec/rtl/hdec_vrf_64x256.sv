@@ -1,8 +1,9 @@
 // =============================================================================
 // hdec_vrf_64x256.sv - 4-bank vector register file
 // =============================================================================
-// Phase 1: LUTRAM-friendly storage with 1-cycle registered reads and sequential
-// power-on init clear. Four 64-bit banks keep read/write routing lane-local.
+// Phase 2 trial: BRAM/SRAM-friendly storage with 1-cycle registered reads and
+// sequential power-on init clear. Four 64-bit banks keep read/write routing
+// lane-local while allowing Vivado to map the storage into block RAM.
 // =============================================================================
 
 module hdec_vrf_64x256
@@ -22,23 +23,22 @@ module hdec_vrf_64x256
     output logic        vrf_ready_o
 );
 
-    (* ram_style = "distributed" *) logic [LANE_WIDTH-1:0] vrf_b0 [0:VRF_ENTRIES-1];
-    (* ram_style = "distributed" *) logic [LANE_WIDTH-1:0] vrf_b1 [0:VRF_ENTRIES-1];
-    (* ram_style = "distributed" *) logic [LANE_WIDTH-1:0] vrf_b2 [0:VRF_ENTRIES-1];
-    (* ram_style = "distributed" *) logic [LANE_WIDTH-1:0] vrf_b3 [0:VRF_ENTRIES-1];
+    localparam int unsigned VRF_BANK_MEMORY_SIZE = LANE_WIDTH * VRF_ENTRIES;
 
     typedef enum logic [1:0] { INIT_CLEAR, INIT_DONE } init_state_t;
     init_state_t init_state_q, init_state_n;
     logic [7:0] init_cnt_q, init_cnt_n;
 
-    logic init_b0_we, init_b1_we, init_b2_we, init_b3_we;
+    logic [LANE_NUM-1:0] init_bank_we;
     logic [VRF_IDX_W-1:0] init_addr;
+    logic [LANE_NUM-1:0][LANE_WIDTH-1:0] bank_rd_data;
 
-    assign init_addr  = init_cnt_q[5:0];
-    assign init_b0_we = (init_state_q == INIT_CLEAR) && (init_cnt_q[7:6] == 2'd0);
-    assign init_b1_we = (init_state_q == INIT_CLEAR) && (init_cnt_q[7:6] == 2'd1);
-    assign init_b2_we = (init_state_q == INIT_CLEAR) && (init_cnt_q[7:6] == 2'd2);
-    assign init_b3_we = (init_state_q == INIT_CLEAR) && (init_cnt_q[7:6] == 2'd3);
+    assign init_addr       = init_cnt_q[5:0];
+    assign init_bank_we[0] = (init_state_q == INIT_CLEAR) && (init_cnt_q[7:6] == 2'd0);
+    assign init_bank_we[1] = (init_state_q == INIT_CLEAR) && (init_cnt_q[7:6] == 2'd1);
+    assign init_bank_we[2] = (init_state_q == INIT_CLEAR) && (init_cnt_q[7:6] == 2'd2);
+    assign init_bank_we[3] = (init_state_q == INIT_CLEAR) && (init_cnt_q[7:6] == 2'd3);
+    assign bank_ra_data_o  = bank_rd_data;
 
     always_comb begin
         init_state_n = init_state_q;
@@ -63,43 +63,63 @@ module hdec_vrf_64x256
         end
     end
 
-    always_ff @(posedge clk_i) begin
-        if (init_b0_we)
-            vrf_b0[init_addr] <= '0;
-        else if (bank_we_i[0])
-            vrf_b0[bank_wa_addr_i[0]] <= bank_wdata_i[0];
-    end
+    for (genvar bank = 0; bank < LANE_NUM; bank++) begin : gen_vrf_bram
+        logic write_en;
+        logic [0:0] write_we;
+        logic [VRF_IDX_W-1:0] write_addr;
+        logic [LANE_WIDTH-1:0] write_data;
+        logic sbiterr_unused;
+        logic dbiterr_unused;
 
-    always_ff @(posedge clk_i) begin
-        if (init_b1_we)
-            vrf_b1[init_addr] <= '0;
-        else if (bank_we_i[1])
-            vrf_b1[bank_wa_addr_i[1]] <= bank_wdata_i[1];
-    end
+        assign write_en   = init_bank_we[bank] || bank_we_i[bank];
+        assign write_we   = write_en;
+        assign write_addr = init_bank_we[bank] ? init_addr : bank_wa_addr_i[bank];
+        assign write_data = init_bank_we[bank] ? '0 : bank_wdata_i[bank];
 
-    always_ff @(posedge clk_i) begin
-        if (init_b2_we)
-            vrf_b2[init_addr] <= '0;
-        else if (bank_we_i[2])
-            vrf_b2[bank_wa_addr_i[2]] <= bank_wdata_i[2];
-    end
-
-    always_ff @(posedge clk_i) begin
-        if (init_b3_we)
-            vrf_b3[init_addr] <= '0;
-        else if (bank_we_i[3])
-            vrf_b3[bank_wa_addr_i[3]] <= bank_wdata_i[3];
-    end
-
-    always_ff @(posedge clk_i or negedge rst_ni) begin
-        if (!rst_ni) begin
-            bank_ra_data_o <= '0;
-        end else begin
-            bank_ra_data_o[0] <= vrf_b0[bank_ra_addr_i[0]];
-            bank_ra_data_o[1] <= vrf_b1[bank_ra_addr_i[1]];
-            bank_ra_data_o[2] <= vrf_b2[bank_ra_addr_i[2]];
-            bank_ra_data_o[3] <= vrf_b3[bank_ra_addr_i[3]];
-        end
+        xpm_memory_sdpram #(
+            .MEMORY_SIZE(VRF_BANK_MEMORY_SIZE),
+            .MEMORY_PRIMITIVE("block"),
+            .CLOCKING_MODE("common_clock"),
+            .ECC_MODE("no_ecc"),
+            .MEMORY_INIT_FILE("none"),
+            .MEMORY_INIT_PARAM("0"),
+            .USE_MEM_INIT(0),
+            .WAKEUP_TIME("disable_sleep"),
+            .AUTO_SLEEP_TIME(0),
+            .MESSAGE_CONTROL(0),
+            .USE_EMBEDDED_CONSTRAINT(0),
+            .MEMORY_OPTIMIZATION("true"),
+            .CASCADE_HEIGHT(0),
+            .SIM_ASSERT_CHK(0),
+            .WRITE_PROTECT(1),
+            .WRITE_DATA_WIDTH_A(LANE_WIDTH),
+            .BYTE_WRITE_WIDTH_A(LANE_WIDTH),
+            .ADDR_WIDTH_A(VRF_IDX_W),
+            .RST_MODE_A("SYNC"),
+            .READ_DATA_WIDTH_B(LANE_WIDTH),
+            .ADDR_WIDTH_B(VRF_IDX_W),
+            .READ_RESET_VALUE_B("0"),
+            .READ_LATENCY_B(1),
+            .WRITE_MODE_B("read_first"),
+            .RST_MODE_B("SYNC")
+        ) i_vrf_bank (
+            .sleep(1'b0),
+            .clka(clk_i),
+            .ena(1'b1),
+            .wea(write_we),
+            .addra(write_addr),
+            .dina(write_data),
+            .injectsbiterra(1'b0),
+            .injectdbiterra(1'b0),
+            .clkb(clk_i),
+            .rstb(!rst_ni),
+            .enb(1'b1),
+            .regceb(1'b1),
+            .addrb(bank_ra_addr_i[bank]),
+            .doutb(bank_rd_data[bank]),
+            .sbiterrb(sbiterr_unused),
+            .dbiterrb(dbiterr_unused)
+        );
     end
 
 endmodule

@@ -403,6 +403,12 @@ write_text_file $xdc_file "create_clock -name clk_i -period $period_ns \[get_por
 create_project -in_memory "hdec_p2_pop_local_keep_${run_label}" -part $part_name
 set_property target_language Verilog [current_project]
 set_property source_mgmt_mode None [current_project]
+set xpm_memory_file "E:/Vivado/Vivado/2024.2/data/ip/xpm/xpm_memory/hdl/xpm_memory.sv"
+if {[file exists $xpm_memory_file]} {
+    read_verilog -sv $xpm_memory_file
+} else {
+    puts "WARNING: XPM memory source not found at $xpm_memory_file"
+}
 read_verilog -sv $rtl_files
 read_xdc $xdc_file
 

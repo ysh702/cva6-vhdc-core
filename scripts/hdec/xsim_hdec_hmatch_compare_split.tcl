@@ -12,6 +12,7 @@ file mkdir $run_dir
 cd $run_dir
 
 set rtl_files [list \
+    E:/Vivado/Vivado/2024.2/data/ip/xpm/xpm_memory/hdl/xpm_memory.sv \
     [file join $rtl_dir "hdec_pkg.sv"] \
     [file join $rtl_dir "hdec_resource_pkg.sv"] \
     [file join $rtl_dir "hdec_vrf_64x256.sv"] \
