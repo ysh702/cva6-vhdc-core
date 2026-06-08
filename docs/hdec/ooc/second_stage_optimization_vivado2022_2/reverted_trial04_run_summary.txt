@@ -1,0 +1,9 @@
+run_label=trial04_pop16_tree
+period_ns=5.000
+part=xc7z020clg400-2
+top=hdec_top
+wns=-1.052
+worst_data_delay_ns=6.066
+fmax_est_mhz=165.235
+top_endpoint=gen_lane[0].i_p2_pop_slice/popcount_q_o_reg[6]/D
+vivado_version=2022.2

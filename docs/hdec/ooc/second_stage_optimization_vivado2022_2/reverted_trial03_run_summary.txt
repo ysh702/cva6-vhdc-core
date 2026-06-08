@@ -1,0 +1,9 @@
+run_label=trial03_hmatch_diff_reuse
+period_ns=5.000
+part=xc7z020clg400-2
+top=hdec_top
+wns=-1.126
+worst_data_delay_ns=6.123
+fmax_est_mhz=163.239
+top_endpoint=hmatch_budget_q_reg[10]/D
+vivado_version=2022.2

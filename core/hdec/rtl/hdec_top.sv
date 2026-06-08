@@ -24,7 +24,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
     logic [3:0] clr_cnt_q,clr_cnt_n; logic [VRF_IDX_W-1:0] clr_base_q,clr_base_n;
 
     // ── HBIND registers ─────────────────────────────────────────────────────
-    logic [LANE_NUM-1:0][LANE_WIDTH-1:0] src0_q,src0_n;
     logic [1:0] chunk_cnt_q,chunk_cnt_n;
     logic [VRF_IDX_W-1:0] hb_dst_base_q,hb_dst_base_n, hb_src0_base_q,hb_src0_base_n, hb_src1_base_q,hb_src1_base_n;
 
@@ -149,7 +148,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             .rst_ni,
             .pop_d_i          (p1_pop_d),
             .xor_d_i          (p1_xor_d),
-            .src_a_i          (src0_q[lid]),
+            .src_a_i          (vrf_rd[lid]),
             .src_b_i          (vrf_rd[lid]),
             .xor_only_valid_o (lane_xor_only_valid[lid]),
             .xor_result_o     (lane_bool_result[lid]),
@@ -194,7 +193,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
         st_n=st_q; ready_o=(st_q==S_IDLE); valid_o=(st_q==S_RESULT); result_o=response_valid_q?scalar_response_q:res_q;
         res_n=res_q; op_n=op_q; a_n=a_q; b_n=b_q; bk_n=bk_q; vaddr_bank_n=vaddr_bank_q; vaddr_idx_n=vaddr_idx_q;
         clr_cnt_n=clr_cnt_q; clr_base_n=clr_base_q;
-        src0_n=src0_q; chunk_cnt_n=chunk_cnt_q;
+        chunk_cnt_n=chunk_cnt_q;
         hb_dst_base_n=hb_dst_base_q; hb_src0_base_n=hb_src0_base_q; hb_src1_base_n=hb_src1_base_q;
         hsim_src0_base_n=hsim_src0_base_q; hsim_src1_base_n=hsim_src1_base_q; hsim_total_n=hsim_total_q;
         hmatch_num_n=hmatch_num_q; hmatch_best_idx_n=hmatch_best_idx_q; hmatch_class_slot_n=hmatch_class_slot_q; hmatch_best_dist_n=hmatch_best_dist_q;
@@ -243,6 +242,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                     uop_p0_n.subgroup_idx= 2'd0;
                     uop_p0_n.src0_addr   = {1'b0, a_q[2:0], 2'b00};
                     uop_p0_n.src1_addr   = a_q[4] ? 6'd48 : 6'd32;
+                    uop_p0_n.dst_addr    = a_q[4] ? 6'd48 : 6'd32;
                     uop_p0_n.use_counter = 1'b1;
                     st_n=S_UOP_P1_RD0;
                 end
@@ -344,6 +344,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                     uop_p0_n.src0_base   = hperm_src_base_n;
                     uop_p0_n.src0_addr   = hperm_read_addr(hperm_src_base_n, 2'd0, a_q[17:14], 1'b0);
                     uop_p0_n.src1_addr   = hperm_read_addr(hperm_src_base_n, 2'd0, a_q[17:14], 1'b1);
+                    uop_p0_n.dst_addr    = hperm_dst_base_n;
                     uop_p0_n.dst_base    = hperm_dst_base_n;
                     uop_p0_n.perm_nibble = hperm_nibble_n;
                     uop_p0_n.use_shift   = 1'b1;
@@ -393,7 +394,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             if (uop_p1_q.op_type == UOP_HPERM_CHUNK) begin
                 hperm_a_n = vrf_rd;
             end else begin
-                src0_n = vrf_rd;
                 if (uop_p1_q.op_type == UOP_HCNTADD_SUBGROUP) hcntadd_hv_n = vrf_rd;
             end
             vrf_ra[0]=uop_p1_q.src1_addr; vrf_ra[1]=uop_p1_q.src1_addr;
@@ -503,7 +503,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             end
             UOP_HCNTADD_SUBGROUP: begin
                 vrf_we = '1;
-                vrf_wa[0]=hcntadd_acc_base+{2'b00,uop_p3_q.chunk_idx,2'b00}+{4'b0,uop_p3_q.subgroup_idx};
+                vrf_wa[0]=uop_p3_q.dst_addr;
                 vrf_wa[1]=vrf_wa[0]; vrf_wa[2]=vrf_wa[0]; vrf_wa[3]=vrf_wa[0];
                 vrf_wd = lane_result_q;
                 if (uop_p3_q.subgroup_idx < 2'd3) begin
@@ -513,6 +513,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                     // Advance uop to P2 directly (skip P1_RD0/P1_RD1)
                     uop_p2_n = uop_p3_q; uop_p2_n.valid = 1'b1;
                     uop_p2_n.subgroup_idx = hcntadd_subgroup_n;
+                    uop_p2_n.dst_addr = uop_p3_q.dst_addr + 6'd1;
                     uop_p1_n.valid = 1'b0; uop_p0_n.valid = 1'b0;
                     st_n = S_UOP_P2_LANE;
                 end else if (uop_p3_q.chunk_idx < 2'd3) begin
@@ -523,6 +524,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                     uop_p0_n.subgroup_idx = 2'd0;
                     uop_p0_n.src0_addr = {1'b0,hcntadd_hv_slot_q,2'b00}+{4'b0,hcntadd_chunk_n};
                     uop_p0_n.src1_addr = hcntadd_acc_base+{2'b00,hcntadd_chunk_n,2'b00};
+                    uop_p0_n.dst_addr  = hcntadd_acc_base+{2'b00,hcntadd_chunk_n,2'b00};
                     st_n = S_UOP_P1_RD0;
                 end else st_n = S_UOP_P4_RESP;
             end
@@ -549,8 +551,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             end
             UOP_HPERM_CHUNK: begin
                 vrf_we = '1;
-                vrf_wa[0]=hperm_dst_base_q+uop_p3_q.chunk_idx; vrf_wa[1]=hperm_dst_base_q+uop_p3_q.chunk_idx;
-                vrf_wa[2]=hperm_dst_base_q+uop_p3_q.chunk_idx; vrf_wa[3]=hperm_dst_base_q+uop_p3_q.chunk_idx;
+                vrf_wa[0]=uop_p3_q.dst_addr; vrf_wa[1]=uop_p3_q.dst_addr;
+                vrf_wa[2]=uop_p3_q.dst_addr; vrf_wa[3]=uop_p3_q.dst_addr;
                 vrf_wd = lane_result_q;
                 if (uop_p3_q.chunk_idx == 2'd3) st_n = S_UOP_P4_RESP;
                 else begin
@@ -559,6 +561,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                     uop_p0_n.chunk_idx = chunk_cnt_n;
                     uop_p0_n.src0_addr = hperm_read_addr(hperm_src_base_q, chunk_cnt_n, hperm_word_off_q, 1'b0);
                     uop_p0_n.src1_addr = hperm_read_addr(hperm_src_base_q, chunk_cnt_n, hperm_word_off_q, 1'b1);
+                    uop_p0_n.dst_addr  = uop_p3_q.dst_base + {4'b0, chunk_cnt_n};
                     st_n = S_UOP_P1_RD0;
                 end
             end
@@ -621,7 +624,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
         if(!rst_ni)begin
             st_q<=S_IDLE;res_q<='0;op_q<=HDEC_VWR64;a_q<='0;b_q<='0;bk_q<='0;
             vaddr_bank_q<='0;vaddr_idx_q<='0;clr_cnt_q<='0;clr_base_q<='0;
-            src0_q<='0;chunk_cnt_q<='0;
+            chunk_cnt_q<='0;
             hb_dst_base_q<='0;hb_src0_base_q<='0;hb_src1_base_q<='0;
             hsim_src0_base_q<='0;hsim_src1_base_q<='0;hsim_total_q<='0;
             hmatch_num_q<='0;hmatch_best_idx_q<='0;hmatch_class_slot_q<='0;hmatch_best_dist_q<='0;hmatch_budget_q<='0;hmatch_update_q<=1'b0;
@@ -635,7 +638,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
         else begin
             st_q<=st_n;res_q<=res_n;op_q<=op_n;a_q<=a_n;b_q<=b_n;bk_q<=bk_n;
             vaddr_bank_q<=vaddr_bank_n;vaddr_idx_q<=vaddr_idx_n;clr_cnt_q<=clr_cnt_n;clr_base_q<=clr_base_n;
-            src0_q<=src0_n;chunk_cnt_q<=chunk_cnt_n;
+            chunk_cnt_q<=chunk_cnt_n;
             hb_dst_base_q<=hb_dst_base_n;hb_src0_base_q<=hb_src0_base_n;hb_src1_base_q<=hb_src1_base_n;
             hsim_src0_base_q<=hsim_src0_base_n;hsim_src1_base_q<=hsim_src1_base_n;hsim_total_q<=hsim_total_n;
             hmatch_num_q<=hmatch_num_n;hmatch_best_idx_q<=hmatch_best_idx_n;hmatch_class_slot_q<=hmatch_class_slot_n;hmatch_best_dist_q<=hmatch_best_dist_n;hmatch_budget_q<=hmatch_budget_n;hmatch_update_q<=hmatch_update_n;

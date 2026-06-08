@@ -1,0 +1,9 @@
+run_label=trial05_pop2stage
+period_ns=5.000
+part=xc7z020clg400-2
+top=hdec_top
+wns=-0.450
+worst_data_delay_ns=5.447
+fmax_est_mhz=183.486
+top_endpoint=hmatch_budget_q_reg[1]/D
+vivado_version=2022.2
