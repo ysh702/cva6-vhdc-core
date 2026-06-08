@@ -1,0 +1,6 @@
+rank,slack_ns,required_time_ns,arrival_time_ns,data_path_delay_ns,logic_delay_ns,route_delay_ns,logic_levels,startpoint,endpoint,startpoint_clock,endpoint_clock,path_group,major_hdec_stage_guess,key_path_tokens,main_cells
+1,-1.075,5.000,6.072,6.072,1.295,4.777,7,"i_vrf/bank_ra_data_o_reg[0][43]/C","gen_lane[0].i_p2_pop_slice/popcount_q_o_reg[4]/D","clk_i","clk_i","","P2 popcount/control","popcount;hdec_p2_pop_slice","FDCE=2;LUT2=1;LUT5=2;LUT6=4"
+2,-1.075,5.000,6.072,6.072,1.295,4.777,7,"i_vrf/bank_ra_data_o_reg[0][43]/C","gen_lane[0].i_p2_pop_slice/popcount_q_o_reg[5]/D","clk_i","clk_i","","P2 popcount/control","popcount;hdec_p2_pop_slice","FDCE=2;LUT2=1;LUT5=1;LUT6=5"
+3,-1.075,5.000,6.072,6.072,1.295,4.777,7,"i_vrf/bank_ra_data_o_reg[0][43]/C","gen_lane[0].i_p2_pop_slice/popcount_q_o_reg[6]/D","clk_i","clk_i","","P2 popcount/control","popcount;hdec_p2_pop_slice","FDCE=2;LUT2=1;LUT5=1;LUT6=5"
+4,-1.073,5.000,6.070,6.070,1.295,4.775,7,"i_vrf/bank_ra_data_o_reg[1][43]/C","gen_lane[1].i_p2_pop_slice/popcount_q_o_reg[4]/D","clk_i","clk_i","","P2 popcount/control","popcount;hdec_p2_pop_slice","FDCE=2;LUT2=1;LUT5=2;LUT6=4"
+5,-1.073,5.000,6.070,6.070,1.295,4.775,7,"i_vrf/bank_ra_data_o_reg[1][43]/C","gen_lane[1].i_p2_pop_slice/popcount_q_o_reg[5]/D","clk_i","clk_i","","P2 popcount/control","popcount;hdec_p2_pop_slice","FDCE=2;LUT2=1;LUT5=1;LUT6=5"
