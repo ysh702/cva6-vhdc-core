@@ -1,0 +1,6 @@
+rank,slack_ns,required_time_ns,arrival_time_ns,data_path_delay_ns,logic_delay_ns,route_delay_ns,logic_levels,startpoint,endpoint,startpoint_clock,endpoint_clock,path_group,major_hdec_stage_guess,key_path_tokens,main_cells
+1,-0.447,5.000,5.444,5.444,1.190,4.254,6,"src0_q_reg[0][1]/C","gen_lane[0].i_p2_pop_slice/popcount_q_o_reg[3]/D","clk_i","clk_i","","P2 popcount/control","popcount;hdec_p2_pop_slice","FDCE=2;LUT3=2;LUT6=4"
+2,-0.447,5.000,5.444,5.444,1.190,4.254,6,"src0_q_reg[0][1]/C","gen_lane[0].i_p2_pop_slice/popcount_q_o_reg[5]/D","clk_i","clk_i","","P2 popcount/control","popcount;hdec_p2_pop_slice","FDCE=2;LUT3=1;LUT6=5"
+3,-0.447,5.000,5.444,5.444,1.190,4.254,6,"src0_q_reg[0][1]/C","gen_lane[0].i_p2_pop_slice/popcount_q_o_reg[6]/D","clk_i","clk_i","","P2 popcount/control","popcount;hdec_p2_pop_slice","FDCE=2;LUT3=1;LUT6=5"
+4,-0.447,5.000,5.444,5.444,1.190,4.254,6,"src0_q_reg[1][1]/C","gen_lane[1].i_p2_pop_slice/popcount_q_o_reg[3]/D","clk_i","clk_i","","P2 popcount/control","popcount;hdec_p2_pop_slice","FDCE=2;LUT3=2;LUT6=4"
+5,-0.447,5.000,5.444,5.444,1.190,4.254,6,"src0_q_reg[1][1]/C","gen_lane[1].i_p2_pop_slice/popcount_q_o_reg[5]/D","clk_i","clk_i","","P2 popcount/control","popcount;hdec_p2_pop_slice","FDCE=2;LUT3=1;LUT6=5"

@@ -1,8 +1,8 @@
 // =============================================================================
 // hdec_vrf_64x256.sv - 4-bank vector register file
 // =============================================================================
-// Phase 1: LUTRAM-friendly storage with 1-cycle registered reads,
-// same-cycle normal write forwarding, and sequential power-on init clear.
+// Phase 1: LUTRAM-friendly storage with 1-cycle registered reads and sequential
+// power-on init clear. Four 64-bit banks keep read/write routing lane-local.
 // =============================================================================
 
 module hdec_vrf_64x256
@@ -63,8 +63,6 @@ module hdec_vrf_64x256
         end
     end
 
-    // One write port per bank. During init, the sequential clear owns the write
-    // port; normal HDEC traffic is expected after reset/init.
     always_ff @(posedge clk_i) begin
         if (init_b0_we)
             vrf_b0[init_addr] <= '0;
@@ -93,31 +91,14 @@ module hdec_vrf_64x256
             vrf_b3[bank_wa_addr_i[3]] <= bank_wdata_i[3];
     end
 
-    // Keep the existing 1-cycle registered read behavior seen by hdec_top.
-    // Same-cycle normal write/read to the same bank/address forwards write data.
     always_ff @(posedge clk_i or negedge rst_ni) begin
         if (!rst_ni) begin
             bank_ra_data_o <= '0;
         end else begin
-            if (bank_we_i[0] && (bank_wa_addr_i[0] == bank_ra_addr_i[0]))
-                bank_ra_data_o[0] <= bank_wdata_i[0];
-            else
-                bank_ra_data_o[0] <= vrf_b0[bank_ra_addr_i[0]];
-
-            if (bank_we_i[1] && (bank_wa_addr_i[1] == bank_ra_addr_i[1]))
-                bank_ra_data_o[1] <= bank_wdata_i[1];
-            else
-                bank_ra_data_o[1] <= vrf_b1[bank_ra_addr_i[1]];
-
-            if (bank_we_i[2] && (bank_wa_addr_i[2] == bank_ra_addr_i[2]))
-                bank_ra_data_o[2] <= bank_wdata_i[2];
-            else
-                bank_ra_data_o[2] <= vrf_b2[bank_ra_addr_i[2]];
-
-            if (bank_we_i[3] && (bank_wa_addr_i[3] == bank_ra_addr_i[3]))
-                bank_ra_data_o[3] <= bank_wdata_i[3];
-            else
-                bank_ra_data_o[3] <= vrf_b3[bank_ra_addr_i[3]];
+            bank_ra_data_o[0] <= vrf_b0[bank_ra_addr_i[0]];
+            bank_ra_data_o[1] <= vrf_b1[bank_ra_addr_i[1]];
+            bank_ra_data_o[2] <= vrf_b2[bank_ra_addr_i[2]];
+            bank_ra_data_o[3] <= vrf_b3[bank_ra_addr_i[3]];
         end
     end
 

@@ -14,35 +14,15 @@ module hdec_p2_pop_slice (
     output logic [6:0]  popcount_q_o
 );
 
-    (* keep = "true", dont_touch = "true", equivalent_register_removal = "no" *)
+    (* keep = "true", equivalent_register_removal = "no" *)
     logic        pop_q;
-    (* keep = "true", dont_touch = "true", equivalent_register_removal = "no" *)
+    (* keep = "true", equivalent_register_removal = "no" *)
     logic        xor_q;
-    logic [63:0] bool_src_a;
-    logic [63:0] bool_src_b;
     logic [63:0] bool_result;
     logic [6:0]  popcount_count;
 
-    assign bool_src_a = src_a_i;
-    assign bool_src_b = src_b_i;
-
-    hdec_lane_boolean_mask i_boolean_mask (
-        .src_a_i (bool_src_a),
-        .src_b_i (bool_src_b),
-        .result_o(bool_result)
-    );
-
-    hdec_lane_popcount_compressor i_popcount (
-        .mode_i      (1'b0),
-        .diff_i      (bool_result),
-        .a_i         ('0),
-        .b_i         ('0),
-        .c_i         ('0),
-        .count_o     (popcount_count),
-        .csa_sum_o   (),
-        .csa_carry_o (),
-        .csa_cout_o  ()
-    );
+    assign bool_result    = src_a_i ^ src_b_i;
+    assign popcount_count = 7'($countones(bool_result));
 
     assign xor_only_valid_o = xor_q && !pop_q;
     assign xor_result_o     = bool_result;
