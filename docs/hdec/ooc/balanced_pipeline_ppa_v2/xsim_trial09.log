@@ -1,0 +1,40 @@
+#-----------------------------------------------------------
+# xsim v2024.2 (64-bit)
+# SW Build 5239630 on Fri Nov 08 22:35:27 MST 2024
+# IP Build 5239520 on Sun Nov 10 16:12:51 MST 2024
+# SharedData Build 5239561 on Fri Nov 08 14:39:27 MST 2024
+# Start of session at: Mon Jun  8 18:55:28 2026
+# Process ID         : 26384
+# Current directory  : E:/HDEC/cva6-vhdc-core/tmp/hdec_ooc_p1_keep_trial/worktree/tmp/hdec_balanced_ppa_v2/xsim_trial09/xsim_hmatch_compare_split
+# Command line       : xsim.exe -mode tcl -source {xsim.dir/tb_hdec_hmatch_compare_split/xsim_script.tcl}
+# Log file           : E:/HDEC/cva6-vhdc-core/tmp/hdec_ooc_p1_keep_trial/worktree/tmp/hdec_balanced_ppa_v2/xsim_trial09/xsim_hmatch_compare_split/xsim.log
+# Journal file       : E:/HDEC/cva6-vhdc-core/tmp/hdec_ooc_p1_keep_trial/worktree/tmp/hdec_balanced_ppa_v2/xsim_trial09/xsim_hmatch_compare_split\xsim.jou
+# Running On         : WIN-20240824NZS
+# Platform           : Windows Server 2016 or Windows 10
+# Operating System   : 26100
+# Processor Detail   : 12th Gen Intel(R) Core(TM) i5-12600KF
+# CPU Frequency      : 3686 MHz
+# CPU Physical cores : 10
+# CPU Logical cores  : 16
+# Host memory        : 34125 MB
+# Swap memory        : 4026 MB
+# Total Virtual      : 38152 MB
+# Available Virtual  : 23133 MB
+#-----------------------------------------------------------
+source xsim.dir/tb_hdec_hmatch_compare_split/xsim_script.tcl
+# xsim {tb_hdec_hmatch_compare_split} -autoloadwcfg -tclbatch {E:/HDEC/cva6-vhdc-core/tmp/hdec_ooc_p1_keep_trial/worktree/tmp/hdec_balanced_ppa_v2/xsim_trial09/xsim_hmatch_compare_split/run_all.tcl}
+Time resolution is 1 ps
+source E:/HDEC/cva6-vhdc-core/tmp/hdec_ooc_p1_keep_trial/worktree/tmp/hdec_balanced_ppa_v2/xsim_trial09/xsim_hmatch_compare_split/run_all.tcl
+## run all
+HMATCH param=0x0110 cycles=18 result=0x0000000000000400
+PASS          single class max distance result=0x0000000000000400
+HMATCH param=0x0210 cycles=34 result=0x0000000000000800
+PASS           second class exact match result=0x0000000000000800
+HMATCH param=0x0240 cycles=34 result=0x0000000000000000
+PASS              tie keeps first class result=0x0000000000000000
+HMATCH param=0x0010 cycles=1 result=0x0000000000000002
+PASS           illegal num_classes zero result=0x0000000000000002
+All HDEC HMATCH compare-split xsim tests passed.
+$finish called at time : 8443500 ps : File "E:/HDEC/cva6-vhdc-core/tmp/hdec_ooc_p1_keep_trial/worktree/verif/hdec/tb_hdec_hmatch_compare_split.sv" Line 183
+## quit
+INFO: [Common 17-206] Exiting xsim at Mon Jun  8 18:55:30 2026...

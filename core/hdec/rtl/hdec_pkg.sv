@@ -61,23 +61,18 @@ package hdec_pkg;
         // ── Control ──
         logic                   valid;
         hdec_uop_type_e         op_type;
-        hdec_op_t               arch_op;
 
         // ── VRF Addressing ──
         logic [VRF_IDX_W-1:0]   src0_addr;
         logic [VRF_IDX_W-1:0]   src1_addr;
         logic [VRF_IDX_W-1:0]   dst_addr;
-        logic [VRF_IDX_W-1:0]   src0_base;
-        logic [VRF_IDX_W-1:0]   src1_base;
-        logic [VRF_IDX_W-1:0]   dst_base;
 
         // ── Iteration ──
         logic [1:0]             chunk_idx;
         logic [1:0]             subgroup_idx;
 
         // ── Class / Search ──
-        logic [7:0]             class_idx;
-        logic [7:0]             class_count;
+        logic [2:0]             class_idx;
 
         // ── Compute Parameters ──
         logic [3:0]             perm_nibble;
