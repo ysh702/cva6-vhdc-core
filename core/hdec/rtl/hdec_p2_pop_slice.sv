@@ -19,10 +19,11 @@ module hdec_p2_pop_slice (
     (* keep = "true", equivalent_register_removal = "no" *)
     logic        xor_q;
     logic [63:0] src_a_q;
+    logic [63:0] src_b_q;
     logic [63:0] bool_result;
     logic [1:0][5:0] popcount_part_count;
 
-    assign bool_result            = src_a_q ^ src_b_i;
+    assign bool_result            = src_a_q ^ src_b_q;
     assign popcount_part_count[0] = 6'($countones(bool_result[31:0]));
     assign popcount_part_count[1] = 6'($countones(bool_result[63:32]));
 
@@ -34,12 +35,15 @@ module hdec_p2_pop_slice (
             pop_q        <= 1'b0;
             xor_q        <= 1'b0;
             src_a_q      <= '0;
+            src_b_q      <= '0;
             popcount_part_q_o <= '0;
         end else begin
             pop_q <= pop_d_i;
             xor_q <= xor_d_i;
-            if (xor_d_i)
+            if (xor_d_i) begin
                 src_a_q <= src_a_i;
+                src_b_q <= src_b_i;
+            end
             if (pop_q)
                 popcount_part_q_o <= popcount_part_count;
         end

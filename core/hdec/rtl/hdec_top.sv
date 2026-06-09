@@ -23,7 +23,9 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
         S_UOP_P2_LANE, S_UOP_P3_GLOBAL, S_UOP_P3_VRF_WAIT, S_UOP_P3_ACCUM, S_UOP_P4_RESP,
         S_UOP_CLIP_WRITE,
         S_ECC_LOAD_A_WAIT, S_ECC_LOAD_A, S_ECC_LOAD_B_WAIT, S_ECC_LOAD_B,
+        S_ECC_KPD32_FORM,
         S_ECC_DIAG_ISSUE, S_ECC_DIAG_WAIT, S_ECC_DIAG_ACCUM,
+        S_ECC_LEAF_FOLD,
         S_ECC_WRITE_WORD, S_ECC_WRITE_DRAIN
     } st_t;
     st_t st_q, st_n;
@@ -118,16 +120,24 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
     logic [VRF_IDX_W-1:0] ecc_dst_q,   ecc_dst_n;
     logic [255:0]         ecc_a_q,     ecc_a_n;
     logic [255:0]         ecc_b_q,     ecc_b_n;
-    logic [255:0]         ecc_b_window_q, ecc_b_window_n;
-    logic [63:0]          ecc_word_q,  ecc_word_n;
+    logic [511:0]         ecc_product_q, ecc_product_n;
+    logic [31:0]          ecc_leaf_a_q,  ecc_leaf_a_n;
+    logic [31:0]          ecc_leaf_b_q,  ecc_leaf_b_n;
+    logic [63:0]          ecc_leaf_prod_q, ecc_leaf_prod_n;
     logic [8:0]           ecc_k_q,     ecc_k_n;
+    logic [4:0]           ecc_leaf_id_q, ecc_leaf_id_n;
+    logic [5:0]           ecc_diag_base_q, ecc_diag_base_n;
+    logic                 ecc_pipe0_valid_q, ecc_pipe0_valid_n;
+    logic                 ecc_pipe1_valid_q, ecc_pipe1_valid_n;
+    logic [5:0]           ecc_pipe0_diag_q, ecc_pipe0_diag_n;
+    logic [5:0]           ecc_pipe1_diag_q, ecc_pipe1_diag_n;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] ecc_partial_vec;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] pop_src_a;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] pop_src_b;
+    logic [7:0]           ecc_diag8_parity;
     logic                pop_d_mux;
     logic                xor_d_mux;
     logic                ecc_issue_pop;
-    logic                ecc_diag_parity;
 
     // ── Combinational helpers ───────────────────────────────────────────────
     assign hcntadd_acc_base = hcntadd_acc_sel_q ? 6'd48 : 6'd32;
@@ -144,14 +154,18 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
     assign ecc_issue_pop = (st_q == S_ECC_DIAG_ISSUE);
     assign pop_d_mux     = p1_pop_d || ecc_issue_pop;
     assign xor_d_mux     = p1_xor_d || ecc_issue_pop;
-    assign ecc_diag_parity = lane_popcnt_part_q[0][0][0] ^ lane_popcnt_part_q[0][1][0]
-                           ^ lane_popcnt_part_q[1][0][0] ^ lane_popcnt_part_q[1][1][0]
-                           ^ lane_popcnt_part_q[2][0][0] ^ lane_popcnt_part_q[2][1][0]
-                           ^ lane_popcnt_part_q[3][0][0] ^ lane_popcnt_part_q[3][1][0];
-    assign ecc_partial_vec[0] = ecc_a_q[63:0]    & ecc_b_window_q[63:0];
-    assign ecc_partial_vec[1] = ecc_a_q[127:64]  & ecc_b_window_q[127:64];
-    assign ecc_partial_vec[2] = ecc_a_q[191:128] & ecc_b_window_q[191:128];
-    assign ecc_partial_vec[3] = ecc_a_q[255:192] & ecc_b_window_q[255:192];
+    assign ecc_diag8_parity = {lane_popcnt_part_q[3][1][0], lane_popcnt_part_q[3][0][0],
+                               lane_popcnt_part_q[2][1][0], lane_popcnt_part_q[2][0][0],
+                               lane_popcnt_part_q[1][1][0], lane_popcnt_part_q[1][0][0],
+                               lane_popcnt_part_q[0][1][0], lane_popcnt_part_q[0][0][0]};
+    assign ecc_partial_vec[0] = {ecc_diag32_partial(ecc_leaf_a_q, ecc_leaf_b_q, {1'b0, ecc_diag_base_q} + 7'd1),
+                                 ecc_diag32_partial(ecc_leaf_a_q, ecc_leaf_b_q, {1'b0, ecc_diag_base_q} + 7'd0)};
+    assign ecc_partial_vec[1] = {ecc_diag32_partial(ecc_leaf_a_q, ecc_leaf_b_q, {1'b0, ecc_diag_base_q} + 7'd3),
+                                 ecc_diag32_partial(ecc_leaf_a_q, ecc_leaf_b_q, {1'b0, ecc_diag_base_q} + 7'd2)};
+    assign ecc_partial_vec[2] = {ecc_diag32_partial(ecc_leaf_a_q, ecc_leaf_b_q, {1'b0, ecc_diag_base_q} + 7'd5),
+                                 ecc_diag32_partial(ecc_leaf_a_q, ecc_leaf_b_q, {1'b0, ecc_diag_base_q} + 7'd4)};
+    assign ecc_partial_vec[3] = {ecc_diag32_partial(ecc_leaf_a_q, ecc_leaf_b_q, {1'b0, ecc_diag_base_q} + 7'd7),
+                                 ecc_diag32_partial(ecc_leaf_a_q, ecc_leaf_b_q, {1'b0, ecc_diag_base_q} + 7'd6)};
 
     function automatic hdec_op_t p4_arch_from_uop(input hdec_uop_type_e op_type);
         unique case (op_type)
@@ -183,6 +197,225 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
         input logic next_word
     );
         hperm_read_addr = base + {4'b0, chunk} + {4'b0, word_off[3:2]} + VRF_IDX_W'(next_word);
+    endfunction
+
+    function automatic logic [31:0] ecc_limb32(input logic [255:0] value, input logic [2:0] idx);
+        unique case (idx)
+            3'd0: ecc_limb32 = value[31:0];
+            3'd1: ecc_limb32 = value[63:32];
+            3'd2: ecc_limb32 = value[95:64];
+            3'd3: ecc_limb32 = value[127:96];
+            3'd4: ecc_limb32 = value[159:128];
+            3'd5: ecc_limb32 = value[191:160];
+            3'd6: ecc_limb32 = value[223:192];
+            3'd7: ecc_limb32 = value[255:224];
+            default: ecc_limb32 = '0;
+        endcase
+    endfunction
+
+    function automatic logic [5:0] ecc_kpd32_leaf_path(input logic [4:0] leaf_id);
+        unique case (leaf_id)
+            5'd0:  ecc_kpd32_leaf_path = {2'd0, 2'd0, 2'd0};
+            5'd1:  ecc_kpd32_leaf_path = {2'd0, 2'd0, 2'd1};
+            5'd2:  ecc_kpd32_leaf_path = {2'd0, 2'd0, 2'd2};
+            5'd3:  ecc_kpd32_leaf_path = {2'd0, 2'd1, 2'd0};
+            5'd4:  ecc_kpd32_leaf_path = {2'd0, 2'd1, 2'd1};
+            5'd5:  ecc_kpd32_leaf_path = {2'd0, 2'd1, 2'd2};
+            5'd6:  ecc_kpd32_leaf_path = {2'd0, 2'd2, 2'd0};
+            5'd7:  ecc_kpd32_leaf_path = {2'd0, 2'd2, 2'd1};
+            5'd8:  ecc_kpd32_leaf_path = {2'd0, 2'd2, 2'd2};
+            5'd9:  ecc_kpd32_leaf_path = {2'd1, 2'd0, 2'd0};
+            5'd10: ecc_kpd32_leaf_path = {2'd1, 2'd0, 2'd1};
+            5'd11: ecc_kpd32_leaf_path = {2'd1, 2'd0, 2'd2};
+            5'd12: ecc_kpd32_leaf_path = {2'd1, 2'd1, 2'd0};
+            5'd13: ecc_kpd32_leaf_path = {2'd1, 2'd1, 2'd1};
+            5'd14: ecc_kpd32_leaf_path = {2'd1, 2'd1, 2'd2};
+            5'd15: ecc_kpd32_leaf_path = {2'd1, 2'd2, 2'd0};
+            5'd16: ecc_kpd32_leaf_path = {2'd1, 2'd2, 2'd1};
+            5'd17: ecc_kpd32_leaf_path = {2'd1, 2'd2, 2'd2};
+            5'd18: ecc_kpd32_leaf_path = {2'd2, 2'd0, 2'd0};
+            5'd19: ecc_kpd32_leaf_path = {2'd2, 2'd0, 2'd1};
+            5'd20: ecc_kpd32_leaf_path = {2'd2, 2'd0, 2'd2};
+            5'd21: ecc_kpd32_leaf_path = {2'd2, 2'd1, 2'd0};
+            5'd22: ecc_kpd32_leaf_path = {2'd2, 2'd1, 2'd1};
+            5'd23: ecc_kpd32_leaf_path = {2'd2, 2'd1, 2'd2};
+            5'd24: ecc_kpd32_leaf_path = {2'd2, 2'd2, 2'd0};
+            5'd25: ecc_kpd32_leaf_path = {2'd2, 2'd2, 2'd1};
+            5'd26: ecc_kpd32_leaf_path = {2'd2, 2'd2, 2'd2};
+            default: ecc_kpd32_leaf_path = '0;
+        endcase
+    endfunction
+
+    function automatic logic [31:0] ecc_kpd32_select(
+        input logic [31:0] lo_word,
+        input logic [31:0] hi_word,
+        input logic [1:0]  sel
+    );
+        unique case (sel)
+            2'd0: ecc_kpd32_select = lo_word;
+            2'd1: ecc_kpd32_select = lo_word ^ hi_word;
+            2'd2: ecc_kpd32_select = hi_word;
+            default: ecc_kpd32_select = '0;
+        endcase
+    endfunction
+
+    function automatic logic [31:0] ecc_kpd32_leaf_word(
+        input logic [255:0] value,
+        input logic [4:0]   leaf_id
+    );
+        logic [5:0] path;
+        logic [31:0] s0_0, s0_1, s0_2, s0_3;
+        logic [31:0] s1_0, s1_1;
+        begin
+            path = ecc_kpd32_leaf_path(leaf_id);
+            s0_0 = ecc_kpd32_select(ecc_limb32(value, 3'd0), ecc_limb32(value, 3'd4), path[5:4]);
+            s0_1 = ecc_kpd32_select(ecc_limb32(value, 3'd1), ecc_limb32(value, 3'd5), path[5:4]);
+            s0_2 = ecc_kpd32_select(ecc_limb32(value, 3'd2), ecc_limb32(value, 3'd6), path[5:4]);
+            s0_3 = ecc_kpd32_select(ecc_limb32(value, 3'd3), ecc_limb32(value, 3'd7), path[5:4]);
+            s1_0 = ecc_kpd32_select(s0_0, s0_2, path[3:2]);
+            s1_1 = ecc_kpd32_select(s0_1, s0_3, path[3:2]);
+            ecc_kpd32_leaf_word = ecc_kpd32_select(s1_0, s1_1, path[1:0]);
+        end
+    endfunction
+
+    function automatic logic [31:0] ecc_diag32_partial(
+        input logic [31:0] a_word,
+        input logic [31:0] b_word,
+        input logic [6:0]  diag_idx
+    );
+        logic [31:0] partial;
+        int signed b_idx;
+        begin
+            partial = '0;
+            for (int signed i = 0; i < 32; i++) begin
+                b_idx = int'(diag_idx) - i;
+                if ((b_idx >= 0) && (b_idx < 32))
+                    partial[i] = a_word[i] & b_word[b_idx];
+            end
+            ecc_diag32_partial = partial;
+        end
+    endfunction
+
+    function automatic logic [63:0] ecc_product_word(
+        input logic [511:0] product,
+        input logic [2:0]   word_idx
+    );
+        unique case (word_idx)
+            3'd0: ecc_product_word = product[63:0];
+            3'd1: ecc_product_word = product[127:64];
+            3'd2: ecc_product_word = product[191:128];
+            3'd3: ecc_product_word = product[255:192];
+            3'd4: ecc_product_word = product[319:256];
+            3'd5: ecc_product_word = product[383:320];
+            3'd6: ecc_product_word = product[447:384];
+            3'd7: ecc_product_word = product[511:448];
+            default: ecc_product_word = '0;
+        endcase
+    endfunction
+
+    function automatic logic [63:0] ecc_kpd32_leaf_store_pack(
+        input logic [63:0] leaf_product,
+        input logic [5:0]   diag_base,
+        input logic [7:0]   parity
+    );
+        logic [63:0] updated;
+        begin
+            updated = leaf_product;
+            unique case (diag_base)
+                6'd0:  updated[7:0]   = parity;
+                6'd8:  updated[15:8]  = parity;
+                6'd16: updated[23:16] = parity;
+                6'd24: updated[31:24] = parity;
+                6'd32: updated[39:32] = parity;
+                6'd40: updated[47:40] = parity;
+                6'd48: updated[55:48] = parity;
+                6'd56: begin
+                    updated[62:56] = parity[6:0];
+                    updated[63]    = 1'b0;
+                end
+                default: updated = leaf_product;
+            endcase
+            ecc_kpd32_leaf_store_pack = updated;
+        end
+    endfunction
+
+    function automatic logic [511:0] ecc_shift_leaf64(
+        input logic [63:0] leaf_product,
+        input logic [8:0]  offset
+    );
+        logic [511:0] shifted;
+        begin
+            shifted = '0;
+            unique case (offset)
+                9'd0:   shifted[63:0]    = leaf_product;
+                9'd32:  shifted[95:32]   = leaf_product;
+                9'd64:  shifted[127:64]  = leaf_product;
+                9'd96:  shifted[159:96]  = leaf_product;
+                9'd128: shifted[191:128] = leaf_product;
+                9'd160: shifted[223:160] = leaf_product;
+                9'd192: shifted[255:192] = leaf_product;
+                9'd224: shifted[287:224] = leaf_product;
+                9'd256: shifted[319:256] = leaf_product;
+                9'd288: shifted[351:288] = leaf_product;
+                9'd320: shifted[383:320] = leaf_product;
+                9'd352: shifted[415:352] = leaf_product;
+                9'd384: shifted[447:384] = leaf_product;
+                9'd416: shifted[479:416] = leaf_product;
+                9'd448: shifted[511:448] = leaf_product;
+                default: shifted = '0;
+            endcase
+            ecc_shift_leaf64 = shifted;
+        end
+    endfunction
+
+    function automatic logic [511:0] ecc_kpd32_fold_leaf(
+        input logic [511:0] product,
+        input logic [4:0]   leaf_id,
+        input logic [63:0]  leaf_product
+    );
+        logic [511:0] mask;
+        begin
+            mask = '0;
+            unique case (leaf_id)
+                5'd0:  mask = ecc_shift_leaf64(leaf_product, 9'd0)   ^ ecc_shift_leaf64(leaf_product, 9'd32)  ^ ecc_shift_leaf64(leaf_product, 9'd64)  ^ ecc_shift_leaf64(leaf_product, 9'd96)
+                              ^ ecc_shift_leaf64(leaf_product, 9'd128) ^ ecc_shift_leaf64(leaf_product, 9'd160) ^ ecc_shift_leaf64(leaf_product, 9'd192) ^ ecc_shift_leaf64(leaf_product, 9'd224);
+                5'd1:  mask = ecc_shift_leaf64(leaf_product, 9'd32)  ^ ecc_shift_leaf64(leaf_product, 9'd96)  ^ ecc_shift_leaf64(leaf_product, 9'd160) ^ ecc_shift_leaf64(leaf_product, 9'd224);
+                5'd2:  mask = ecc_shift_leaf64(leaf_product, 9'd32)  ^ ecc_shift_leaf64(leaf_product, 9'd64)  ^ ecc_shift_leaf64(leaf_product, 9'd96)  ^ ecc_shift_leaf64(leaf_product, 9'd128)
+                              ^ ecc_shift_leaf64(leaf_product, 9'd160) ^ ecc_shift_leaf64(leaf_product, 9'd192) ^ ecc_shift_leaf64(leaf_product, 9'd224) ^ ecc_shift_leaf64(leaf_product, 9'd256);
+                5'd3:  mask = ecc_shift_leaf64(leaf_product, 9'd64)  ^ ecc_shift_leaf64(leaf_product, 9'd96)  ^ ecc_shift_leaf64(leaf_product, 9'd192) ^ ecc_shift_leaf64(leaf_product, 9'd224);
+                5'd4:  mask = ecc_shift_leaf64(leaf_product, 9'd96)  ^ ecc_shift_leaf64(leaf_product, 9'd224);
+                5'd5:  mask = ecc_shift_leaf64(leaf_product, 9'd96)  ^ ecc_shift_leaf64(leaf_product, 9'd128) ^ ecc_shift_leaf64(leaf_product, 9'd224) ^ ecc_shift_leaf64(leaf_product, 9'd256);
+                5'd6:  mask = ecc_shift_leaf64(leaf_product, 9'd64)  ^ ecc_shift_leaf64(leaf_product, 9'd96)  ^ ecc_shift_leaf64(leaf_product, 9'd128) ^ ecc_shift_leaf64(leaf_product, 9'd160)
+                              ^ ecc_shift_leaf64(leaf_product, 9'd192) ^ ecc_shift_leaf64(leaf_product, 9'd224) ^ ecc_shift_leaf64(leaf_product, 9'd256) ^ ecc_shift_leaf64(leaf_product, 9'd288);
+                5'd7:  mask = ecc_shift_leaf64(leaf_product, 9'd96)  ^ ecc_shift_leaf64(leaf_product, 9'd160) ^ ecc_shift_leaf64(leaf_product, 9'd224) ^ ecc_shift_leaf64(leaf_product, 9'd288);
+                5'd8:  mask = ecc_shift_leaf64(leaf_product, 9'd96)  ^ ecc_shift_leaf64(leaf_product, 9'd128) ^ ecc_shift_leaf64(leaf_product, 9'd160) ^ ecc_shift_leaf64(leaf_product, 9'd192)
+                              ^ ecc_shift_leaf64(leaf_product, 9'd224) ^ ecc_shift_leaf64(leaf_product, 9'd256) ^ ecc_shift_leaf64(leaf_product, 9'd288) ^ ecc_shift_leaf64(leaf_product, 9'd320);
+                5'd9:  mask = ecc_shift_leaf64(leaf_product, 9'd128) ^ ecc_shift_leaf64(leaf_product, 9'd160) ^ ecc_shift_leaf64(leaf_product, 9'd192) ^ ecc_shift_leaf64(leaf_product, 9'd224);
+                5'd10: mask = ecc_shift_leaf64(leaf_product, 9'd160) ^ ecc_shift_leaf64(leaf_product, 9'd224);
+                5'd11: mask = ecc_shift_leaf64(leaf_product, 9'd160) ^ ecc_shift_leaf64(leaf_product, 9'd192) ^ ecc_shift_leaf64(leaf_product, 9'd224) ^ ecc_shift_leaf64(leaf_product, 9'd256);
+                5'd12: mask = ecc_shift_leaf64(leaf_product, 9'd192) ^ ecc_shift_leaf64(leaf_product, 9'd224);
+                5'd13: mask = ecc_shift_leaf64(leaf_product, 9'd224);
+                5'd14: mask = ecc_shift_leaf64(leaf_product, 9'd224) ^ ecc_shift_leaf64(leaf_product, 9'd256);
+                5'd15: mask = ecc_shift_leaf64(leaf_product, 9'd192) ^ ecc_shift_leaf64(leaf_product, 9'd224) ^ ecc_shift_leaf64(leaf_product, 9'd256) ^ ecc_shift_leaf64(leaf_product, 9'd288);
+                5'd16: mask = ecc_shift_leaf64(leaf_product, 9'd224) ^ ecc_shift_leaf64(leaf_product, 9'd288);
+                5'd17: mask = ecc_shift_leaf64(leaf_product, 9'd224) ^ ecc_shift_leaf64(leaf_product, 9'd256) ^ ecc_shift_leaf64(leaf_product, 9'd288) ^ ecc_shift_leaf64(leaf_product, 9'd320);
+                5'd18: mask = ecc_shift_leaf64(leaf_product, 9'd128) ^ ecc_shift_leaf64(leaf_product, 9'd160) ^ ecc_shift_leaf64(leaf_product, 9'd192) ^ ecc_shift_leaf64(leaf_product, 9'd224)
+                              ^ ecc_shift_leaf64(leaf_product, 9'd256) ^ ecc_shift_leaf64(leaf_product, 9'd288) ^ ecc_shift_leaf64(leaf_product, 9'd320) ^ ecc_shift_leaf64(leaf_product, 9'd352);
+                5'd19: mask = ecc_shift_leaf64(leaf_product, 9'd160) ^ ecc_shift_leaf64(leaf_product, 9'd224) ^ ecc_shift_leaf64(leaf_product, 9'd288) ^ ecc_shift_leaf64(leaf_product, 9'd352);
+                5'd20: mask = ecc_shift_leaf64(leaf_product, 9'd160) ^ ecc_shift_leaf64(leaf_product, 9'd192) ^ ecc_shift_leaf64(leaf_product, 9'd224) ^ ecc_shift_leaf64(leaf_product, 9'd256)
+                              ^ ecc_shift_leaf64(leaf_product, 9'd288) ^ ecc_shift_leaf64(leaf_product, 9'd320) ^ ecc_shift_leaf64(leaf_product, 9'd352) ^ ecc_shift_leaf64(leaf_product, 9'd384);
+                5'd21: mask = ecc_shift_leaf64(leaf_product, 9'd192) ^ ecc_shift_leaf64(leaf_product, 9'd224) ^ ecc_shift_leaf64(leaf_product, 9'd320) ^ ecc_shift_leaf64(leaf_product, 9'd352);
+                5'd22: mask = ecc_shift_leaf64(leaf_product, 9'd224) ^ ecc_shift_leaf64(leaf_product, 9'd352);
+                5'd23: mask = ecc_shift_leaf64(leaf_product, 9'd224) ^ ecc_shift_leaf64(leaf_product, 9'd256) ^ ecc_shift_leaf64(leaf_product, 9'd352) ^ ecc_shift_leaf64(leaf_product, 9'd384);
+                5'd24: mask = ecc_shift_leaf64(leaf_product, 9'd192) ^ ecc_shift_leaf64(leaf_product, 9'd224) ^ ecc_shift_leaf64(leaf_product, 9'd256) ^ ecc_shift_leaf64(leaf_product, 9'd288)
+                              ^ ecc_shift_leaf64(leaf_product, 9'd320) ^ ecc_shift_leaf64(leaf_product, 9'd352) ^ ecc_shift_leaf64(leaf_product, 9'd384) ^ ecc_shift_leaf64(leaf_product, 9'd416);
+                5'd25: mask = ecc_shift_leaf64(leaf_product, 9'd224) ^ ecc_shift_leaf64(leaf_product, 9'd288) ^ ecc_shift_leaf64(leaf_product, 9'd352) ^ ecc_shift_leaf64(leaf_product, 9'd416);
+                5'd26: mask = ecc_shift_leaf64(leaf_product, 9'd224) ^ ecc_shift_leaf64(leaf_product, 9'd256) ^ ecc_shift_leaf64(leaf_product, 9'd288) ^ ecc_shift_leaf64(leaf_product, 9'd320)
+                              ^ ecc_shift_leaf64(leaf_product, 9'd352) ^ ecc_shift_leaf64(leaf_product, 9'd384) ^ ecc_shift_leaf64(leaf_product, 9'd416) ^ ecc_shift_leaf64(leaf_product, 9'd448);
+                default: mask = '0;
+            endcase
+            ecc_kpd32_fold_leaf = product ^ mask;
+        end
     endfunction
 
     // ── 4× Lane instances ───────────────────────────────────────────────────
@@ -259,7 +492,11 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
         lane_result_n=lane_result_q; lane_clip_n=lane_clip_q;
         scalar_response_n=scalar_response_q; response_valid_n=response_valid_q; p4_arch_op_n=p4_arch_op_q;
         ecc_src_a_n=ecc_src_a_q; ecc_src_b_n=ecc_src_b_q; ecc_dst_n=ecc_dst_q;
-        ecc_a_n=ecc_a_q; ecc_b_n=ecc_b_q; ecc_b_window_n=ecc_b_window_q; ecc_word_n=ecc_word_q; ecc_k_n=ecc_k_q;
+        ecc_a_n=ecc_a_q; ecc_b_n=ecc_b_q; ecc_product_n=ecc_product_q;
+        ecc_leaf_a_n=ecc_leaf_a_q; ecc_leaf_b_n=ecc_leaf_b_q; ecc_leaf_prod_n=ecc_leaf_prod_q; ecc_k_n=ecc_k_q;
+        ecc_leaf_id_n=ecc_leaf_id_q; ecc_diag_base_n=ecc_diag_base_q;
+        ecc_pipe0_valid_n=1'b0; ecc_pipe0_diag_n=ecc_pipe0_diag_q;
+        ecc_pipe1_valid_n=ecc_pipe0_valid_q; ecc_pipe1_diag_n=ecc_pipe0_diag_q;
         lane_cnt_valid='0;
         lane_shift_valid='0;
         lane_shift_a='0; lane_shift_b='0; lane_shift_nibble=hperm_nibble_q;
@@ -283,8 +520,14 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                     ecc_src_b_n = a_q[5:0];
                     ecc_a_n     = '0;
                     ecc_b_n     = '0;
-                    ecc_b_window_n = '0;
-                    ecc_word_n  = '0;
+                    ecc_product_n = '0;
+                    ecc_leaf_a_n  = '0;
+                    ecc_leaf_b_n  = '0;
+                    ecc_leaf_prod_n = '0;
+                    ecc_leaf_id_n = '0;
+                    ecc_diag_base_n = '0;
+                    ecc_pipe0_valid_n = 1'b0;
+                    ecc_pipe1_valid_n = 1'b0;
                     ecc_k_n     = '0;
                     vrf_ra[0]=a_q[11:6]; vrf_ra[1]=a_q[11:6];
                     vrf_ra[2]=a_q[11:6]; vrf_ra[3]=a_q[11:6];
@@ -421,50 +664,70 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
 
         S_ECC_LOAD_B: begin
             ecc_b_n    = {vrf_rd[3], vrf_rd[2], vrf_rd[1], vrf_rd[0]};
-            ecc_b_window_n = {255'b0, vrf_rd[0][0]};
-            ecc_word_n = '0;
-            ecc_k_n    = '0;
+            ecc_product_n = '0;
+            ecc_leaf_prod_n = '0;
+            ecc_leaf_id_n = 5'd0;
+            ecc_diag_base_n = 6'd0;
+            ecc_k_n = '0;
+            ecc_pipe0_valid_n = 1'b0;
+            ecc_pipe1_valid_n = 1'b0;
+            st_n=S_ECC_KPD32_FORM;
+        end
+
+        S_ECC_KPD32_FORM: begin
+            ecc_leaf_a_n = ecc_kpd32_leaf_word(ecc_a_q, ecc_leaf_id_q);
+            ecc_leaf_b_n = ecc_kpd32_leaf_word(ecc_b_q, ecc_leaf_id_q);
+            ecc_leaf_prod_n = '0;
+            ecc_diag_base_n = 6'd0;
             st_n=S_ECC_DIAG_ISSUE;
         end
 
         S_ECC_DIAG_ISSUE: begin
-            st_n=S_ECC_DIAG_WAIT;
-        end
-
-        S_ECC_DIAG_WAIT: begin
-            st_n=S_ECC_DIAG_ACCUM;
-        end
-
-        S_ECC_DIAG_ACCUM: begin
-            ecc_word_n = ecc_word_q;
-            ecc_word_n[ecc_k_q[5:0]] = ecc_diag_parity;
-            if ((ecc_k_q[5:0] == 6'd63) || (ecc_k_q == 9'd510)) begin
-                st_n=S_ECC_WRITE_WORD;
+            if (ecc_pipe1_valid_q)
+                ecc_leaf_prod_n = ecc_kpd32_leaf_store_pack(ecc_leaf_prod_q, ecc_pipe1_diag_q, ecc_diag8_parity);
+            ecc_pipe0_valid_n = 1'b1;
+            ecc_pipe0_diag_n  = ecc_diag_base_q;
+            if (ecc_diag_base_q == 6'd56) begin
+                st_n=S_ECC_DIAG_WAIT;
             end else begin
-                if (ecc_k_q < 9'd255)
-                    ecc_b_window_n={ecc_b_window_q[254:0], ecc_b_q[ecc_k_q + 9'd1]};
-                else
-                    ecc_b_window_n={ecc_b_window_q[254:0], 1'b0};
-                ecc_k_n=ecc_k_q + 9'd1;
+                ecc_diag_base_n = ecc_diag_base_q + 6'd8;
                 st_n=S_ECC_DIAG_ISSUE;
             end
         end
 
+        S_ECC_DIAG_WAIT: begin
+            if (ecc_pipe1_valid_q)
+                ecc_leaf_prod_n = ecc_kpd32_leaf_store_pack(ecc_leaf_prod_q, ecc_pipe1_diag_q, ecc_diag8_parity);
+            st_n=S_ECC_DIAG_ACCUM;
+        end
+
+        S_ECC_DIAG_ACCUM: begin
+            if (ecc_pipe1_valid_q)
+                ecc_leaf_prod_n = ecc_kpd32_leaf_store_pack(ecc_leaf_prod_q, ecc_pipe1_diag_q, ecc_diag8_parity);
+            st_n=S_ECC_LEAF_FOLD;
+        end
+
+        S_ECC_LEAF_FOLD: begin
+            ecc_product_n = ecc_kpd32_fold_leaf(ecc_product_q, ecc_leaf_id_q, ecc_leaf_prod_q);
+            if (ecc_leaf_id_q == 5'd26) begin
+                ecc_k_n = '0;
+                st_n=S_ECC_WRITE_WORD;
+            end else begin
+                ecc_leaf_id_n = ecc_leaf_id_q + 5'd1;
+                st_n=S_ECC_KPD32_FORM;
+            end
+        end
+
         S_ECC_WRITE_WORD: begin
-            vrf_we[ecc_k_q[7:6]]=1'b1;
-            vrf_wa[ecc_k_q[7:6]]=ecc_dst_q + {5'b0, ecc_k_q[8]};
-            vrf_wd[ecc_k_q[7:6]]=ecc_word_q;
-            ecc_word_n='0;
-            if (ecc_k_q == 9'd510) begin
+            vrf_we[ecc_k_q[1:0]]=1'b1;
+            vrf_wa[ecc_k_q[1:0]]=ecc_dst_q + {5'b0, ecc_k_q[2]};
+            vrf_wd[ecc_k_q[1:0]]=ecc_product_word(ecc_product_q, ecc_k_q[2:0]);
+            if (ecc_k_q[2:0] == 3'd7) begin
                 res_n={56'b0, ecc_dst_q, STATUS_OK};
                 st_n=S_ECC_WRITE_DRAIN;
             end else begin
-                if (ecc_k_q < 9'd255)
-                    ecc_b_window_n={ecc_b_window_q[254:0], ecc_b_q[ecc_k_q + 9'd1]};
-                else
-                    ecc_b_window_n={ecc_b_window_q[254:0], 1'b0};
                 ecc_k_n=ecc_k_q + 9'd1;
-                st_n=S_ECC_DIAG_ISSUE;
+                st_n=S_ECC_WRITE_WORD;
             end
         end
 
@@ -805,7 +1068,9 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             uop_p0_q<='0;uop_p1_q<='0;uop_p2_q<='0;uop_p3_q<='0;
             lane_result_q<='0;lane_clip_q<='0;
             scalar_response_q<='0;response_valid_q<='0;p4_arch_op_q<=HDEC_VWR64;
-            ecc_src_a_q<='0;ecc_src_b_q<='0;ecc_dst_q<='0;ecc_a_q<='0;ecc_b_q<='0;ecc_b_window_q<='0;ecc_word_q<='0;ecc_k_q<='0;
+            ecc_src_a_q<='0;ecc_src_b_q<='0;ecc_dst_q<='0;ecc_a_q<='0;ecc_b_q<='0;ecc_product_q<='0;
+            ecc_leaf_a_q<='0;ecc_leaf_b_q<='0;ecc_leaf_prod_q<='0;ecc_k_q<='0;ecc_leaf_id_q<='0;ecc_diag_base_q<='0;
+            ecc_pipe0_valid_q<=1'b0;ecc_pipe1_valid_q<=1'b0;ecc_pipe0_diag_q<='0;ecc_pipe1_diag_q<='0;
         end
         else begin
             st_q<=st_n;res_q<=res_n;op_q<=op_n;a_q<=a_n;b_q<=b_n;bk_q<=bk_n;
@@ -821,7 +1086,9 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             uop_p0_q<=uop_p0_n;uop_p1_q<=uop_p1_n;uop_p2_q<=uop_p2_n;uop_p3_q<=uop_p3_n;
             lane_result_q<=lane_result_n;lane_clip_q<=lane_clip_n;
             scalar_response_q<=scalar_response_n;response_valid_q<=response_valid_n;p4_arch_op_q<=p4_arch_op_n;
-            ecc_src_a_q<=ecc_src_a_n;ecc_src_b_q<=ecc_src_b_n;ecc_dst_q<=ecc_dst_n;ecc_a_q<=ecc_a_n;ecc_b_q<=ecc_b_n;ecc_b_window_q<=ecc_b_window_n;ecc_word_q<=ecc_word_n;ecc_k_q<=ecc_k_n;
+            ecc_src_a_q<=ecc_src_a_n;ecc_src_b_q<=ecc_src_b_n;ecc_dst_q<=ecc_dst_n;ecc_a_q<=ecc_a_n;ecc_b_q<=ecc_b_n;ecc_product_q<=ecc_product_n;
+            ecc_leaf_a_q<=ecc_leaf_a_n;ecc_leaf_b_q<=ecc_leaf_b_n;ecc_leaf_prod_q<=ecc_leaf_prod_n;ecc_k_q<=ecc_k_n;ecc_leaf_id_q<=ecc_leaf_id_n;ecc_diag_base_q<=ecc_diag_base_n;
+            ecc_pipe0_valid_q<=ecc_pipe0_valid_n;ecc_pipe1_valid_q<=ecc_pipe1_valid_n;ecc_pipe0_diag_q<=ecc_pipe0_diag_n;ecc_pipe1_diag_q<=ecc_pipe1_diag_n;
         end
     end
 endmodule
