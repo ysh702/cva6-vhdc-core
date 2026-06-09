@@ -23,7 +23,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
         S_UOP_P2_LANE, S_UOP_P3_GLOBAL, S_UOP_P3_POP_CAPTURE, S_UOP_P3_VRF_WAIT, S_UOP_P3_ACCUM, S_UOP_P4_RESP,
         S_UOP_CLIP_WRITE,
         S_ECC_LOAD_A_WAIT, S_ECC_LOAD_A, S_ECC_LOAD_B_WAIT, S_ECC_LOAD_B,
-        S_ECC_KPD32_FORM,
         S_ECC_DIAG_ISSUE, S_ECC_DIAG_WAIT, S_ECC_DIAG_ACCUM,
         S_ECC_LEAF_FOLD,
         S_ECC_WRITE_WORD, S_ECC_WRITE_DRAIN
@@ -119,8 +118,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
     logic [VRF_IDX_W-1:0] ecc_src_a_q, ecc_src_a_n;
     logic [VRF_IDX_W-1:0] ecc_src_b_q, ecc_src_b_n;
     logic [VRF_IDX_W-1:0] ecc_dst_q,   ecc_dst_n;
-    logic [255:0]         ecc_a_q,     ecc_a_n;
-    logic [255:0]         ecc_b_q,     ecc_b_n;
     logic [511:0]         ecc_product_q, ecc_product_n;
     logic [31:0]          ecc_leaf_a_q,  ecc_leaf_a_n;
     logic [31:0]          ecc_leaf_b_q,  ecc_leaf_b_n;
@@ -138,6 +135,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] pop_src_b;
     logic [7:0]           ecc_diag8_parity;
     logic [5:0]           ecc_leaf_path;
+    logic [4:0]           ecc_next_leaf_id;
+    logic [5:0]           ecc_next_leaf_path;
     logic [14:0]          ecc_leaf_offset_mask;
     logic                pop_d_mux;
     logic                xor_d_mux;
@@ -159,6 +158,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
     assign pop_d_mux     = hdc_pop_issue || ecc_issue_pop;
     assign xor_d_mux     = hdc_xor_issue || ecc_issue_pop;
     assign ecc_leaf_path = ecc_kpd32_leaf_path(ecc_leaf_id_q);
+    assign ecc_next_leaf_id = ecc_leaf_id_q + 5'd1;
+    assign ecc_next_leaf_path = ecc_kpd32_leaf_path(ecc_next_leaf_id);
     assign ecc_leaf_offset_mask = ecc_kpd32_leaf_offset_mask(ecc_leaf_id_q);
     assign ecc_diag8_parity = {lane_popcnt_part_q[3][1][0], lane_popcnt_part_q[3][0][0],
                               lane_popcnt_part_q[2][1][0], lane_popcnt_part_q[2][0][0],
@@ -511,7 +512,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
         lane_result_n=lane_result_q; lane_clip_n=lane_clip_q;
         scalar_response_n=scalar_response_q; response_valid_n=response_valid_q; p4_arch_op_n=p4_arch_op_q;
         ecc_src_a_n=ecc_src_a_q; ecc_src_b_n=ecc_src_b_q; ecc_dst_n=ecc_dst_q;
-        ecc_a_n=ecc_a_q; ecc_b_n=ecc_b_q; ecc_product_n=ecc_product_q;
+        ecc_product_n=ecc_product_q;
         ecc_leaf_a_n=ecc_leaf_a_q; ecc_leaf_b_n=ecc_leaf_b_q; ecc_leaf_prod_n=ecc_leaf_prod_q; ecc_k_n=ecc_k_q;
         ecc_leaf_id_n=ecc_leaf_id_q; ecc_diag_base_n=ecc_diag_base_q;
         ecc_fold_word_n=ecc_fold_word_q;
@@ -538,8 +539,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                     ecc_dst_n   = a_q[17:12];
                     ecc_src_a_n = a_q[11:6];
                     ecc_src_b_n = a_q[5:0];
-                    ecc_a_n     = '0;
-                    ecc_b_n     = '0;
                     ecc_product_n = '0;
                     ecc_leaf_a_n  = '0;
                     ecc_leaf_b_n  = '0;
@@ -673,7 +672,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
         end
 
         S_ECC_LOAD_A: begin
-            ecc_a_n = {vrf_rd[3], vrf_rd[2], vrf_rd[1], vrf_rd[0]};
+            ecc_leaf_a_n = ecc_kpd32_leaf_word({vrf_rd[3], vrf_rd[2], vrf_rd[1], vrf_rd[0]}, ecc_leaf_path);
             vrf_ra[0]=ecc_src_b_q; vrf_ra[1]=ecc_src_b_q;
             vrf_ra[2]=ecc_src_b_q; vrf_ra[3]=ecc_src_b_q;
             st_n=S_ECC_LOAD_B_WAIT;
@@ -684,7 +683,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
         end
 
         S_ECC_LOAD_B: begin
-            ecc_b_n    = {vrf_rd[3], vrf_rd[2], vrf_rd[1], vrf_rd[0]};
+            ecc_leaf_b_n = ecc_kpd32_leaf_word({vrf_rd[3], vrf_rd[2], vrf_rd[1], vrf_rd[0]}, ecc_leaf_path);
             ecc_product_n = '0;
             ecc_leaf_prod_n = '0;
             ecc_leaf_id_n = 5'd0;
@@ -693,14 +692,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             ecc_k_n = '0;
             ecc_pipe0_valid_n = 1'b0;
             ecc_pipe1_valid_n = 1'b0;
-            st_n=S_ECC_KPD32_FORM;
-        end
-
-        S_ECC_KPD32_FORM: begin
-            ecc_leaf_a_n = ecc_kpd32_leaf_word(ecc_a_q, ecc_leaf_path);
-            ecc_leaf_b_n = ecc_kpd32_leaf_word(ecc_b_q, ecc_leaf_path);
-            ecc_leaf_prod_n = '0;
-            ecc_diag_base_n = 6'd0;
             st_n=S_ECC_DIAG_ISSUE;
         end
 
@@ -731,6 +722,24 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
 
         S_ECC_LEAF_FOLD: begin
             ecc_product_n = ecc_kpd32_fold_leaf_word_pair(ecc_product_q, ecc_leaf_offset_mask, ecc_fold_word_q, ecc_leaf_prod_q);
+            if (ecc_leaf_id_q != 5'd26) begin
+                unique case (ecc_fold_word_q)
+                    2'd0: begin
+                        vrf_ra[0]=ecc_src_a_q; vrf_ra[1]=ecc_src_a_q;
+                        vrf_ra[2]=ecc_src_a_q; vrf_ra[3]=ecc_src_a_q;
+                    end
+                    2'd1: begin
+                        vrf_ra[0]=ecc_src_b_q; vrf_ra[1]=ecc_src_b_q;
+                        vrf_ra[2]=ecc_src_b_q; vrf_ra[3]=ecc_src_b_q;
+                    end
+                    2'd2: begin
+                        ecc_leaf_a_n = ecc_kpd32_leaf_word({vrf_rd[3], vrf_rd[2], vrf_rd[1], vrf_rd[0]}, ecc_next_leaf_path);
+                    end
+                    default: begin
+                        ecc_leaf_b_n = ecc_kpd32_leaf_word({vrf_rd[3], vrf_rd[2], vrf_rd[1], vrf_rd[0]}, ecc_next_leaf_path);
+                    end
+                endcase
+            end
             if (ecc_fold_word_q == 2'd3) begin
                 ecc_fold_word_n = 2'd0;
                 if (ecc_leaf_id_q == 5'd26) begin
@@ -738,7 +747,9 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                     st_n=S_ECC_WRITE_WORD;
                 end else begin
                     ecc_leaf_id_n = ecc_leaf_id_q + 5'd1;
-                    st_n=S_ECC_KPD32_FORM;
+                    ecc_leaf_prod_n = '0;
+                    ecc_diag_base_n = 6'd0;
+                    st_n=S_ECC_DIAG_ISSUE;
                 end
             end else begin
                 ecc_fold_word_n = ecc_fold_word_q + 2'd1;
@@ -1100,7 +1111,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             hdc_src0_q<='0;
             lane_result_q<='0;lane_clip_q<='0;
             scalar_response_q<='0;response_valid_q<='0;p4_arch_op_q<=HDEC_VWR64;
-            ecc_src_a_q<='0;ecc_src_b_q<='0;ecc_dst_q<='0;ecc_a_q<='0;ecc_b_q<='0;ecc_product_q<='0;
+            ecc_src_a_q<='0;ecc_src_b_q<='0;ecc_dst_q<='0;ecc_product_q<='0;
             ecc_leaf_a_q<='0;ecc_leaf_b_q<='0;ecc_leaf_prod_q<='0;ecc_k_q<='0;ecc_leaf_id_q<='0;ecc_diag_base_q<='0;ecc_fold_word_q<='0;
             ecc_pipe0_valid_q<=1'b0;ecc_pipe1_valid_q<=1'b0;ecc_pipe0_diag_q<='0;ecc_pipe1_diag_q<='0;
         end
@@ -1119,7 +1130,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             hdc_src0_q<=hdc_src0_n;
             lane_result_q<=lane_result_n;lane_clip_q<=lane_clip_n;
             scalar_response_q<=scalar_response_n;response_valid_q<=response_valid_n;p4_arch_op_q<=p4_arch_op_n;
-            ecc_src_a_q<=ecc_src_a_n;ecc_src_b_q<=ecc_src_b_n;ecc_dst_q<=ecc_dst_n;ecc_a_q<=ecc_a_n;ecc_b_q<=ecc_b_n;ecc_product_q<=ecc_product_n;
+            ecc_src_a_q<=ecc_src_a_n;ecc_src_b_q<=ecc_src_b_n;ecc_dst_q<=ecc_dst_n;ecc_product_q<=ecc_product_n;
             ecc_leaf_a_q<=ecc_leaf_a_n;ecc_leaf_b_q<=ecc_leaf_b_n;ecc_leaf_prod_q<=ecc_leaf_prod_n;ecc_k_q<=ecc_k_n;ecc_leaf_id_q<=ecc_leaf_id_n;ecc_diag_base_q<=ecc_diag_base_n;ecc_fold_word_q<=ecc_fold_word_n;
             ecc_pipe0_valid_q<=ecc_pipe0_valid_n;ecc_pipe1_valid_q<=ecc_pipe1_valid_n;ecc_pipe0_diag_q<=ecc_pipe0_diag_n;ecc_pipe1_diag_q<=ecc_pipe1_diag_n;
         end
