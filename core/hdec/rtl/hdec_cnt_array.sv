@@ -52,12 +52,7 @@ module hdec_cnt_array (
         endcase
 
         always_comb begin
-            if (clear_i)
-                new_counter_o[4*ni +: 4] = 4'h0;
-            else if (update_i)
-                new_counter_o[4*ni +: 4] = hv_bit ? inc_one : old_cnt;
-            else
-                new_counter_o[4*ni +: 4] = old_cnt;
+            new_counter_o[4*ni +: 4] = hv_bit ? inc_one : old_cnt;
 
             clip_bits_o[ni] = (old_cnt >= clip_threshold_i);
         end

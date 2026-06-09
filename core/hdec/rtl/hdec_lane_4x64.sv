@@ -88,62 +88,33 @@ module hdec_lane_4x64
 );
 
     // ── XOR Front-End Core ──────────────────────────────────────────────────
-    logic [LANE_WIDTH-1:0] bool_src_a, bool_src_b;
-    assign bool_src_a = bool_valid_i ? bool_src_a_i : '0;
-    assign bool_src_b = bool_valid_i ? bool_src_b_i : '0;
-
-    logic [LANE_WIDTH-1:0] bool_result;
-
-    hdec_lane_boolean_mask i_boolean_mask (
-        .src_a_i (bool_src_a),
-        .src_b_i (bool_src_b),
-        .result_o(bool_result)
-    );
-
-    assign bool_result_o = bool_result;
-    assign popcount_count_o = 7'($countones(bool_result));
+    assign bool_result_o = bool_src_a_i ^ bool_src_b_i;
+    assign popcount_count_o = 7'($countones(bool_result_o));
 
     // ── HDCU CNT array update ──────────────────────────────────────────────
-    logic [LANE_WIDTH-1:0] cnt_hv_word, cnt_old_counter;
-    logic [1:0]            cnt_subgroup;
-    assign cnt_hv_word     = cnt_valid_i ? cnt_hv_word_i     : '0;
-    assign cnt_old_counter = cnt_valid_i ? cnt_old_counter_i : '0;
-    assign cnt_subgroup    = cnt_valid_i ? cnt_subgroup_i    : '0;
-
     hdec_cnt_array i_cnt_array (
         .clear_i         (1'b0),
         .update_i        (cnt_valid_i),
-        .old_counter_i   (cnt_old_counter),
-        .hv_word_i       (cnt_hv_word),
-        .subgroup_i      (cnt_subgroup),
+        .old_counter_i   (cnt_old_counter_i),
+        .hv_word_i       (cnt_hv_word_i),
+        .subgroup_i      (cnt_subgroup_i),
         .clip_threshold_i('0),
         .new_counter_o   (cnt_new_counter_o),
         .clip_bits_o     ()
     );
 
     // ── Shift-Align Core ───────────────────────────────────────────────────
-    logic [LANE_WIDTH-1:0] shift_src_a, shift_src_b;
-    logic [3:0]            shift_nibble;
-    assign shift_src_a  = shift_valid_i ? shift_src_a_i  : '0;
-    assign shift_src_b  = shift_valid_i ? shift_src_b_i  : '0;
-    assign shift_nibble = shift_valid_i ? shift_nibble_i : '0;
-
     hdec_lane_shift_align i_shift_align (
-        .src_a_i       (shift_src_a),
-        .src_b_i       (shift_src_b),
-        .nibble_shift_i(shift_nibble),
+        .src_a_i       (shift_src_a_i),
+        .src_b_i       (shift_src_b_i),
+        .nibble_shift_i(shift_nibble_i),
         .result_o      (shift_result_o)
     );
 
     // ── Clip Core ──────────────────────────────────────────────────────────
-    logic [LANE_WIDTH-1:0] clip_counter;
-    logic [3:0]            clip_threshold;
-    assign clip_counter   = clip_valid_i ? clip_counter_i   : '0;
-    assign clip_threshold = clip_valid_i ? clip_threshold_i : '0;
-
     hdec_lane_clip i_clip (
-        .counter_i  (clip_counter),
-        .threshold_i(clip_threshold),
+        .counter_i  (clip_counter_i),
+        .threshold_i(clip_threshold_i),
         .bits_o     (clip_bits_o)
     );
 
