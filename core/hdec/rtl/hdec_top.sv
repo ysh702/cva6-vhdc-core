@@ -47,13 +47,11 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
     logic hmatch_update_q,hmatch_update_n;
 
     // ── HPERM registers ─────────────────────────────────────────────────────
-    logic [LANE_NUM-1:0][LANE_WIDTH-1:0] hperm_a_q,hperm_a_n;
     logic [VRF_IDX_W-1:0] hperm_dst_base_q,hperm_dst_base_n, hperm_src_base_q,hperm_src_base_n;
     logic [3:0] hperm_word_off_q,hperm_word_off_n, hperm_nibble_q,hperm_nibble_n;
     logic [1:0] hperm_lane_base_q,hperm_lane_base_n;
 
     // ── HCNTADD registers ───────────────────────────────────────────────────
-    logic [LANE_NUM-1:0][LANE_WIDTH-1:0] hcntadd_hv_q,hcntadd_hv_n;
     logic [2:0] hcntadd_hv_slot_q,hcntadd_hv_slot_n;
     logic [1:0] hcntadd_chunk_q,hcntadd_chunk_n, hcntadd_subgroup_q,hcntadd_subgroup_n;
     logic hcntadd_acc_sel_q,hcntadd_acc_sel_n;
@@ -64,7 +62,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
     logic hcntclip_acc_sel_q,hcntclip_acc_sel_n;
     logic [3:0] hcntclip_threshold_q,hcntclip_threshold_n;
     logic [1:0] hcntclip_chunk_q,hcntclip_chunk_n,hcntclip_subgroup_q,hcntclip_subgroup_n;
-    logic [LANE_NUM-1:0][LANE_WIDTH-1:0] hcntclip_word_q,hcntclip_word_n,hcntclip_word_with_result;
+    logic [LANE_NUM-1:0][LANE_WIDTH-1:0] hcntclip_word_with_result;
     // hcntclip_acc_base selects the active counter bank; per-entry addresses are
     // formed locally in the uop stages.
 
@@ -486,7 +484,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             .bool_result_o(),
             .popcount_count_o(),
             .cnt_valid_i(lane_cnt_valid[lid]),
-            .cnt_hv_word_i(hcntadd_hv_q[lid]),
+            .cnt_hv_word_i(hdc_src0_q[lid]),
             .cnt_old_counter_i(vrf_rd[lid]),
             .cnt_subgroup_i(hcntadd_subgroup_q),
             .cnt_new_counter_o(lane_cnt_new_counter[lid]),
@@ -518,10 +516,10 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
         group_dist_n=group_dist_q;
         hmatch_last_idx_n=hmatch_last_idx_q; hmatch_best_idx_n=hmatch_best_idx_q; hmatch_class_slot_n=hmatch_class_slot_q; hmatch_best_dist_n=hmatch_best_dist_q;
         hmatch_budget_n=hmatch_budget_q; hmatch_update_n=hmatch_update_q;
-        hperm_a_n=hperm_a_q; hperm_dst_base_n=hperm_dst_base_q; hperm_src_base_n=hperm_src_base_q;
+        hperm_dst_base_n=hperm_dst_base_q; hperm_src_base_n=hperm_src_base_q;
         hperm_word_off_n=hperm_word_off_q; hperm_nibble_n=hperm_nibble_q; hperm_lane_base_n=hperm_lane_base_q;
-        hcntadd_hv_n=hcntadd_hv_q; hcntadd_hv_slot_n=hcntadd_hv_slot_q; hcntadd_chunk_n=hcntadd_chunk_q; hcntadd_subgroup_n=hcntadd_subgroup_q; hcntadd_acc_sel_n=hcntadd_acc_sel_q;
-        hcntclip_dst_base_n=hcntclip_dst_base_q; hcntclip_acc_sel_n=hcntclip_acc_sel_q; hcntclip_threshold_n=hcntclip_threshold_q; hcntclip_chunk_n=hcntclip_chunk_q; hcntclip_subgroup_n=hcntclip_subgroup_q; hcntclip_word_n=hcntclip_word_q; hcntclip_word_with_result=hcntclip_word_q;
+        hcntadd_hv_slot_n=hcntadd_hv_slot_q; hcntadd_chunk_n=hcntadd_chunk_q; hcntadd_subgroup_n=hcntadd_subgroup_q; hcntadd_acc_sel_n=hcntadd_acc_sel_q;
+        hcntclip_dst_base_n=hcntclip_dst_base_q; hcntclip_acc_sel_n=hcntclip_acc_sel_q; hcntclip_threshold_n=hcntclip_threshold_q; hcntclip_chunk_n=hcntclip_chunk_q; hcntclip_subgroup_n=hcntclip_subgroup_q; hcntclip_word_with_result=hdc_src0_q;
         uop_p0_n=uop_p0_q; uop_p1_n=uop_p1_q; uop_p2_n=uop_p2_q; uop_p3_n=uop_p3_q;
         hdc_src0_n=hdc_src0_q;
         lane_result_n=lane_result_q; lane_clip_n=lane_clip_q;
@@ -639,7 +637,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                 hcntclip_threshold_n=a_q[7:4];
                 hcntclip_chunk_n=2'd0;
                 hcntclip_subgroup_n=2'd0;
-                hcntclip_word_n='0;
+                hdc_src0_n='0;
                 uop_p0_n.valid       = 1'b1;
                 uop_p0_n.op_type     = UOP_HCNTCLIP_READ;
                 uop_p0_n.chunk_idx   = 2'd0;
@@ -861,15 +859,12 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
         S_UOP_P1_RD1: begin
             uop_p2_n       = uop_p1_q;
             uop_p1_n.valid = 1'b0;
-            if (uop_p1_q.op_type == UOP_HPERM_CHUNK) begin
-                hperm_a_n = vrf_rd;
-            end else begin
-                if (uop_p1_q.op_type == UOP_HCNTADD_SUBGROUP) hcntadd_hv_n = vrf_rd;
-                if ((uop_p1_q.op_type == UOP_HBIND_CHUNK)
-                 || (uop_p1_q.op_type == UOP_HSIM_CHUNK)
-                 || (uop_p1_q.op_type == UOP_HMATCH_CHUNK))
-                    hdc_src0_n = vrf_rd;
-            end
+            if ((uop_p1_q.op_type == UOP_HPERM_CHUNK)
+             || (uop_p1_q.op_type == UOP_HCNTADD_SUBGROUP)
+             || (uop_p1_q.op_type == UOP_HBIND_CHUNK)
+             || (uop_p1_q.op_type == UOP_HSIM_CHUNK)
+             || (uop_p1_q.op_type == UOP_HMATCH_CHUNK))
+                hdc_src0_n = vrf_rd;
             vrf_ra[0]=uop_p1_q.src1_addr; vrf_ra[1]=uop_p1_q.src1_addr;
             vrf_ra[2]=uop_p1_q.src1_addr; vrf_ra[3]=uop_p1_q.src1_addr;
             st_n=S_UOP_P1_RD1_WAIT;
@@ -899,14 +894,14 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             if (uop_p2_q.use_shift) begin
                 lane_shift_valid = '1;
                 lane_shift_nibble = uop_p2_q.perm_nibble;
-                lane_shift_a[0]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd0,hperm_a_q,vrf_rd);
-                lane_shift_a[1]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd1,hperm_a_q,vrf_rd);
-                lane_shift_a[2]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd2,hperm_a_q,vrf_rd);
-                lane_shift_a[3]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd3,hperm_a_q,vrf_rd);
-                lane_shift_b[0]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd1,hperm_a_q,vrf_rd);
-                lane_shift_b[1]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd2,hperm_a_q,vrf_rd);
-                lane_shift_b[2]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd3,hperm_a_q,vrf_rd);
-                lane_shift_b[3]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd4,hperm_a_q,vrf_rd);
+                lane_shift_a[0]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd0,hdc_src0_q,vrf_rd);
+                lane_shift_a[1]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd1,hdc_src0_q,vrf_rd);
+                lane_shift_a[2]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd2,hdc_src0_q,vrf_rd);
+                lane_shift_a[3]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd3,hdc_src0_q,vrf_rd);
+                lane_shift_b[0]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd1,hdc_src0_q,vrf_rd);
+                lane_shift_b[1]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd2,hdc_src0_q,vrf_rd);
+                lane_shift_b[2]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd3,hdc_src0_q,vrf_rd);
+                lane_shift_b[3]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd4,hdc_src0_q,vrf_rd);
             end
             if (uop_p2_q.use_clip)
                 lane_clip_valid = '1;
@@ -973,12 +968,12 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                 end else st_n = S_UOP_P4_RESP;
             end
             UOP_HCNTCLIP_READ: begin
-            hcntclip_word_with_result = hcntclip_word_q;
+            hcntclip_word_with_result = hdc_src0_q;
                 hcntclip_word_with_result[0][{uop_p3_q.subgroup_idx,4'b0000} +: 16] = lane_clip_q[0];
                 hcntclip_word_with_result[1][{uop_p3_q.subgroup_idx,4'b0000} +: 16] = lane_clip_q[1];
                 hcntclip_word_with_result[2][{uop_p3_q.subgroup_idx,4'b0000} +: 16] = lane_clip_q[2];
                 hcntclip_word_with_result[3][{uop_p3_q.subgroup_idx,4'b0000} +: 16] = lane_clip_q[3];
-                hcntclip_word_n = hcntclip_word_with_result;
+                hdc_src0_n = hcntclip_word_with_result;
                 if (uop_p3_q.subgroup_idx < 2'd3) begin
                     hcntclip_subgroup_n = uop_p3_q.subgroup_idx + 2'd1;
                     vrf_ra[0]=hcntclip_acc_base+{2'b00,uop_p3_q.chunk_idx,2'b00}+{4'b0,hcntclip_subgroup_n};
@@ -1063,8 +1058,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             vrf_we = '1;
             vrf_wa[0]=hcntclip_dst_base_q+hcntclip_chunk_q; vrf_wa[1]=hcntclip_dst_base_q+hcntclip_chunk_q;
             vrf_wa[2]=hcntclip_dst_base_q+hcntclip_chunk_q; vrf_wa[3]=hcntclip_dst_base_q+hcntclip_chunk_q;
-            vrf_wd = hcntclip_word_q;
-            hcntclip_word_n = '0;
+            vrf_wd = hdc_src0_q;
+            hdc_src0_n = '0;
             hcntclip_subgroup_n = 2'd0;
             p4_arch_op_n = HDEC_HCNTCLIP;
             if (hcntclip_chunk_q == 2'd3) st_n = S_UOP_P4_RESP;
@@ -1123,9 +1118,9 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             hb_dst_base_q<='0;hb_src0_base_q<='0;hb_src1_base_q<='0;
             hsim_src0_base_q<='0;hsim_src1_base_q<='0;hsim_total_q<='0;group_dist_q<='0;
             hmatch_last_idx_q<='0;hmatch_best_idx_q<='0;hmatch_class_slot_q<='0;hmatch_best_dist_q<='0;hmatch_budget_q<='0;hmatch_update_q<=1'b0;
-            hperm_a_q<='0;hperm_dst_base_q<='0;hperm_src_base_q<='0;hperm_word_off_q<='0;hperm_nibble_q<='0;hperm_lane_base_q<='0;
-            hcntadd_hv_q<='0;hcntadd_hv_slot_q<='0;hcntadd_chunk_q<='0;hcntadd_subgroup_q<='0;hcntadd_acc_sel_q<='0;
-            hcntclip_dst_base_q<='0;hcntclip_acc_sel_q<='0;hcntclip_threshold_q<='0;hcntclip_chunk_q<='0;hcntclip_subgroup_q<='0;hcntclip_word_q<='0;
+            hperm_dst_base_q<='0;hperm_src_base_q<='0;hperm_word_off_q<='0;hperm_nibble_q<='0;hperm_lane_base_q<='0;
+            hcntadd_hv_slot_q<='0;hcntadd_chunk_q<='0;hcntadd_subgroup_q<='0;hcntadd_acc_sel_q<='0;
+            hcntclip_dst_base_q<='0;hcntclip_acc_sel_q<='0;hcntclip_threshold_q<='0;hcntclip_chunk_q<='0;hcntclip_subgroup_q<='0;
             vrf_ra_q<='0;vrf_we_q<='0;vrf_wa_q<='0;vrf_wd_q<='0;
             uop_p0_q<='0;uop_p1_q<='0;uop_p2_q<='0;uop_p3_q<='0;
             hdc_src0_q<='0;
@@ -1142,9 +1137,9 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             hb_dst_base_q<=hb_dst_base_n;hb_src0_base_q<=hb_src0_base_n;hb_src1_base_q<=hb_src1_base_n;
             hsim_src0_base_q<=hsim_src0_base_n;hsim_src1_base_q<=hsim_src1_base_n;hsim_total_q<=hsim_total_n;group_dist_q<=group_dist_n;
             hmatch_last_idx_q<=hmatch_last_idx_n;hmatch_best_idx_q<=hmatch_best_idx_n;hmatch_class_slot_q<=hmatch_class_slot_n;hmatch_best_dist_q<=hmatch_best_dist_n;hmatch_budget_q<=hmatch_budget_n;hmatch_update_q<=hmatch_update_n;
-            hperm_a_q<=hperm_a_n;hperm_dst_base_q<=hperm_dst_base_n;hperm_src_base_q<=hperm_src_base_n;hperm_word_off_q<=hperm_word_off_n;hperm_nibble_q<=hperm_nibble_n;hperm_lane_base_q<=hperm_lane_base_n;
-            hcntadd_hv_q<=hcntadd_hv_n;hcntadd_hv_slot_q<=hcntadd_hv_slot_n;hcntadd_chunk_q<=hcntadd_chunk_n;hcntadd_subgroup_q<=hcntadd_subgroup_n;hcntadd_acc_sel_q<=hcntadd_acc_sel_n;
-            hcntclip_dst_base_q<=hcntclip_dst_base_n;hcntclip_acc_sel_q<=hcntclip_acc_sel_n;hcntclip_threshold_q<=hcntclip_threshold_n;hcntclip_chunk_q<=hcntclip_chunk_n;hcntclip_subgroup_q<=hcntclip_subgroup_n;hcntclip_word_q<=hcntclip_word_n;
+            hperm_dst_base_q<=hperm_dst_base_n;hperm_src_base_q<=hperm_src_base_n;hperm_word_off_q<=hperm_word_off_n;hperm_nibble_q<=hperm_nibble_n;hperm_lane_base_q<=hperm_lane_base_n;
+            hcntadd_hv_slot_q<=hcntadd_hv_slot_n;hcntadd_chunk_q<=hcntadd_chunk_n;hcntadd_subgroup_q<=hcntadd_subgroup_n;hcntadd_acc_sel_q<=hcntadd_acc_sel_n;
+            hcntclip_dst_base_q<=hcntclip_dst_base_n;hcntclip_acc_sel_q<=hcntclip_acc_sel_n;hcntclip_threshold_q<=hcntclip_threshold_n;hcntclip_chunk_q<=hcntclip_chunk_n;hcntclip_subgroup_q<=hcntclip_subgroup_n;
             vrf_ra_q<=vrf_ra;vrf_we_q<=vrf_we;vrf_wa_q<=vrf_wa;vrf_wd_q<=vrf_wd;
             uop_p0_q<=uop_p0_n;uop_p1_q<=uop_p1_n;uop_p2_q<=uop_p2_n;uop_p3_q<=uop_p3_n;
             hdc_src0_q<=hdc_src0_n;
