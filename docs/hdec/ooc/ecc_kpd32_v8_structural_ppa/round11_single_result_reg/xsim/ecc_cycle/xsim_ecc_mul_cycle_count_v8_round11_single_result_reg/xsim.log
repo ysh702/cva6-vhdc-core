@@ -1,0 +1,33 @@
+#-----------------------------------------------------------
+# xsim v2024.2 (64-bit)
+# SW Build 5239630 on Fri Nov 08 22:35:27 MST 2024
+# IP Build 5239520 on Sun Nov 10 16:12:51 MST 2024
+# SharedData Build 5239561 on Fri Nov 08 14:39:27 MST 2024
+# Start of session at: Tue Jun  9 23:19:59 2026
+# Process ID         : 40716
+# Current directory  : E:/HDEC/cva6-vhdc-core/tmp/hdec_ooc_p1_keep_trial/worktree/docs/hdec/ooc/ecc_kpd32_v8_structural_ppa/round11_single_result_reg/xsim/ecc_cycle/xsim_ecc_mul_cycle_count_v8_round11_single_result_reg
+# Command line       : xsim.exe -mode tcl -source {xsim.dir/tb_hdec_ecc_mul_cycle_count/xsim_script.tcl}
+# Log file           : E:/HDEC/cva6-vhdc-core/tmp/hdec_ooc_p1_keep_trial/worktree/docs/hdec/ooc/ecc_kpd32_v8_structural_ppa/round11_single_result_reg/xsim/ecc_cycle/xsim_ecc_mul_cycle_count_v8_round11_single_result_reg/xsim.log
+# Journal file       : E:/HDEC/cva6-vhdc-core/tmp/hdec_ooc_p1_keep_trial/worktree/docs/hdec/ooc/ecc_kpd32_v8_structural_ppa/round11_single_result_reg/xsim/ecc_cycle/xsim_ecc_mul_cycle_count_v8_round11_single_result_reg\xsim.jou
+# Running On         : WIN-20240824NZS
+# Platform           : Windows Server 2016 or Windows 10
+# Operating System   : 26100
+# Processor Detail   : 12th Gen Intel(R) Core(TM) i5-12600KF
+# CPU Frequency      : 3686 MHz
+# CPU Physical cores : 10
+# CPU Logical cores  : 16
+# Host memory        : 34125 MB
+# Swap memory        : 4026 MB
+# Total Virtual      : 38152 MB
+# Available Virtual  : 21547 MB
+#-----------------------------------------------------------
+source xsim.dir/tb_hdec_ecc_mul_cycle_count/xsim_script.tcl
+# xsim {tb_hdec_ecc_mul_cycle_count} -autoloadwcfg -tclbatch {E:/HDEC/cva6-vhdc-core/tmp/hdec_ooc_p1_keep_trial/worktree/docs/hdec/ooc/ecc_kpd32_v8_structural_ppa/round11_single_result_reg/xsim/ecc_cycle/xsim_ecc_mul_cycle_count_v8_round11_single_result_reg/run_all.tcl}
+Time resolution is 1 ps
+source E:/HDEC/cva6-vhdc-core/tmp/hdec_ooc_p1_keep_trial/worktree/docs/hdec/ooc/ecc_kpd32_v8_structural_ppa/round11_single_result_reg/xsim/ecc_cycle/xsim_ecc_mul_cycle_count_v8_round11_single_result_reg/run_all.tcl
+## run all
+ECC_MUL_CYCLES=394
+[HDEC_ECC_MUL_CYCLE_COUNT] PASS
+$finish called at time : 8545 ns : File "E:/HDEC/cva6-vhdc-core/tmp/hdec_ooc_p1_keep_trial/worktree/verif/hdec/tb_hdec_ecc_mul_cycle_count.sv" Line 171
+## quit
+INFO: [Common 17-206] Exiting xsim at Tue Jun  9 23:20:01 2026...

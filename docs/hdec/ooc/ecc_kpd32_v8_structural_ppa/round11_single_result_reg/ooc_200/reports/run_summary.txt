@@ -1,0 +1,9 @@
+run_label=v8_round11_single_result_reg
+period_ns=5.000
+part=xc7z020clg400-2
+top=hdec_top
+wns=0.061
+worst_data_delay_ns=4.936
+fmax_est_mhz=202.470
+top_endpoint=gen_lane[0].i_p2_pop_slice/popcount_part_q_o_reg[0][5]/D
+vivado_version=2024.2

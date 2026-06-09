@@ -105,8 +105,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
     logic [LANE_NUM-1:0][15:0]           lane_clip_q, lane_clip_n;
 
     // ── Scalar Response Registers (P4) ──────────────────────────────────────
-    logic [63:0] scalar_response_q, scalar_response_n;
-    logic        response_valid_q, response_valid_n;
     hdec_op_t    p4_arch_op_q, p4_arch_op_n;
     logic [10:0] group_dist_q, group_dist_n, group_dist_sum;
     logic signed [11:0] hmatch_budget_step;
@@ -507,7 +505,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
 
     // ── Main FSM ────────────────────────────────────────────────────────────
     always_comb begin
-        st_n=st_q; ready_o=(st_q==S_IDLE); valid_o=(st_q==S_RESULT); result_o=response_valid_q?scalar_response_q:res_q;
+        st_n=st_q; ready_o=(st_q==S_IDLE); valid_o=(st_q==S_RESULT); result_o=res_q;
         res_n='0; op_n=op_q; a_n=a_q; b_n=b_q; bk_n=bk_q; vaddr_bank_n=vaddr_bank_q; vaddr_idx_n=vaddr_idx_q;
         clr_cnt_n=clr_cnt_q; clr_base_n=clr_base_q;
         chunk_cnt_n=chunk_cnt_q;
@@ -523,7 +521,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
         uop_p0_n=uop_p0_q; uop_p1_n=uop_p1_q; uop_p2_n=uop_p2_q; uop_p3_n=uop_p3_q;
         hdc_src0_n=hdc_src0_q;
         lane_result_n=lane_result_q; lane_clip_n=lane_clip_q;
-        scalar_response_n=scalar_response_q; response_valid_n=response_valid_q; p4_arch_op_n=p4_arch_op_q;
+        p4_arch_op_n=p4_arch_op_q;
         ecc_src_a_n=ecc_src_a_q; ecc_src_b_n=ecc_src_b_q; ecc_dst_n=ecc_dst_q;
         ecc_leaf_a_n=ecc_leaf_a_q; ecc_leaf_b_n=ecc_leaf_b_q; ecc_leaf_prod_n=ecc_leaf_prod_q; ecc_k_n=ecc_k_q;
         ecc_leaf_id_n=ecc_leaf_id_q; ecc_diag_base_n=ecc_diag_base_q;
@@ -1078,10 +1076,9 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
         end
 
         S_UOP_P4_RESP: begin
-            scalar_response_n = '0;
-            response_valid_n  = 1'b1;
+            res_n = '0;
             if (p4_arch_op_q == HDEC_HSIM) begin
-                scalar_response_n = {53'b0, hsim_total_q};
+                res_n = {53'b0, hsim_total_q};
                 st_n = S_RESULT;
             end else if (p4_arch_op_q == HDEC_HMATCH) begin
                 hmatch_update_n = 1'b0;
@@ -1090,14 +1087,14 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                     hmatch_best_idx_n  = uop_p3_q.class_idx;
                 end
                 if (hmatch_update_q)
-                    scalar_response_n = {50'b0, uop_p3_q.class_idx, hsim_total_q};
+                    res_n = {50'b0, uop_p3_q.class_idx, hsim_total_q};
                 else
-                    scalar_response_n = {50'b0, hmatch_best_idx_q, hmatch_best_dist_q};
+                    res_n = {50'b0, hmatch_best_idx_q, hmatch_best_dist_q};
                 st_n = S_RESULT;
             end else st_n = S_RESULT;
         end
 
-        S_RESULT: begin response_valid_n=1'b0;st_n=S_IDLE;end
+        S_RESULT: begin st_n=S_IDLE;end
         default: st_n=S_IDLE;
         endcase
     end
@@ -1125,7 +1122,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             uop_p0_q<='0;uop_p1_q<='0;uop_p2_q<='0;uop_p3_q<='0;
             hdc_src0_q<='0;
             lane_result_q<='0;lane_clip_q<='0;
-            scalar_response_q<='0;response_valid_q<='0;p4_arch_op_q<=HDEC_VWR64;
+            p4_arch_op_q<=HDEC_VWR64;
             ecc_src_a_q<='0;ecc_src_b_q<='0;ecc_dst_q<='0;
             ecc_leaf_a_q<='0;ecc_leaf_b_q<='0;ecc_leaf_prod_q<='0;ecc_k_q<='0;ecc_leaf_id_q<='0;ecc_diag_base_q<='0;ecc_fold_word_q<='0;
             ecc_pipe0_valid_q<=1'b0;ecc_pipe1_valid_q<=1'b0;ecc_pipe0_diag_q<='0;ecc_pipe1_diag_q<='0;
@@ -1144,7 +1141,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             uop_p0_q<=uop_p0_n;uop_p1_q<=uop_p1_n;uop_p2_q<=uop_p2_n;uop_p3_q<=uop_p3_n;
             hdc_src0_q<=hdc_src0_n;
             lane_result_q<=lane_result_n;lane_clip_q<=lane_clip_n;
-            scalar_response_q<=scalar_response_n;response_valid_q<=response_valid_n;p4_arch_op_q<=p4_arch_op_n;
+            p4_arch_op_q<=p4_arch_op_n;
             ecc_src_a_q<=ecc_src_a_n;ecc_src_b_q<=ecc_src_b_n;ecc_dst_q<=ecc_dst_n;
             ecc_leaf_a_q<=ecc_leaf_a_n;ecc_leaf_b_q<=ecc_leaf_b_n;ecc_leaf_prod_q<=ecc_leaf_prod_n;ecc_k_q<=ecc_k_n;ecc_leaf_id_q<=ecc_leaf_id_n;ecc_diag_base_q<=ecc_diag_base_n;ecc_fold_word_q<=ecc_fold_word_n;
             ecc_pipe0_valid_q<=ecc_pipe0_valid_n;ecc_pipe1_valid_q<=ecc_pipe1_valid_n;ecc_pipe0_diag_q<=ecc_pipe0_diag_n;ecc_pipe1_diag_q<=ecc_pipe1_diag_n;
