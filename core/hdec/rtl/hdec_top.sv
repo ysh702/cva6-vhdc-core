@@ -128,7 +128,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
     logic [8:0]           ecc_k_q,     ecc_k_n;
     logic [4:0]           ecc_leaf_id_q, ecc_leaf_id_n;
     logic [5:0]           ecc_diag_base_q, ecc_diag_base_n;
-    logic [2:0]           ecc_fold_word_q, ecc_fold_word_n;
+    logic [1:0]           ecc_fold_word_q, ecc_fold_word_n;
     logic                 ecc_pipe0_valid_q, ecc_pipe0_valid_n;
     logic                 ecc_pipe1_valid_q, ecc_pipe1_valid_n;
     logic [5:0]           ecc_pipe0_diag_q, ecc_pipe0_diag_n;
@@ -137,6 +137,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] pop_src_a;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] pop_src_b;
     logic [7:0]           ecc_diag8_parity;
+    logic [5:0]           ecc_leaf_path;
+    logic [14:0]          ecc_leaf_offset_mask;
     logic                pop_d_mux;
     logic                xor_d_mux;
     logic                ecc_issue_pop;
@@ -156,6 +158,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
     assign ecc_issue_pop = (st_q == S_ECC_DIAG_ISSUE);
     assign pop_d_mux     = hdc_pop_issue || ecc_issue_pop;
     assign xor_d_mux     = hdc_xor_issue || ecc_issue_pop;
+    assign ecc_leaf_path = ecc_kpd32_leaf_path(ecc_leaf_id_q);
+    assign ecc_leaf_offset_mask = ecc_kpd32_leaf_offset_mask(ecc_leaf_id_q);
     assign ecc_diag8_parity = {lane_popcnt_part_q[3][1][0], lane_popcnt_part_q[3][0][0],
                               lane_popcnt_part_q[2][1][0], lane_popcnt_part_q[2][0][0],
                               lane_popcnt_part_q[1][1][0], lane_popcnt_part_q[1][0][0],
@@ -263,13 +267,11 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
 
     function automatic logic [31:0] ecc_kpd32_leaf_word(
         input logic [255:0] value,
-        input logic [4:0]   leaf_id
+        input logic [5:0]   path
     );
-        logic [5:0] path;
         logic [31:0] s0_0, s0_1, s0_2, s0_3;
         logic [31:0] s1_0, s1_1;
         begin
-            path = ecc_kpd32_leaf_path(leaf_id);
             s0_0 = ecc_kpd32_select(ecc_limb32(value, 3'd0), ecc_limb32(value, 3'd4), path[5:4]);
             s0_1 = ecc_kpd32_select(ecc_limb32(value, 3'd1), ecc_limb32(value, 3'd5), path[5:4]);
             s0_2 = ecc_kpd32_select(ecc_limb32(value, 3'd2), ecc_limb32(value, 3'd6), path[5:4]);
@@ -394,31 +396,41 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
         end
     endfunction
 
-    function automatic logic [511:0] ecc_kpd32_fold_leaf_word(
+    function automatic logic [511:0] ecc_kpd32_fold_leaf_word_pair(
         input logic [511:0] product,
-        input logic [4:0]   leaf_id,
-        input logic [2:0]   word_idx,
+        input logic [14:0]  mask,
+        input logic [1:0]   pair_idx,
         input logic [63:0]  leaf_product
     );
         logic [511:0] updated;
-        logic [63:0]  contrib;
+        logic [2:0]   word0, word1;
+        logic [63:0]  contrib0, contrib1;
         begin
             updated = product;
-            contrib = ecc_kpd32_fold_word_contrib(ecc_kpd32_leaf_offset_mask(leaf_id),
-                                                  word_idx,
-                                                  leaf_product);
-            unique case (word_idx)
-                3'd0: updated[63:0]    = product[63:0]    ^ contrib;
-                3'd1: updated[127:64]  = product[127:64]  ^ contrib;
-                3'd2: updated[191:128] = product[191:128] ^ contrib;
-                3'd3: updated[255:192] = product[255:192] ^ contrib;
-                3'd4: updated[319:256] = product[319:256] ^ contrib;
-                3'd5: updated[383:320] = product[383:320] ^ contrib;
-                3'd6: updated[447:384] = product[447:384] ^ contrib;
-                3'd7: updated[511:448] = product[511:448] ^ contrib;
+            word0 = {pair_idx, 1'b0};
+            word1 = {pair_idx, 1'b1};
+            contrib0 = ecc_kpd32_fold_word_contrib(mask, word0, leaf_product);
+            contrib1 = ecc_kpd32_fold_word_contrib(mask, word1, leaf_product);
+            unique case (pair_idx)
+                2'd0: begin
+                    updated[63:0]    = product[63:0]    ^ contrib0;
+                    updated[127:64]  = product[127:64]  ^ contrib1;
+                end
+                2'd1: begin
+                    updated[191:128] = product[191:128] ^ contrib0;
+                    updated[255:192] = product[255:192] ^ contrib1;
+                end
+                2'd2: begin
+                    updated[319:256] = product[319:256] ^ contrib0;
+                    updated[383:320] = product[383:320] ^ contrib1;
+                end
+                2'd3: begin
+                    updated[447:384] = product[447:384] ^ contrib0;
+                    updated[511:448] = product[511:448] ^ contrib1;
+                end
                 default: updated = product;
             endcase
-            ecc_kpd32_fold_leaf_word = updated;
+            ecc_kpd32_fold_leaf_word_pair = updated;
         end
     endfunction
 
@@ -677,7 +689,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             ecc_leaf_prod_n = '0;
             ecc_leaf_id_n = 5'd0;
             ecc_diag_base_n = 6'd0;
-            ecc_fold_word_n = 3'd0;
+            ecc_fold_word_n = 2'd0;
             ecc_k_n = '0;
             ecc_pipe0_valid_n = 1'b0;
             ecc_pipe1_valid_n = 1'b0;
@@ -685,8 +697,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
         end
 
         S_ECC_KPD32_FORM: begin
-            ecc_leaf_a_n = ecc_kpd32_leaf_word(ecc_a_q, ecc_leaf_id_q);
-            ecc_leaf_b_n = ecc_kpd32_leaf_word(ecc_b_q, ecc_leaf_id_q);
+            ecc_leaf_a_n = ecc_kpd32_leaf_word(ecc_a_q, ecc_leaf_path);
+            ecc_leaf_b_n = ecc_kpd32_leaf_word(ecc_b_q, ecc_leaf_path);
             ecc_leaf_prod_n = '0;
             ecc_diag_base_n = 6'd0;
             st_n=S_ECC_DIAG_ISSUE;
@@ -718,9 +730,9 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
         end
 
         S_ECC_LEAF_FOLD: begin
-            ecc_product_n = ecc_kpd32_fold_leaf_word(ecc_product_q, ecc_leaf_id_q, ecc_fold_word_q, ecc_leaf_prod_q);
-            if (ecc_fold_word_q == 3'd7) begin
-                ecc_fold_word_n = 3'd0;
+            ecc_product_n = ecc_kpd32_fold_leaf_word_pair(ecc_product_q, ecc_leaf_offset_mask, ecc_fold_word_q, ecc_leaf_prod_q);
+            if (ecc_fold_word_q == 2'd3) begin
+                ecc_fold_word_n = 2'd0;
                 if (ecc_leaf_id_q == 5'd26) begin
                     ecc_k_n = '0;
                     st_n=S_ECC_WRITE_WORD;
@@ -729,7 +741,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                     st_n=S_ECC_KPD32_FORM;
                 end
             end else begin
-                ecc_fold_word_n = ecc_fold_word_q + 3'd1;
+                ecc_fold_word_n = ecc_fold_word_q + 2'd1;
                 st_n=S_ECC_LEAF_FOLD;
             end
         end

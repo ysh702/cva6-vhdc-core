@@ -140,10 +140,10 @@ fold_word_idx = 0..7
 
 结果如下：
 
-| Trial | WNS | Fmax | LUT | FF | 结论 |
-|---|---:|---:|---:|---:|---|
-| trial01：bool-result + 64-bit fold word | +0.322 ns | 213.767 MHz | 6709 | 3878 | 保留 |
-| trial02：parity sideband | +0.328 ns | 214.041 MHz | 6817 | 3881 | 回退 |
+| Trial | WNS | Fmax | LUT | FF | ECC_MUL cycles | 结论 |
+|---|---:|---:|---:|---:|---:|---|
+| trial01：bool-result + 64-bit fold word | +0.322 ns | 213.767 MHz | 6709 | 3878 | 529 | 保留 |
+| trial02：parity sideband | +0.328 ns | 214.041 MHz | 6817 | 3881 | 529 | 回退 |
 
 原因：
 
@@ -153,11 +153,11 @@ fold_word_idx = 0..7
 
 ## OOC PPA 对比
 
-| 版本 | WNS @200MHz | Worst delay | 估算 Fmax | Slice LUT | Logic LUT | LUTRAM | FF | BRAM | DSP | CARRY4 |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| ECC V3 | +0.069 ns | 4.960 ns | 202.799 MHz | 5476 | 4788 | 688 | 3275 | 0 | 0 | 16 |
-| ECC KPD32 V5 | +0.232 ns | 4.765 ns | 209.732 MHz | 6946 | 6258 | 688 | 4125 | 0 | 0 | 16 |
-| ECC KPD32 V6 | +0.322 ns | 4.704 ns | 213.767 MHz | 6709 | 6021 | 688 | 3878 | 0 | 0 | 16 |
+| 版本 | WNS @200MHz | Worst delay | 估算 Fmax | Slice LUT | Logic LUT | LUTRAM | FF | BRAM | DSP | CARRY4 | ECC_MUL cycles |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| ECC V3 | +0.069 ns | 4.960 ns | 202.799 MHz | 5476 | 4788 | 688 | 3275 | 0 | 0 | 16 | 1549 |
+| ECC KPD32 V5 | +0.232 ns | 4.765 ns | 209.732 MHz | 6946 | 6258 | 688 | 4125 | 0 | 0 | 16 | 340 |
+| ECC KPD32 V6 | +0.322 ns | 4.704 ns | 213.767 MHz | 6709 | 6021 | 688 | 3878 | 0 | 0 | 16 | 529 |
 
 V6 相对 V5：
 
@@ -171,6 +171,7 @@ V6 相对 V5：
 | FF | -247 |
 | BRAM/DSP | 0 |
 | CARRY4 | 0 |
+| ECC_MUL cycles | +189 |
 
 ## 层次资源变化
 

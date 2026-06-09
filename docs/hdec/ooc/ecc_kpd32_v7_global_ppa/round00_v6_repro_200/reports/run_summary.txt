@@ -1,0 +1,9 @@
+run_label=v7_round00_v6_repro
+period_ns=5.000
+part=xc7z020clg400-2
+top=hdec_top
+wns=0.322
+worst_data_delay_ns=4.704
+fmax_est_mhz=213.767
+top_endpoint=group_dist_q_reg[8]/D
+vivado_version=2024.2

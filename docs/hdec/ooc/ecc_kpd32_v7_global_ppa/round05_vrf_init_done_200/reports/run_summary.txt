@@ -1,0 +1,9 @@
+run_label=v7_round05_vrf_init_done
+period_ns=5.000
+part=xc7z020clg400-2
+top=hdec_top
+wns=0.136
+worst_data_delay_ns=4.861
+fmax_est_mhz=205.592
+top_endpoint=lane_result_q_reg[0][55]/D
+vivado_version=2024.2
