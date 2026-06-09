@@ -32,8 +32,8 @@ module hdec_cvxif_wrapper import hdec_pkg::*; #(
         else if (instr[31:25]==7'b0000011 && instr[14:12]==3'b000) decoded_op = HDEC_HCNTCLIP;
         else if (instr[31:25]==7'b0000011 && instr[14:12]==3'b001) decoded_op = HDEC_HMATCH;
         else if (instr[31:25]==7'b0000011 && instr[14:12]==3'b010) decoded_op = HDEC_VADDR;
-        else if (instr[31:25]==7'b0000011 && instr[14:12]==3'b011) decoded_op = HDEC_RSVD_B3;
-        else if (instr[31:25]==7'b0000011 && instr[14:12]==3'b100) decoded_op = HDEC_RSVD_B4;
+        else if (instr[31:25]==7'b0000011 && instr[14:12]==3'b011) decoded_op = HDEC_ECC_MUL;
+        else if (instr[31:25]==7'b0000011 && instr[14:12]==3'b100) decoded_op = HDEC_ECC_STATUS;
     end
     assign matched = (instr[6:0]==OPCODE_HDEC) && ((instr[31:25]==F7_PHASE1_BASE)||(instr[31:25]==F7_PHASE1_EXT));
 
@@ -90,8 +90,8 @@ module hdec_cvxif_wrapper import hdec_pkg::*; #(
             HDEC_HCNTCLIP: perf_op_name = "HCNTCLIP";
             HDEC_HMATCH:   perf_op_name = "HMATCH";
             HDEC_VADDR:    perf_op_name = "VADDR";
-            HDEC_RSVD_B3:  perf_op_name = "RSVD_B3";
-            HDEC_RSVD_B4:  perf_op_name = "RSVD_B4";
+            HDEC_ECC_MUL:    perf_op_name = "ECC_MUL";
+            HDEC_ECC_STATUS: perf_op_name = "ECC_STATUS";
             default:       perf_op_name = "UNKNOWN";
         endcase
     endfunction

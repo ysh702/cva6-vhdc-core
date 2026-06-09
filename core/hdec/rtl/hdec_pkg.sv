@@ -2,7 +2,7 @@
 // hdec_pkg.sv — HDEC Phase 1 Constants, Types, Opcodes, Instruction Table
 // =============================================================================
 // HDEC-LiteV-4L64-HV1024: 4 lanes × 64-bit, 1024-bit HDC vectors
-// ECC GF(2^256) reserved but not implemented in Phase 1
+// ECC V1 adds raw GF(2) 256x256 diagonal multiplication.
 // =============================================================================
 
 package hdec_pkg;
@@ -42,19 +42,19 @@ package hdec_pkg;
         HDEC_HCNTCLIP  = 4'd8,    // was HDEC_CLIP
         HDEC_HMATCH    = 4'd9,    // was HDEC_HSEARCH
         HDEC_VADDR     = 4'd10,
-        HDEC_RSVD_B3   = 4'd11,   // was HDEC_HBUNDLE3 (unsupported)
-        HDEC_RSVD_B4   = 4'd12    // was HDEC_HBUNDLE4 (unsupported)
+        HDEC_ECC_MUL   = 4'd11,   // ECC V1 raw GF(2) 256x256 diagonal multiply
+        HDEC_ECC_STATUS= 4'd12    // ECC V1 status/debug read
     } hdec_op_t;
 
     // ── UOP Pipeline Types ─────────────────────────────────────────────────
-    typedef enum logic [3:0] {
-        UOP_IDLE             = 4'd0,
-        UOP_HBIND_CHUNK      = 4'd1,
-        UOP_HSIM_CHUNK       = 4'd2,
-        UOP_HMATCH_CHUNK     = 4'd3,
-        UOP_HCNTADD_SUBGROUP = 4'd4,
-        UOP_HCNTCLIP_READ    = 4'd5,
-        UOP_HPERM_CHUNK      = 4'd6
+    typedef enum logic [2:0] {
+        UOP_IDLE             = 3'd0,
+        UOP_HBIND_CHUNK      = 3'd1,
+        UOP_HSIM_CHUNK       = 3'd2,
+        UOP_HMATCH_CHUNK     = 3'd3,
+        UOP_HCNTADD_SUBGROUP = 3'd4,
+        UOP_HCNTCLIP_READ    = 3'd5,
+        UOP_HPERM_CHUNK      = 3'd6
     } hdec_uop_type_e;
 
     typedef struct packed {
@@ -105,6 +105,8 @@ package hdec_pkg;
     localparam logic [2:0] F3_HCNTCLIP = 3'b000;   // funct7=000_0011
     localparam logic [2:0] F3_HMATCH   = 3'b001;   // funct7=000_0011
     localparam logic [2:0] F3_VADDR    = 3'b010;   // funct7=000_0011
+    localparam logic [2:0] F3_ECC_MUL  = 3'b011;   // funct7=000_0011
+    localparam logic [2:0] F3_ECC_STATUS = 3'b100; // funct7=000_0011
 
     // ── CV-X-IF Issue Response Struct ───────────────────────────────────────
     typedef struct packed {
@@ -196,17 +198,17 @@ package hdec_pkg;
         tbl[10].resp   = '{accept:1'b1, writeback:1'b1, register_read:2'b01};
         tbl[10].opcode = HDEC_VADDR;
 
-        // 11: reserved (was hdec_hbundle3) — unsupported hole
+        // 11: hdec_ecc_mul (funct7=000_0011, funct3=011, rs1)
         tbl[11].mask   = mask;
-        tbl[11].instr  = base | (F7_PHASE1_EXT << 25) | (3'b011 << 12);
-        tbl[11].resp   = '{accept:1'b0, writeback:1'b0, register_read:2'b00};
-        tbl[11].opcode = HDEC_RSVD_B3;
+        tbl[11].instr  = base | (F7_PHASE1_EXT << 25) | (F3_ECC_MUL << 12);
+        tbl[11].resp   = '{accept:1'b1, writeback:1'b1, register_read:2'b01};
+        tbl[11].opcode = HDEC_ECC_MUL;
 
-        // 12: reserved (was hdec_hbundle4) — unsupported hole
+        // 12: hdec_ecc_status (funct7=000_0011, funct3=100, no reg read)
         tbl[12].mask   = mask;
-        tbl[12].instr  = base | (F7_PHASE1_EXT << 25) | (3'b100 << 12);
-        tbl[12].resp   = '{accept:1'b0, writeback:1'b0, register_read:2'b00};
-        tbl[12].opcode = HDEC_RSVD_B4;
+        tbl[12].instr  = base | (F7_PHASE1_EXT << 25) | (F3_ECC_STATUS << 12);
+        tbl[12].resp   = '{accept:1'b1, writeback:1'b1, register_read:2'b00};
+        tbl[12].opcode = HDEC_ECC_STATUS;
 
         return tbl;
     endfunction

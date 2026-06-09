@@ -16,7 +16,9 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
     typedef enum logic [4:0] {
         S_IDLE, S_EXEC, S_RD_WAIT, S_RESULT, S_CLR,
         S_UOP_P1_RD0, S_UOP_P1_RD1, S_UOP_P2_LANE, S_UOP_P3_GLOBAL, S_UOP_P3_ACCUM, S_UOP_P4_RESP,
-        S_UOP_CLIP_WRITE
+        S_UOP_CLIP_WRITE,
+        S_ECC_LOAD_A, S_ECC_LOAD_B, S_ECC_DIAG_ISSUE, S_ECC_DIAG_WAIT, S_ECC_DIAG_ACCUM,
+        S_ECC_WRITE_WORD
     } st_t;
     st_t st_q, st_n;
 
@@ -104,6 +106,23 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
     logic signed [11:0] hmatch_budget_step;
     logic        hmatch_budget_step_nonnegative;
 
+    // ── ECC V1 diagonal multiply shadow state ───────────────────────────────
+    logic [VRF_IDX_W-1:0] ecc_src_a_q, ecc_src_a_n;
+    logic [VRF_IDX_W-1:0] ecc_src_b_q, ecc_src_b_n;
+    logic [VRF_IDX_W-1:0] ecc_dst_q,   ecc_dst_n;
+    logic [255:0]         ecc_a_q,     ecc_a_n;
+    logic [255:0]         ecc_b_q,     ecc_b_n;
+    logic [255:0]         ecc_b_window_q, ecc_b_window_n;
+    logic [63:0]          ecc_word_q,  ecc_word_n;
+    logic [8:0]           ecc_k_q,     ecc_k_n;
+    logic [LANE_NUM-1:0][LANE_WIDTH-1:0] ecc_partial_vec;
+    logic [LANE_NUM-1:0][LANE_WIDTH-1:0] pop_src_a;
+    logic [LANE_NUM-1:0][LANE_WIDTH-1:0] pop_src_b;
+    logic                pop_d_mux;
+    logic                xor_d_mux;
+    logic                ecc_issue_pop;
+    logic                ecc_diag_parity;
+
     // ── Combinational helpers ───────────────────────────────────────────────
     assign hcntadd_acc_base = hcntadd_acc_sel_q ? 6'd48 : 6'd32;
     assign hcntclip_acc_base = hcntclip_acc_sel_q ? 6'd48 : 6'd32;
@@ -116,6 +135,17 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                     && ((uop_p1_q.op_type == UOP_HBIND_CHUNK)
                      || (uop_p1_q.op_type == UOP_HSIM_CHUNK)
                      || (uop_p1_q.op_type == UOP_HMATCH_CHUNK));
+    assign ecc_issue_pop = (st_q == S_ECC_DIAG_ISSUE);
+    assign pop_d_mux     = p1_pop_d || ecc_issue_pop;
+    assign xor_d_mux     = p1_xor_d || ecc_issue_pop;
+    assign ecc_diag_parity = lane_popcnt_part_q[0][0][0] ^ lane_popcnt_part_q[0][1][0]
+                           ^ lane_popcnt_part_q[1][0][0] ^ lane_popcnt_part_q[1][1][0]
+                           ^ lane_popcnt_part_q[2][0][0] ^ lane_popcnt_part_q[2][1][0]
+                           ^ lane_popcnt_part_q[3][0][0] ^ lane_popcnt_part_q[3][1][0];
+    assign ecc_partial_vec[0] = ecc_a_q[63:0]    & ecc_b_window_q[63:0];
+    assign ecc_partial_vec[1] = ecc_a_q[127:64]  & ecc_b_window_q[127:64];
+    assign ecc_partial_vec[2] = ecc_a_q[191:128] & ecc_b_window_q[191:128];
+    assign ecc_partial_vec[3] = ecc_a_q[255:192] & ecc_b_window_q[255:192];
 
     function automatic hdec_op_t p4_arch_from_uop(input hdec_uop_type_e op_type);
         unique case (op_type)
@@ -151,13 +181,16 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
 
     // ── 4× Lane instances ───────────────────────────────────────────────────
     for (genvar lid = 0; lid < LANE_NUM; lid++) begin : gen_lane
+        assign pop_src_a[lid] = ecc_issue_pop ? ecc_partial_vec[lid] : vrf_rd[lid];
+        assign pop_src_b[lid] = ecc_issue_pop ? '0 : vrf_rd[lid];
+
         hdec_p2_pop_slice i_p2_pop_slice (
             .clk_i,
             .rst_ni,
-            .pop_d_i          (p1_pop_d),
-            .xor_d_i          (p1_xor_d),
-            .src_a_i          (vrf_rd[lid]),
-            .src_b_i          (vrf_rd[lid]),
+            .pop_d_i          (pop_d_mux),
+            .xor_d_i          (xor_d_mux),
+            .src_a_i          (pop_src_a[lid]),
+            .src_b_i          (pop_src_b[lid]),
             .xor_only_valid_o (lane_xor_only_valid[lid]),
             .xor_result_o     (lane_bool_result[lid]),
             .popcount_part_q_o(lane_popcnt_part_q[lid])
@@ -219,6 +252,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
         uop_p0_n=uop_p0_q; uop_p1_n=uop_p1_q; uop_p2_n=uop_p2_q; uop_p3_n=uop_p3_q;
         lane_result_n=lane_result_q; lane_clip_n=lane_clip_q;
         scalar_response_n=scalar_response_q; response_valid_n=response_valid_q; p4_arch_op_n=p4_arch_op_q;
+        ecc_src_a_n=ecc_src_a_q; ecc_src_b_n=ecc_src_b_q; ecc_dst_n=ecc_dst_q;
+        ecc_a_n=ecc_a_q; ecc_b_n=ecc_b_q; ecc_b_window_n=ecc_b_window_q; ecc_word_n=ecc_word_q; ecc_k_n=ecc_k_q;
         lane_cnt_valid='0;
         lane_shift_valid='0;
         lane_shift_a='0; lane_shift_b='0; lane_shift_nibble=hperm_nibble_q;
@@ -232,6 +267,29 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             HDEC_VADDR: begin vaddr_bank_n=a_q[7:6];vaddr_idx_n=a_q[5:0];res_n='0;st_n=S_RESULT;end
             HDEC_VWR64: begin vrf_we[vaddr_bank_q]=1'b1;vrf_wa[vaddr_bank_q]=vaddr_idx_q;vrf_wd[vaddr_bank_q]=a_q;res_n='0;st_n=S_RESULT;end
             HDEC_VRD64: begin vrf_ra[vaddr_bank_q]=vaddr_idx_q;bk_n=vaddr_bank_q;st_n=S_RD_WAIT;end
+
+            HDEC_ECC_MUL: begin
+                if (a_q[17:12] == 6'd63) begin
+                    res_n={62'b0,STATUS_ERROR};st_n=S_RESULT;
+                end else begin
+                    ecc_dst_n   = a_q[17:12];
+                    ecc_src_a_n = a_q[11:6];
+                    ecc_src_b_n = a_q[5:0];
+                    ecc_a_n     = '0;
+                    ecc_b_n     = '0;
+                    ecc_b_window_n = '0;
+                    ecc_word_n  = '0;
+                    ecc_k_n     = '0;
+                    vrf_ra[0]=a_q[11:6]; vrf_ra[1]=a_q[11:6];
+                    vrf_ra[2]=a_q[11:6]; vrf_ra[3]=a_q[11:6];
+                    st_n=S_ECC_LOAD_A;
+                end
+            end
+
+            HDEC_ECC_STATUS: begin
+                res_n={56'b0, ecc_dst_q, STATUS_OK};
+                st_n=S_RESULT;
+            end
 
             HDEC_HCLR: begin
                 clr_base_n={a_q[3:0],2'b00};clr_cnt_n=4'd0;st_n=S_CLR;
@@ -352,6 +410,63 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
         endcase end
 
         S_RD_WAIT: begin res_n=vrf_rd[bk_q];st_n=S_RESULT;end
+
+        // ── ECC V1 raw GF(2) diagonal multiply ─────────────────────────────
+        S_ECC_LOAD_A: begin
+            ecc_a_n = {vrf_rd[3], vrf_rd[2], vrf_rd[1], vrf_rd[0]};
+            vrf_ra[0]=ecc_src_b_q; vrf_ra[1]=ecc_src_b_q;
+            vrf_ra[2]=ecc_src_b_q; vrf_ra[3]=ecc_src_b_q;
+            st_n=S_ECC_LOAD_B;
+        end
+
+        S_ECC_LOAD_B: begin
+            ecc_b_n    = {vrf_rd[3], vrf_rd[2], vrf_rd[1], vrf_rd[0]};
+            ecc_b_window_n = {255'b0, vrf_rd[0][0]};
+            ecc_word_n = '0;
+            ecc_k_n    = '0;
+            st_n=S_ECC_DIAG_ISSUE;
+        end
+
+        S_ECC_DIAG_ISSUE: begin
+            st_n=S_ECC_DIAG_WAIT;
+        end
+
+        S_ECC_DIAG_WAIT: begin
+            st_n=S_ECC_DIAG_ACCUM;
+        end
+
+        S_ECC_DIAG_ACCUM: begin
+            ecc_word_n = ecc_word_q;
+            ecc_word_n[ecc_k_q[5:0]] = ecc_diag_parity;
+            if ((ecc_k_q[5:0] == 6'd63) || (ecc_k_q == 9'd510)) begin
+                st_n=S_ECC_WRITE_WORD;
+            end else begin
+                if (ecc_k_q < 9'd255)
+                    ecc_b_window_n={ecc_b_window_q[254:0], ecc_b_q[ecc_k_q + 9'd1]};
+                else
+                    ecc_b_window_n={ecc_b_window_q[254:0], 1'b0};
+                ecc_k_n=ecc_k_q + 9'd1;
+                st_n=S_ECC_DIAG_ISSUE;
+            end
+        end
+
+        S_ECC_WRITE_WORD: begin
+            vrf_we[ecc_k_q[7:6]]=1'b1;
+            vrf_wa[ecc_k_q[7:6]]=ecc_dst_q + {5'b0, ecc_k_q[8]};
+            vrf_wd[ecc_k_q[7:6]]=ecc_word_q;
+            ecc_word_n='0;
+            if (ecc_k_q == 9'd510) begin
+                res_n={56'b0, ecc_dst_q, STATUS_OK};
+                st_n=S_RESULT;
+            end else begin
+                if (ecc_k_q < 9'd255)
+                    ecc_b_window_n={ecc_b_window_q[254:0], ecc_b_q[ecc_k_q + 9'd1]};
+                else
+                    ecc_b_window_n={ecc_b_window_q[254:0], 1'b0};
+                ecc_k_n=ecc_k_q + 9'd1;
+                st_n=S_ECC_DIAG_ISSUE;
+            end
+        end
 
         // ── S_CLR: shared by HCLR (4 entries) and HCNTCLR (16 entries) ──────
         S_CLR: begin
@@ -638,6 +753,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             uop_p0_q<='0;uop_p1_q<='0;uop_p2_q<='0;uop_p3_q<='0;
             lane_result_q<='0;lane_clip_q<='0;
             scalar_response_q<='0;response_valid_q<='0;p4_arch_op_q<=HDEC_VWR64;
+            ecc_src_a_q<='0;ecc_src_b_q<='0;ecc_dst_q<='0;ecc_a_q<='0;ecc_b_q<='0;ecc_b_window_q<='0;ecc_word_q<='0;ecc_k_q<='0;
         end
         else begin
             st_q<=st_n;res_q<=res_n;op_q<=op_n;a_q<=a_n;b_q<=b_n;bk_q<=bk_n;
@@ -652,6 +768,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             uop_p0_q<=uop_p0_n;uop_p1_q<=uop_p1_n;uop_p2_q<=uop_p2_n;uop_p3_q<=uop_p3_n;
             lane_result_q<=lane_result_n;lane_clip_q<=lane_clip_n;
             scalar_response_q<=scalar_response_n;response_valid_q<=response_valid_n;p4_arch_op_q<=p4_arch_op_n;
+            ecc_src_a_q<=ecc_src_a_n;ecc_src_b_q<=ecc_src_b_n;ecc_dst_q<=ecc_dst_n;ecc_a_q<=ecc_a_n;ecc_b_q<=ecc_b_n;ecc_b_window_q<=ecc_b_window_n;ecc_word_q<=ecc_word_n;ecc_k_q<=ecc_k_n;
         end
     end
 endmodule
