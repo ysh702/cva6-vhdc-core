@@ -12,26 +12,15 @@ module hdec_lane_shift_align (
     output logic [63:0] result_o
 );
 
-    always_comb begin
-        unique case (nibble_shift_i)
-            4'd0:    result_o = src_a_i;
-            4'd1:    result_o = (src_a_i >> 4)  | (src_b_i << 60);
-            4'd2:    result_o = (src_a_i >> 8)  | (src_b_i << 56);
-            4'd3:    result_o = (src_a_i >> 12) | (src_b_i << 52);
-            4'd4:    result_o = (src_a_i >> 16) | (src_b_i << 48);
-            4'd5:    result_o = (src_a_i >> 20) | (src_b_i << 44);
-            4'd6:    result_o = (src_a_i >> 24) | (src_b_i << 40);
-            4'd7:    result_o = (src_a_i >> 28) | (src_b_i << 36);
-            4'd8:    result_o = (src_a_i >> 32) | (src_b_i << 32);
-            4'd9:    result_o = (src_a_i >> 36) | (src_b_i << 28);
-            4'd10:   result_o = (src_a_i >> 40) | (src_b_i << 24);
-            4'd11:   result_o = (src_a_i >> 44) | (src_b_i << 20);
-            4'd12:   result_o = (src_a_i >> 48) | (src_b_i << 16);
-            4'd13:   result_o = (src_a_i >> 52) | (src_b_i << 12);
-            4'd14:   result_o = (src_a_i >> 56) | (src_b_i << 8);
-            4'd15:   result_o = (src_a_i >> 60) | (src_b_i << 4);
-            default: result_o = src_a_i;
-        endcase
-    end
+    logic [127:0] cat_word;
+    logic [127:0] sh1, sh2, sh4, sh8;
+
+    assign cat_word = {src_b_i, src_a_i};
+    assign sh1 = nibble_shift_i[0] ? {4'b0,  cat_word[127:4]}  : cat_word;
+    assign sh2 = nibble_shift_i[1] ? {8'b0,  sh1[127:8]}       : sh1;
+    assign sh4 = nibble_shift_i[2] ? {16'b0, sh2[127:16]}      : sh2;
+    assign sh8 = nibble_shift_i[3] ? {32'b0, sh4[127:32]}      : sh4;
+
+    assign result_o = sh8[63:0];
 
 endmodule
