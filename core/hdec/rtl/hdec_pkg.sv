@@ -2,7 +2,6 @@
 // hdec_pkg.sv — HDEC Phase 1 Constants, Types, Opcodes, Instruction Table
 // =============================================================================
 // HDEC-LiteV-4L64-HV1024: 4 lanes × 64-bit, 1024-bit HDC vectors
-// ECC V1 adds raw GF(2) 256x256 diagonal multiplication.
 // =============================================================================
 
 package hdec_pkg;
@@ -22,7 +21,6 @@ package hdec_pkg;
     // ── Owner Tags ──────────────────────────────────────────────────────────
     localparam logic [1:0] OWNER_NONE = 2'd0;
     localparam logic [1:0] OWNER_HDC  = 2'd1;
-    localparam logic [1:0] OWNER_ECC  = 2'd2;   // reserved for future ECC
 
     // ── Controller Status Codes ─────────────────────────────────────────────
     localparam logic [1:0] STATUS_OK              = 2'd0;
@@ -41,9 +39,7 @@ package hdec_pkg;
         HDEC_HSIM      = 4'd7,
         HDEC_HCNTCLIP  = 4'd8,    // was HDEC_CLIP
         HDEC_HMATCH    = 4'd9,    // was HDEC_HSEARCH
-        HDEC_VADDR     = 4'd10,
-        HDEC_ECC_MUL   = 4'd11,   // ECC V1 raw GF(2) 256x256 diagonal multiply
-        HDEC_ECC_STATUS= 4'd12    // ECC V1 status/debug read
+        HDEC_VADDR     = 4'd10
     } hdec_op_t;
 
     // ── UOP Pipeline Types ─────────────────────────────────────────────────
@@ -105,8 +101,6 @@ package hdec_pkg;
     localparam logic [2:0] F3_HCNTCLIP = 3'b000;   // funct7=000_0011
     localparam logic [2:0] F3_HMATCH   = 3'b001;   // funct7=000_0011
     localparam logic [2:0] F3_VADDR    = 3'b010;   // funct7=000_0011
-    localparam logic [2:0] F3_ECC_MUL  = 3'b011;   // funct7=000_0011
-    localparam logic [2:0] F3_ECC_STATUS = 3'b100; // funct7=000_0011
 
     // ── CV-X-IF Issue Response Struct ───────────────────────────────────────
     typedef struct packed {
@@ -124,7 +118,7 @@ package hdec_pkg;
     } hdec_instr_entry_t;
 
     // ── Number of Instructions in Table ─────────────────────────────────────
-    localparam int HDEC_NB_INSTR = 13;
+    localparam int HDEC_NB_INSTR = 11;
 
     // ── Instruction Table Generator ─────────────────────────────────────────
     function automatic hdec_instr_entry_t [HDEC_NB_INSTR-1:0] get_hdec_instr_table();
@@ -197,18 +191,6 @@ package hdec_pkg;
         tbl[10].instr  = base | (F7_PHASE1_EXT << 25) | (F3_VADDR << 12);
         tbl[10].resp   = '{accept:1'b1, writeback:1'b1, register_read:2'b01};
         tbl[10].opcode = HDEC_VADDR;
-
-        // 11: hdec_ecc_mul (funct7=000_0011, funct3=011, rs1)
-        tbl[11].mask   = mask;
-        tbl[11].instr  = base | (F7_PHASE1_EXT << 25) | (F3_ECC_MUL << 12);
-        tbl[11].resp   = '{accept:1'b1, writeback:1'b1, register_read:2'b01};
-        tbl[11].opcode = HDEC_ECC_MUL;
-
-        // 12: hdec_ecc_status (funct7=000_0011, funct3=100, no reg read)
-        tbl[12].mask   = mask;
-        tbl[12].instr  = base | (F7_PHASE1_EXT << 25) | (F3_ECC_STATUS << 12);
-        tbl[12].resp   = '{accept:1'b1, writeback:1'b1, register_read:2'b00};
-        tbl[12].opcode = HDEC_ECC_STATUS;
 
         return tbl;
     endfunction
