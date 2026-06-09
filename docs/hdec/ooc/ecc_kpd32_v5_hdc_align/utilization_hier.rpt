@@ -1,0 +1,32 @@
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+----------------------------------------------------------------------------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2022.2 (win64) Build 3671981 Fri Oct 14 05:00:03 MDT 2022
+| Date         : Tue Jun  9 18:06:38 2026
+| Host         : DESKTOP-RSKE6BB running 64-bit major release  (build 9200)
+| Command      : report_utilization -hierarchical -file H:/CVA6-HDEC/cva6-vhdc-core/reports/hdec_v5_hdc_capture_ooc_20260609/reports/utilization_hier.rpt
+| Design       : hdec_top
+| Device       : xc7z020clg400-2
+| Speed File   : -2
+| Design State : Synthesized
+----------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Utilization Design Information
+
+Table of Contents
+-----------------
+1. Utilization by Hierarchy
+
+1. Utilization by Hierarchy
+---------------------------
+
++------------------------------+---------------------+------------+------------+---------+------+------+--------+--------+------------+
+|           Instance           |        Module       | Total LUTs | Logic LUTs | LUTRAMs | SRLs |  FFs | RAMB36 | RAMB18 | DSP Blocks |
++------------------------------+---------------------+------------+------------+---------+------+------+--------+--------+------------+
+| hdec_top                     |               (top) |       6769 |       6081 |     688 |    0 | 4117 |      0 |      0 |          0 |
+|   (hdec_top)                 |               (top) |       2422 |       2422 |       0 |    0 | 3280 |      0 |      0 |          0 |
+|   gen_lane[0].i_p2_pop_slice |   hdec_p2_pop_slice |        291 |        291 |       0 |    0 |  142 |      0 |      0 |          0 |
+|   gen_lane[1].i_p2_pop_slice | hdec_p2_pop_slice_0 |        279 |        279 |       0 |    0 |  142 |      0 |      0 |          0 |
+|   gen_lane[2].i_p2_pop_slice | hdec_p2_pop_slice_1 |        285 |        285 |       0 |    0 |  142 |      0 |      0 |          0 |
+|   gen_lane[3].i_p2_pop_slice | hdec_p2_pop_slice_2 |        295 |        295 |       0 |    0 |  142 |      0 |      0 |          0 |
+|   i_vrf                      |     hdec_vrf_64x256 |       3197 |       2509 |     688 |    0 |  269 |      0 |      0 |          0 |
++------------------------------+---------------------+------------+------------+---------+------+------+--------+--------+------------+

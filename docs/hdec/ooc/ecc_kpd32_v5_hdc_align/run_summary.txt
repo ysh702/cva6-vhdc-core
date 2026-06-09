@@ -1,0 +1,9 @@
+run_label=v5_hdc_capture_5ns
+period_ns=5.0
+part=xc7z020clg400-2
+top=hdec_top
+wns=0.326
+worst_data_delay_ns=4.700
+fmax_est_mhz=213.950
+top_endpoint=group_dist_q_reg[8]/D
+vivado_version=2022.2
