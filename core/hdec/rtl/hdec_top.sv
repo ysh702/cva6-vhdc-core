@@ -20,7 +20,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
         S_IDLE, S_EXEC, S_VWR_WAIT, S_RD_WAIT, S_RD_CAPTURE, S_RESULT, S_CLR, S_CLR_DRAIN,
         S_HSIM_INIT, S_HMATCH_INIT,
         S_UOP_P1_RD0, S_UOP_P1_RD0_WAIT, S_UOP_P1_RD1, S_UOP_P1_RD1_WAIT,
-        S_UOP_P2_LANE, S_UOP_P3_GLOBAL, S_UOP_P3_VRF_WAIT, S_UOP_P3_ACCUM, S_UOP_P4_RESP,
+        S_UOP_P2_LANE, S_UOP_P3_GLOBAL, S_UOP_P3_POP_CAPTURE, S_UOP_P3_VRF_WAIT, S_UOP_P3_ACCUM, S_UOP_P4_RESP,
         S_UOP_CLIP_WRITE,
         S_ECC_LOAD_A_WAIT, S_ECC_LOAD_A, S_ECC_LOAD_B_WAIT, S_ECC_LOAD_B,
         S_ECC_KPD32_FORM,
@@ -77,7 +77,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
     hdec_uop_t uop_p0_q, uop_p0_n, uop_p1_q, uop_p1_n, uop_p2_q, uop_p2_n, uop_p3_q, uop_p3_n;
 
     // ── Lane compute wires ──────────────────────────────────────────────────
-    logic                                p1_pop_d, p1_xor_d;
+    logic                                hdc_pop_issue, hdc_xor_issue;
+    logic [LANE_NUM-1:0][LANE_WIDTH-1:0] hdc_src0_q, hdc_src0_n;
     logic [LANE_NUM-1:0]                 lane_xor_only_valid;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] lane_bool_result;
     logic [LANE_NUM-1:0]                 lane_cnt_valid;
@@ -144,16 +145,16 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
     assign hcntclip_acc_base = hcntclip_acc_sel_q ? 6'd48 : 6'd32;
     assign hmatch_budget_step = hmatch_budget_q - $signed({1'b0, group_dist_q});
     assign hmatch_budget_step_nonnegative = !hmatch_budget_step[11];
-    assign p1_pop_d = uop_p1_q.valid
-                    && ((uop_p1_q.op_type == UOP_HSIM_CHUNK)
-                     || (uop_p1_q.op_type == UOP_HMATCH_CHUNK));
-    assign p1_xor_d = uop_p1_q.valid
-                    && ((uop_p1_q.op_type == UOP_HBIND_CHUNK)
-                     || (uop_p1_q.op_type == UOP_HSIM_CHUNK)
-                     || (uop_p1_q.op_type == UOP_HMATCH_CHUNK));
+    assign hdc_pop_issue = (st_q == S_UOP_P2_LANE) && uop_p2_q.valid
+                         && ((uop_p2_q.op_type == UOP_HSIM_CHUNK)
+                          || (uop_p2_q.op_type == UOP_HMATCH_CHUNK));
+    assign hdc_xor_issue = (st_q == S_UOP_P2_LANE) && uop_p2_q.valid
+                         && ((uop_p2_q.op_type == UOP_HBIND_CHUNK)
+                          || (uop_p2_q.op_type == UOP_HSIM_CHUNK)
+                          || (uop_p2_q.op_type == UOP_HMATCH_CHUNK));
     assign ecc_issue_pop = (st_q == S_ECC_DIAG_ISSUE);
-    assign pop_d_mux     = p1_pop_d || ecc_issue_pop;
-    assign xor_d_mux     = p1_xor_d || ecc_issue_pop;
+    assign pop_d_mux     = hdc_pop_issue || ecc_issue_pop;
+    assign xor_d_mux     = hdc_xor_issue || ecc_issue_pop;
     assign ecc_diag8_parity = {lane_popcnt_part_q[3][1][0], lane_popcnt_part_q[3][0][0],
                                lane_popcnt_part_q[2][1][0], lane_popcnt_part_q[2][0][0],
                                lane_popcnt_part_q[1][1][0], lane_popcnt_part_q[1][0][0],
@@ -420,7 +421,9 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
 
     // ── 4× Lane instances ───────────────────────────────────────────────────
     for (genvar lid = 0; lid < LANE_NUM; lid++) begin : gen_lane
-        assign pop_src_a[lid] = ecc_issue_pop ? ecc_partial_vec[lid] : vrf_rd[lid];
+        assign pop_src_a[lid] = ecc_issue_pop ? ecc_partial_vec[lid]
+                              : hdc_xor_issue ? hdc_src0_q[lid]
+                              : vrf_rd[lid];
         assign pop_src_b[lid] = ecc_issue_pop ? '0 : vrf_rd[lid];
 
         hdec_p2_pop_slice i_p2_pop_slice (
@@ -489,6 +492,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
         hcntadd_hv_n=hcntadd_hv_q; hcntadd_hv_slot_n=hcntadd_hv_slot_q; hcntadd_chunk_n=hcntadd_chunk_q; hcntadd_subgroup_n=hcntadd_subgroup_q; hcntadd_acc_sel_n=hcntadd_acc_sel_q;
         hcntclip_dst_base_n=hcntclip_dst_base_q; hcntclip_acc_sel_n=hcntclip_acc_sel_q; hcntclip_threshold_n=hcntclip_threshold_q; hcntclip_chunk_n=hcntclip_chunk_q; hcntclip_subgroup_n=hcntclip_subgroup_q; hcntclip_word_n=hcntclip_word_q; hcntclip_word_with_result=hcntclip_word_q;
         uop_p0_n=uop_p0_q; uop_p1_n=uop_p1_q; uop_p2_n=uop_p2_q; uop_p3_n=uop_p3_q;
+        hdc_src0_n=hdc_src0_q;
         lane_result_n=lane_result_q; lane_clip_n=lane_clip_q;
         scalar_response_n=scalar_response_q; response_valid_n=response_valid_q; p4_arch_op_n=p4_arch_op_q;
         ecc_src_a_n=ecc_src_a_q; ecc_src_b_n=ecc_src_b_q; ecc_dst_n=ecc_dst_q;
@@ -813,6 +817,10 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                 hperm_a_n = vrf_rd;
             end else begin
                 if (uop_p1_q.op_type == UOP_HCNTADD_SUBGROUP) hcntadd_hv_n = vrf_rd;
+                if ((uop_p1_q.op_type == UOP_HBIND_CHUNK)
+                 || (uop_p1_q.op_type == UOP_HSIM_CHUNK)
+                 || (uop_p1_q.op_type == UOP_HMATCH_CHUNK))
+                    hdc_src0_n = vrf_rd;
             end
             vrf_ra[0]=uop_p1_q.src1_addr; vrf_ra[1]=uop_p1_q.src1_addr;
             vrf_ra[2]=uop_p1_q.src1_addr; vrf_ra[3]=uop_p1_q.src1_addr;
@@ -863,11 +871,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                 lane_clip_n[1] = lane_clip_bits[1];
                 lane_clip_n[2] = lane_clip_bits[2];
                 lane_clip_n[3] = lane_clip_bits[3];
-            end else begin
-                for (int unsigned lid = 0; lid < LANE_NUM; lid++) begin
-                    if (lane_xor_only_valid[lid])
-                        lane_result_n[lid] = lane_bool_result[lid];
-                end
             end
             st_n=S_UOP_P3_GLOBAL;
         end
@@ -880,7 +883,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                 vrf_we = '1;
                 vrf_wa[0]=uop_p3_q.dst_addr; vrf_wa[1]=uop_p3_q.dst_addr;
                 vrf_wa[2]=uop_p3_q.dst_addr; vrf_wa[3]=uop_p3_q.dst_addr;
-                vrf_wd = lane_result_q;
+                vrf_wd = lane_bool_result;
                 if (uop_p3_q.chunk_idx == 2'd3) st_n = S_UOP_P4_RESP;
                 else begin
                     uop_p0_n = uop_p3_q; uop_p0_n.valid = 1'b1;
@@ -892,8 +895,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                 end
             end
             UOP_HSIM_CHUNK, UOP_HMATCH_CHUNK: begin
-                group_dist_n = group_dist_sum;
-                st_n = S_UOP_P3_ACCUM;
+                st_n = S_UOP_P3_POP_CAPTURE;
             end
             UOP_HCNTADD_SUBGROUP: begin
                 vrf_we = '1;
@@ -966,6 +968,11 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
         // ── HCNTCLIP writeback (dedicated state, avoids pipeline timing issues) ─
         S_UOP_P3_VRF_WAIT: begin
             st_n=S_UOP_P2_LANE;
+        end
+
+        S_UOP_P3_POP_CAPTURE: begin
+            group_dist_n = group_dist_sum;
+            st_n=S_UOP_P3_ACCUM;
         end
 
         S_UOP_P3_ACCUM: begin
@@ -1066,6 +1073,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             hcntclip_dst_base_q<='0;hcntclip_acc_sel_q<='0;hcntclip_threshold_q<='0;hcntclip_chunk_q<='0;hcntclip_subgroup_q<='0;hcntclip_word_q<='0;
             vrf_ra_q<='0;vrf_we_q<='0;vrf_wa_q<='0;vrf_wd_q<='0;
             uop_p0_q<='0;uop_p1_q<='0;uop_p2_q<='0;uop_p3_q<='0;
+            hdc_src0_q<='0;
             lane_result_q<='0;lane_clip_q<='0;
             scalar_response_q<='0;response_valid_q<='0;p4_arch_op_q<=HDEC_VWR64;
             ecc_src_a_q<='0;ecc_src_b_q<='0;ecc_dst_q<='0;ecc_a_q<='0;ecc_b_q<='0;ecc_product_q<='0;
@@ -1084,6 +1092,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             hcntclip_dst_base_q<=hcntclip_dst_base_n;hcntclip_acc_sel_q<=hcntclip_acc_sel_n;hcntclip_threshold_q<=hcntclip_threshold_n;hcntclip_chunk_q<=hcntclip_chunk_n;hcntclip_subgroup_q<=hcntclip_subgroup_n;hcntclip_word_q<=hcntclip_word_n;
             vrf_ra_q<=vrf_ra;vrf_we_q<=vrf_we;vrf_wa_q<=vrf_wa;vrf_wd_q<=vrf_wd;
             uop_p0_q<=uop_p0_n;uop_p1_q<=uop_p1_n;uop_p2_q<=uop_p2_n;uop_p3_q<=uop_p3_n;
+            hdc_src0_q<=hdc_src0_n;
             lane_result_q<=lane_result_n;lane_clip_q<=lane_clip_n;
             scalar_response_q<=scalar_response_n;response_valid_q<=response_valid_n;p4_arch_op_q<=p4_arch_op_n;
             ecc_src_a_q<=ecc_src_a_n;ecc_src_b_q<=ecc_src_b_n;ecc_dst_q<=ecc_dst_n;ecc_a_q<=ecc_a_n;ecc_b_q<=ecc_b_n;ecc_product_q<=ecc_product_n;
