@@ -1,0 +1,42 @@
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2024 Advanced Micro Devices, Inc. All Rights Reserved.
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2024.2 (win64) Build 5239630 Fri Nov 08 22:35:27 MST 2024
+| Date         : Wed Jun 10 10:06:16 2026
+| Host         : WIN-20240824NZS running 64-bit major release  (build 9200)
+| Command      : report_utilization -hierarchical -file E:/HDEC/cva6-vhdc-core/tmp/hdec_ooc_p1_keep_trial/worktree/docs/hdec/ooc/ecc_kpd32_v10_increment_ppa/round10_shared_bool_pop_input/ooc_200/reports/utilization_hier.rpt
+| Design       : hdec_top
+| Device       : xc7z020clg400-2
+| Speed File   : -2
+| Design State : Synthesized
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Utilization Design Information
+
+Table of Contents
+-----------------
+1. Utilization by Hierarchy
+
+1. Utilization by Hierarchy
+---------------------------
+
++------------------------------+-------------------------+------------+------------+---------+------+------+--------+--------+------------+
+|           Instance           |          Module         | Total LUTs | Logic LUTs | LUTRAMs | SRLs |  FFs | RAMB36 | RAMB18 | DSP Blocks |
++------------------------------+-------------------------+------------+------------+---------+------+------+--------+--------+------------+
+| hdec_top                     |                   (top) |       5460 |       4988 |     472 |    0 | 2025 |      0 |      0 |          0 |
+|   (hdec_top)                 |                   (top) |        729 |        601 |     128 |    0 | 1457 |      0 |      0 |          0 |
+|   gen_lane[0].i_lane         |          hdec_lane_4x64 |        259 |        259 |       0 |    0 |    0 |      0 |      0 |          0 |
+|     i_shift_align            | hdec_lane_shift_align_8 |        259 |        259 |       0 |    0 |    0 |      0 |      0 |          0 |
+|   gen_lane[0].i_p2_pop_slice |       hdec_p2_pop_slice |        417 |        417 |       0 |    0 |   78 |      0 |      0 |          0 |
+|   gen_lane[1].i_lane         |        hdec_lane_4x64_0 |         72 |         72 |       0 |    0 |    0 |      0 |      0 |          0 |
+|     i_shift_align            | hdec_lane_shift_align_7 |         72 |         72 |       0 |    0 |    0 |      0 |      0 |          0 |
+|   gen_lane[1].i_p2_pop_slice |     hdec_p2_pop_slice_1 |        395 |        395 |       0 |    0 |   78 |      0 |      0 |          0 |
+|   gen_lane[2].i_lane         |        hdec_lane_4x64_2 |         40 |         40 |       0 |    0 |    0 |      0 |      0 |          0 |
+|     i_shift_align            | hdec_lane_shift_align_6 |         40 |         40 |       0 |    0 |    0 |      0 |      0 |          0 |
+|   gen_lane[2].i_p2_pop_slice |     hdec_p2_pop_slice_3 |        401 |        401 |       0 |    0 |   78 |      0 |      0 |          0 |
+|   gen_lane[3].i_lane         |        hdec_lane_4x64_4 |        139 |        139 |       0 |    0 |    0 |      0 |      0 |          0 |
+|     i_shift_align            |   hdec_lane_shift_align |        139 |        139 |       0 |    0 |    0 |      0 |      0 |          0 |
+|   gen_lane[3].i_p2_pop_slice |     hdec_p2_pop_slice_5 |        406 |        406 |       0 |    0 |   78 |      0 |      0 |          0 |
+|   i_vrf                      |         hdec_vrf_64x256 |       2602 |       2258 |     344 |    0 |  256 |      0 |      0 |          0 |
++------------------------------+-------------------------+------------+------------+---------+------+------+--------+--------+------------+
+
+

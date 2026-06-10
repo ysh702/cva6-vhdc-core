@@ -1,0 +1,9 @@
+run_label=v10_round02_direct_diag_parity
+period_ns=5.000
+part=xc7z020clg400-2
+top=hdec_top
+wns=0.328
+worst_data_delay_ns=4.698
+fmax_est_mhz=214.041
+top_endpoint=group_dist_q_reg[8]/D
+vivado_version=2024.2
