@@ -1,0 +1,9 @@
+run_label=v18_pmul_round01_200
+period_ns=5.000
+part=xc7z020clg400-2
+top=hdec_top
+wns=0.219
+worst_data_delay_ns=4.570
+fmax_est_mhz=209.161
+top_endpoint=ecc_dst_q_reg[0]/CE
+vivado_version=2024.2

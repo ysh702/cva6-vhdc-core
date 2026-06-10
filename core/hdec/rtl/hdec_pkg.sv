@@ -52,7 +52,9 @@ package hdec_pkg;
         // ECC status / macro job operand:
         //   [31]=GF_INV start, [17:12]=dst, [5:0]=src
         //        GF_INV also uses dst+1 as product scratch and dst+2 as ITA temp.
-        //   [30]=reserved PMUL start for V17 point-multiply controller
+        //   [30]=PMUL start, [17:12]=out_x, [11:6]=point_x, [5:0]=scalar
+        //        point_y is point_x+1, out_y is out_x+1; V18 uses VRF[32:63]
+        //        as internal LD projective/scratch workspace.
         HDEC_ECC_STATUS= 4'd12,   // ECC status/debug read and macro-job entry
         HDEC_ECC_ADD   = 4'd13,   // ECC V1 GF(2) add/sub via shared XOR lane
         HDEC_ECC_ALIGN = 4'd14,   // ECC V1 256-bit field row align via shared HPERM lane
