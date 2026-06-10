@@ -86,6 +86,18 @@ module tb_hdec_ecc_reduce_v1;
         end
     endfunction
 
+    function automatic logic [63:0] hspread_mac_operand(
+        input logic [5:0] acc_dst_idx,
+        input logic [5:0] tmp_idx,
+        input logic [5:0] src_idx
+    );
+        begin
+            hspread_mac_operand = hspread_operand(tmp_idx, src_idx)
+                                | ({58'd0, acc_dst_idx} << 12)
+                                | (64'h1 << 20);
+        end
+    endfunction
+
     function automatic logic [255:0] slow_reduce233(input logic [511:0] product);
         logic [511:0] work;
         begin
@@ -306,6 +318,15 @@ module tb_hdec_ecc_reduce_v1;
             $fatal(1, "auto GF_MAC returned bad status 0x%016h", status);
         expected = acc_field ^ slow_reduce233(slow_mul_raw233(a_field, b_field));
         check_row("auto GF_MAC", 6'd42, expected);
+
+        acc_field = 256'h0000000000000000000000000000000abcdef0123456789ffeeddccbbaa9988;
+        acc_field[255:233] = '0;
+        write_row(6'd46, acc_field);
+        issue(HDEC_HPERM, hspread_mac_operand(6'd46, 6'd44, 6'd24), status);
+        if (status[1:0] !== STATUS_OK)
+            $fatal(1, "auto GF_SQRMAC returned bad status 0x%016h", status);
+        expected = acc_field ^ slow_reduce233(slow_square_raw233(a_field));
+        check_row("auto GF_SQRMAC", 6'd46, expected);
 
         run_reduce(6'd29, 6'd63, status);
         if (status[1:0] !== STATUS_ERROR)

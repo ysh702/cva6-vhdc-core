@@ -37,6 +37,8 @@ package hdec_pkg;
         HDEC_HCNTCLR   = 4'd3,    // was HDEC_BCLR
         HDEC_HCNTADD   = 4'd4,    // was HDEC_BADD
         HDEC_HBIND     = 4'd5,
+        // HPERM operand for ECC spread:
+        //   [18]=spread square layout, [19]=auto GF_SQR, [20]=GF_SQRMAC acc[17:12] ^= GF_SQR(src)
         HDEC_HPERM     = 4'd6,
         HDEC_HSIM      = 4'd7,
         HDEC_HCNTCLIP  = 4'd8,    // was HDEC_CLIP

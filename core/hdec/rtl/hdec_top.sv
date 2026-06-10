@@ -758,15 +758,19 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
 
             HDEC_HPERM: begin
                 if (a_q[18]) begin
-                    if (a_q[5:0] == 6'd63) begin
+                    if ((a_q[5:0] == 6'd63)
+                     || (a_q[20] && ((a_q[17:12] == a_q[5:0])
+                                   || (a_q[17:12] == (a_q[5:0] + 6'd1))))) begin
                         ecc_autoreduce_n=1'b0; ecc_mac_n=1'b0;
                         res_n={62'b0,STATUS_ERROR};st_n=S_RESULT;
                     end else begin
                         hperm_dst_base_n=a_q[5:0];
                         hperm_src_base_n=a_q[11:6];
                         hperm_spread_n=1'b1;
-                        ecc_autoreduce_n=a_q[19];
-                        ecc_mac_n=1'b0;
+                        ecc_dst_n=a_q[5:0];
+                        ecc_acc_dst_n=a_q[17:12];
+                        ecc_autoreduce_n=a_q[19] | a_q[20];
+                        ecc_mac_n=a_q[20];
                         vrf_ra[0]=a_q[11:6]; vrf_ra[1]=a_q[11:6];
                         vrf_ra[2]=a_q[11:6]; vrf_ra[3]=a_q[11:6];
                         st_n=S_RD_WAIT;
