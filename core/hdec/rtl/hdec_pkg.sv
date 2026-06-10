@@ -39,6 +39,7 @@ package hdec_pkg;
         HDEC_HBIND     = 4'd5,
         // HPERM operand for ECC spread:
         //   [18]=spread square layout, [19]=auto GF_SQR, [20]=GF_SQRMAC acc[17:12] ^= GF_SQR(src)
+        //   [27:24]=extra repeated squares for GF_SQR/GF_SQRMAC, total squares = 1 + extra
         HDEC_HPERM     = 4'd6,
         HDEC_HSIM      = 4'd7,
         HDEC_HCNTCLIP  = 4'd8,    // was HDEC_CLIP

@@ -146,6 +146,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
     logic [255:0]         ecc_reduce_result;
     logic                 ecc_autoreduce_q, ecc_autoreduce_n;
     logic                 ecc_mac_q, ecc_mac_n;
+    logic [3:0]           ecc_sqr_repeat_q, ecc_sqr_repeat_n;
     logic                 ecc_leaf_first;
     logic                 ecc_leaf_last;
     logic                pop_d_mux;
@@ -558,7 +559,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
         ecc_leaf_path_n=ecc_leaf_path_q;
         ecc_fold_word_n=ecc_fold_word_q;
         ecc_product_we=1'b0;
-        ecc_autoreduce_n=ecc_autoreduce_q; ecc_mac_n=ecc_mac_q;
+        ecc_autoreduce_n=ecc_autoreduce_q; ecc_mac_n=ecc_mac_q; ecc_sqr_repeat_n=ecc_sqr_repeat_q;
         ecc_pipe0_valid_n=1'b0; ecc_pipe0_diag_n=ecc_pipe0_diag_q;
         ecc_pipe1_valid_n=ecc_pipe0_valid_q; ecc_pipe1_diag_n=ecc_pipe0_diag_q;
         lane_cnt_valid='0;
@@ -609,7 +610,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                 if ((a_q[17:12] == 6'd63)
                  || (a_q[32] && ((a_q[23:18] == a_q[17:12])
                                || (a_q[23:18] == (a_q[17:12] + 6'd1))))) begin
-                    ecc_autoreduce_n=1'b0; ecc_mac_n=1'b0;
+                    ecc_autoreduce_n=1'b0; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0;
                     res_n={62'b0,STATUS_ERROR};st_n=S_RESULT;
                 end else begin
                     ecc_dst_n   = a_q[17:12];
@@ -624,6 +625,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                     ecc_fold_word_n = '0;
                     ecc_autoreduce_n = a_q[31] | a_q[32];
                     ecc_mac_n = a_q[32];
+                    ecc_sqr_repeat_n='0;
                     ecc_pipe0_valid_n = 1'b0;
                     ecc_pipe1_valid_n = 1'b0;
                     vrf_ra[0]=a_q[11:6]; vrf_ra[1]=a_q[11:6];
@@ -668,7 +670,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             end
 
             HDEC_ECC_REDUCE: begin
-                ecc_autoreduce_n=1'b0; ecc_mac_n=1'b0;
+                ecc_autoreduce_n=1'b0; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0;
                 if (a_q[5:0] == 6'd63) begin
                     res_n={62'b0,STATUS_ERROR};st_n=S_RESULT;
                 end else begin
@@ -761,7 +763,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                     if ((a_q[5:0] == 6'd63)
                      || (a_q[20] && ((a_q[17:12] == a_q[5:0])
                                    || (a_q[17:12] == (a_q[5:0] + 6'd1))))) begin
-                        ecc_autoreduce_n=1'b0; ecc_mac_n=1'b0;
+                        ecc_autoreduce_n=1'b0; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0;
                         res_n={62'b0,STATUS_ERROR};st_n=S_RESULT;
                     end else begin
                         hperm_dst_base_n=a_q[5:0];
@@ -771,6 +773,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                         ecc_acc_dst_n=a_q[17:12];
                         ecc_autoreduce_n=a_q[19] | a_q[20];
                         ecc_mac_n=a_q[20];
+                        ecc_sqr_repeat_n=(a_q[19] | a_q[20]) ? a_q[27:24] : 4'd0;
                         vrf_ra[0]=a_q[11:6]; vrf_ra[1]=a_q[11:6];
                         vrf_ra[2]=a_q[11:6]; vrf_ra[3]=a_q[11:6];
                         st_n=S_RD_WAIT;
@@ -966,6 +969,16 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                 vrf_ra[0]=ecc_src_a_q; vrf_ra[1]=ecc_src_a_q;
                 vrf_ra[2]=ecc_src_a_q; vrf_ra[3]=ecc_src_a_q;
                 st_n=S_ECC_REDUCE_LOAD_LO_WAIT;
+            end else if (ecc_sqr_repeat_q != 4'd0) begin
+                hperm_dst_base_n=ecc_dst_q;
+                hperm_src_base_n=ecc_dst_q;
+                hperm_spread_n=1'b1;
+                ecc_src_a_n=ecc_dst_q;
+                ecc_autoreduce_n=1'b1;
+                ecc_sqr_repeat_n=ecc_sqr_repeat_q - 4'd1;
+                vrf_ra[0]=ecc_dst_q; vrf_ra[1]=ecc_dst_q;
+                vrf_ra[2]=ecc_dst_q; vrf_ra[3]=ecc_dst_q;
+                st_n=S_RD_WAIT;
             end else begin
                 res_n={56'b0, ecc_dst_q, STATUS_OK};
                 st_n=S_RESULT;
@@ -996,7 +1009,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             vrf_wd[2]=ecc_reduce_result[191:128];
             vrf_wd[3]=ecc_reduce_result[255:192];
             ecc_autoreduce_n=1'b0;
-            if (ecc_mac_q) begin
+            if (ecc_mac_q && (ecc_sqr_repeat_q == 4'd0)) begin
                 uop_p0_n='0;
                 uop_p0_n.valid     = 1'b1;
                 uop_p0_n.op_type   = UOP_HBIND_CHUNK;
@@ -1006,8 +1019,10 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                 uop_p0_n.chunk_idx = 2'd3;
                 p4_arch_op_n       = HDEC_ECC_MUL;
                 st_n=S_UOP_P1_RD0;
-            end else begin
+            end else if (ecc_sqr_repeat_q == 4'd0) begin
                 res_n={56'b0, ecc_dst_q, STATUS_OK};
+                st_n=S_ECC_WRITE_DRAIN;
+            end else begin
                 st_n=S_ECC_WRITE_DRAIN;
             end
         end
@@ -1332,7 +1347,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             p4_arch_op_q<=HDEC_VWR64;
             ecc_src_a_q<='0;ecc_src_b_q<='0;ecc_dst_q<='0;ecc_acc_dst_q<='0;
             ecc_leaf_a_q<='0;ecc_leaf_b_q<='0;ecc_leaf_prod_q<='0;ecc_leaf_path_q<='0;ecc_diag_base_q<='0;ecc_fold_word_q<='0;
-            ecc_autoreduce_q<=1'b0;ecc_mac_q<=1'b0;
+            ecc_autoreduce_q<=1'b0;ecc_mac_q<=1'b0;ecc_sqr_repeat_q<='0;
             ecc_pipe0_valid_q<=1'b0;ecc_pipe1_valid_q<=1'b0;ecc_pipe0_diag_q<='0;ecc_pipe1_diag_q<='0;
         end
         else begin
@@ -1353,7 +1368,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             p4_arch_op_q<=p4_arch_op_n;
             ecc_src_a_q<=ecc_src_a_n;ecc_src_b_q<=ecc_src_b_n;ecc_dst_q<=ecc_dst_n;ecc_acc_dst_q<=ecc_acc_dst_n;
             ecc_leaf_a_q<=ecc_leaf_a_n;ecc_leaf_b_q<=ecc_leaf_b_n;ecc_leaf_prod_q<=ecc_leaf_prod_n;ecc_leaf_path_q<=ecc_leaf_path_n;ecc_diag_base_q<=ecc_diag_base_n;ecc_fold_word_q<=ecc_fold_word_n;
-            ecc_autoreduce_q<=ecc_autoreduce_n;ecc_mac_q<=ecc_mac_n;
+            ecc_autoreduce_q<=ecc_autoreduce_n;ecc_mac_q<=ecc_mac_n;ecc_sqr_repeat_q<=ecc_sqr_repeat_n;
             ecc_pipe0_valid_q<=ecc_pipe0_valid_n;ecc_pipe1_valid_q<=ecc_pipe1_valid_n;ecc_pipe0_diag_q<=ecc_pipe0_diag_n;ecc_pipe1_diag_q<=ecc_pipe1_diag_n;
         end
     end

@@ -10,6 +10,7 @@ module tb_hdec_ecc_reduce_v1;
     logic [63:0] operand_b_i;
     logic valid_o;
     logic [63:0] result_o;
+    int unsigned error_count;
 
     hdec_top dut (
         .clk_i,
@@ -98,6 +99,29 @@ module tb_hdec_ecc_reduce_v1;
         end
     endfunction
 
+    function automatic logic [63:0] hspread_repeat_operand(
+        input logic [5:0] dst_idx,
+        input logic [5:0] src_idx,
+        input logic [3:0] extra_squares
+    );
+        begin
+            hspread_repeat_operand = hspread_reduce_operand(dst_idx, src_idx)
+                                   | ({60'd0, extra_squares} << 24);
+        end
+    endfunction
+
+    function automatic logic [63:0] hspread_repeat_mac_operand(
+        input logic [5:0] acc_dst_idx,
+        input logic [5:0] tmp_idx,
+        input logic [5:0] src_idx,
+        input logic [3:0] extra_squares
+    );
+        begin
+            hspread_repeat_mac_operand = hspread_mac_operand(acc_dst_idx, tmp_idx, src_idx)
+                                       | ({60'd0, extra_squares} << 24);
+        end
+    endfunction
+
     function automatic logic [255:0] slow_reduce233(input logic [511:0] product);
         logic [511:0] work;
         begin
@@ -142,6 +166,19 @@ module tb_hdec_ecc_reduce_v1;
                     product[bit_idx << 1] = 1'b1;
             end
             slow_square_raw233 = product;
+        end
+    endfunction
+
+    function automatic logic [255:0] slow_sqrn233(
+        input logic [255:0] a,
+        input int unsigned total_squares
+    );
+        logic [255:0] value;
+        begin
+            value = a;
+            for (int sq = 0; sq < total_squares; sq++)
+                value = slow_reduce233(slow_square_raw233(value));
+            slow_sqrn233 = value;
         end
     endfunction
 
@@ -241,7 +278,7 @@ module tb_hdec_ecc_reduce_v1;
             read_row(idx, got);
             if (got !== expected) begin
                 $error("%s got=0x%064h expected=0x%064h", label, got, expected);
-                $fatal(1);
+                error_count++;
             end
         end
     endtask
@@ -258,6 +295,7 @@ module tb_hdec_ecc_reduce_v1;
         operator_i = HDEC_VWR64;
         operand_a_i = '0;
         operand_b_i = '0;
+        error_count = 0;
         rst_ni = 1'b0;
         repeat (8) @(posedge clk_i);
         rst_ni = 1'b1;
@@ -328,11 +366,31 @@ module tb_hdec_ecc_reduce_v1;
         expected = acc_field ^ slow_reduce233(slow_square_raw233(a_field));
         check_row("auto GF_SQRMAC", 6'd46, expected);
 
+        issue(HDEC_HPERM, hspread_repeat_operand(6'd48, 6'd24, 4'd3), status);
+        if (status[1:0] !== STATUS_OK)
+            $fatal(1, "auto GF_SQRN returned bad status 0x%016h", status);
+        expected = 256'h000000762c657dd1ddd0dcd051c164ac0ef6268a2df84e532fb84c6b313d8c68;
+        check_row("auto GF_SQRN", 6'd48, expected);
+
+        acc_field = 256'h000000000000000000000000000000001010101010101010cafef00dd15ea5e;
+        acc_field[255:233] = '0;
+        write_row(6'd52, acc_field);
+        issue(HDEC_HPERM, hspread_repeat_mac_operand(6'd52, 6'd50, 6'd24, 4'd2), status);
+        if (status[1:0] !== STATUS_OK)
+            $fatal(1, "auto GF_SQRNMAC returned bad status 0x%016h", status);
+        expected = 256'h000001f50af3dbeacc3f36775e2fc4e8d5cf2afcfdeddb4937686472b91380c8;
+        check_row("auto GF_SQRNMAC", 6'd52, expected);
+
         run_reduce(6'd29, 6'd63, status);
         if (status[1:0] !== STATUS_ERROR)
             $fatal(1, "REDUCE src=63 should fail, got 0x%016h", status);
 
-        $display("[HDEC_ECC_REDUCE_V1] PASS");
+        if (error_count != 0) begin
+            $display("[HDEC_ECC_REDUCE_V1] FAIL errors=%0d", error_count);
+            $fatal(1);
+        end else begin
+            $display("[HDEC_ECC_REDUCE_V1] PASS");
+        end
         $finish;
     end
 endmodule
