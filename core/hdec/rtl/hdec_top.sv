@@ -27,6 +27,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
         S_ECC_LEAF_FOLD,
         S_ECC_WRITE_PAIR, S_ECC_WRITE_DRAIN,
         S_ECC_REDUCE_LOAD_LO_WAIT, S_ECC_REDUCE_LOAD_LO, S_ECC_REDUCE_LOAD_HI_WAIT, S_ECC_REDUCE_WRITE,
+        S_ECC_INV_INIT, S_ECC_INV_COPY_WAIT, S_ECC_INV_COPY_WRITE, S_ECC_INV_STEP, S_ECC_INV_ISSUE_SQR,
+        S_ECC_INV_AFTER_SQR, S_ECC_INV_AFTER_MUL, S_ECC_JOB_DONE,
         S_HSPREAD_LO_WRITE, S_HSPREAD_HI_WRITE
     } st_t;
     st_t st_q, st_n;
@@ -146,9 +148,30 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
     logic [255:0]         ecc_reduce_result;
     logic                 ecc_autoreduce_q, ecc_autoreduce_n;
     logic                 ecc_mac_q, ecc_mac_n;
-    logic [3:0]           ecc_sqr_repeat_q, ecc_sqr_repeat_n;
+    logic [6:0]           ecc_sqr_repeat_q, ecc_sqr_repeat_n;
     logic                 ecc_leaf_first;
     logic                 ecc_leaf_last;
+    typedef enum logic [1:0] {
+        ECC_JOB_NONE = 2'd0,
+        ECC_JOB_INV  = 2'd1
+    } ecc_job_kind_e;
+    typedef enum logic [2:0] {
+        ECC_PHASE_NONE          = 3'd0,
+        ECC_PHASE_INV_SQR       = 3'd1,
+        ECC_PHASE_INV_MUL       = 3'd2,
+        ECC_PHASE_INV_COPY_INIT = 3'd3,
+        ECC_PHASE_INV_COPY_TMP  = 3'd4
+    } ecc_job_phase_e;
+    ecc_job_kind_e      ecc_job_kind_q, ecc_job_kind_n;
+    ecc_job_phase_e     ecc_job_phase_q, ecc_job_phase_n;
+    logic               ecc_job_active_q, ecc_job_active_n;
+    logic               ecc_job_done_q, ecc_job_done_n;
+    logic [15:0]        ecc_job_cycle_q, ecc_job_cycle_n;
+    logic [3:0]         ecc_inv_step_q, ecc_inv_step_n;
+    logic [VRF_IDX_W-1:0] ecc_job_src_q, ecc_job_src_n;
+    logic [VRF_IDX_W-1:0] ecc_job_dst_q, ecc_job_dst_n;
+    logic [VRF_IDX_W-1:0] ecc_job_copy_src_q, ecc_job_copy_src_n;
+    logic [VRF_IDX_W-1:0] ecc_job_copy_dst_q, ecc_job_copy_dst_n;
     logic                pop_d_mux;
     logic                xor_d_mux;
     logic                ecc_issue_pop;
@@ -199,6 +222,36 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             UOP_HMATCH_CHUNK:     p4_arch_from_uop = HDEC_HMATCH;
             UOP_HCNTCLIP_READ:    p4_arch_from_uop = HDEC_HCNTCLIP;
             default:              p4_arch_from_uop = HDEC_VWR64;
+        endcase
+    endfunction
+
+    function automatic logic ecc_inv_step_needs_tmp(input logic [3:0] step);
+        unique case (step)
+            4'd2, 4'd4, 4'd5, 4'd7, 4'd8, 4'd9: ecc_inv_step_needs_tmp = 1'b1;
+            default: ecc_inv_step_needs_tmp = 1'b0;
+        endcase
+    endfunction
+
+    function automatic logic ecc_inv_step_has_mul(input logic [3:0] step);
+        ecc_inv_step_has_mul = (step != 4'd10);
+    endfunction
+
+    function automatic logic ecc_inv_step_mul_src_is_orig(input logic [3:0] step);
+        unique case (step)
+            4'd0, 4'd1, 4'd3, 4'd6: ecc_inv_step_mul_src_is_orig = 1'b1;
+            default: ecc_inv_step_mul_src_is_orig = 1'b0;
+        endcase
+    endfunction
+
+    function automatic logic [6:0] ecc_inv_step_sqr_repeat(input logic [3:0] step);
+        unique case (step)
+            4'd2: ecc_inv_step_sqr_repeat = 7'd2;   // 3 squares total
+            4'd4: ecc_inv_step_sqr_repeat = 7'd6;   // 7 squares total
+            4'd5: ecc_inv_step_sqr_repeat = 7'd13;  // 14 squares total
+            4'd7: ecc_inv_step_sqr_repeat = 7'd28;  // 29 squares total
+            4'd8: ecc_inv_step_sqr_repeat = 7'd57;  // 58 squares total
+            4'd9: ecc_inv_step_sqr_repeat = 7'd115; // 116 squares total
+            default: ecc_inv_step_sqr_repeat = 7'd0; // 1 square total
         endcase
     endfunction
 
@@ -560,6 +613,11 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
         ecc_fold_word_n=ecc_fold_word_q;
         ecc_product_we=1'b0;
         ecc_autoreduce_n=ecc_autoreduce_q; ecc_mac_n=ecc_mac_q; ecc_sqr_repeat_n=ecc_sqr_repeat_q;
+        ecc_job_kind_n=ecc_job_kind_q; ecc_job_phase_n=ecc_job_phase_q;
+        ecc_job_active_n=ecc_job_active_q; ecc_job_done_n=ecc_job_done_q;
+        ecc_job_cycle_n=ecc_job_cycle_q + (ecc_job_active_q ? 16'd1 : 16'd0);
+        ecc_inv_step_n=ecc_inv_step_q; ecc_job_src_n=ecc_job_src_q; ecc_job_dst_n=ecc_job_dst_q;
+        ecc_job_copy_src_n=ecc_job_copy_src_q; ecc_job_copy_dst_n=ecc_job_copy_dst_q;
         ecc_pipe0_valid_n=1'b0; ecc_pipe0_diag_slot_n=ecc_pipe0_diag_slot_q;
         ecc_pipe1_valid_n=ecc_pipe0_valid_q; ecc_pipe1_diag_slot_n=ecc_pipe0_diag_slot_q;
         lane_cnt_valid='0;
@@ -607,6 +665,14 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             HDEC_VRD64: begin vrf_ra[vaddr_bank_q]=vaddr_idx_q;bk_n=vaddr_bank_q;st_n=S_RD_WAIT;end
 
             HDEC_ECC_MUL: begin
+                ecc_leaf_a_n  = '0;
+                ecc_leaf_b_n  = '0;
+                ecc_leaf_prod_n = '0;
+                ecc_leaf_path_n = '0;
+                ecc_diag_slot_n = '0;
+                ecc_fold_word_n = '0;
+                ecc_pipe0_valid_n = 1'b0;
+                ecc_pipe1_valid_n = 1'b0;
                 if ((a_q[17:12] == 6'd63)
                  || (a_q[32] && ((a_q[23:18] == a_q[17:12])
                                || (a_q[23:18] == (a_q[17:12] + 6'd1))))) begin
@@ -617,17 +683,9 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                     ecc_acc_dst_n = a_q[23:18];
                     ecc_src_a_n = a_q[11:6];
                     ecc_src_b_n = a_q[5:0];
-                    ecc_leaf_a_n  = '0;
-                    ecc_leaf_b_n  = '0;
-                    ecc_leaf_prod_n = '0;
-                    ecc_leaf_path_n = '0;
-                    ecc_diag_slot_n = '0;
-                    ecc_fold_word_n = '0;
                     ecc_autoreduce_n = a_q[31] | a_q[32];
                     ecc_mac_n = a_q[32];
                     ecc_sqr_repeat_n='0;
-                    ecc_pipe0_valid_n = 1'b0;
-                    ecc_pipe1_valid_n = 1'b0;
                     vrf_ra[0]=a_q[11:6]; vrf_ra[1]=a_q[11:6];
                     vrf_ra[2]=a_q[11:6]; vrf_ra[3]=a_q[11:6];
                     st_n=S_ECC_LOAD_A_WAIT;
@@ -635,8 +693,31 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             end
 
             HDEC_ECC_STATUS: begin
-                res_n={56'b0, ecc_dst_q, STATUS_OK};
-                st_n=S_RESULT;
+                if (a_q[31]) begin
+                    if ((a_q[17:12] > 6'd61)
+                     || (a_q[5:0] == a_q[17:12])
+                     || (a_q[5:0] == (a_q[17:12] + 6'd1))
+                     || (a_q[5:0] == (a_q[17:12] + 6'd2))) begin
+                        res_n={62'b0,STATUS_ERROR};st_n=S_RESULT;
+                    end else begin
+                        ecc_job_kind_n=ECC_JOB_INV;
+                        ecc_job_phase_n=ECC_PHASE_NONE;
+                        ecc_job_active_n=1'b1;
+                        ecc_job_done_n=1'b0;
+                        ecc_job_cycle_n='0;
+                        ecc_job_src_n=a_q[5:0];
+                        ecc_job_dst_n=a_q[17:12];
+                        ecc_inv_step_n='0;
+                        ecc_dst_n=a_q[17:12];
+                        st_n=S_ECC_INV_INIT;
+                    end
+                end else if (a_q[30]) begin
+                    res_n={62'b0,STATUS_NOT_IMPLEMENTED};st_n=S_RESULT;
+                end else begin
+                    res_n={32'b0, ecc_job_cycle_q, 6'b0, ecc_job_dst_q,
+                           ecc_job_done_q, ecc_job_active_q, STATUS_OK};
+                    st_n=S_RESULT;
+                end
             end
 
             HDEC_ECC_ADD: begin
@@ -773,7 +854,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                         ecc_acc_dst_n=a_q[17:12];
                         ecc_autoreduce_n=a_q[19] | a_q[20];
                         ecc_mac_n=a_q[20];
-                        ecc_sqr_repeat_n=(a_q[19] | a_q[20]) ? a_q[27:24] : 4'd0;
+                        ecc_sqr_repeat_n=(a_q[19] | a_q[20]) ? {3'b0, a_q[27:24]} : 7'd0;
                         vrf_ra[0]=a_q[11:6]; vrf_ra[1]=a_q[11:6];
                         vrf_ra[2]=a_q[11:6]; vrf_ra[3]=a_q[11:6];
                         st_n=S_RD_WAIT;
@@ -806,7 +887,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
         S_VWR_WAIT: begin res_n='0;st_n=S_RESULT;end
 
         S_RD_WAIT: begin
-            if ((op_q == HDEC_HPERM) && hperm_spread_q)
+            if (((op_q == HDEC_HPERM) && hperm_spread_q)
+             || (ecc_job_active_q && (ecc_job_phase_q == ECC_PHASE_INV_SQR)))
                 st_n=S_HSPREAD_LO_WRITE;
             else
                 st_n=S_RD_CAPTURE;
@@ -969,19 +1051,25 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                 vrf_ra[0]=ecc_src_a_q; vrf_ra[1]=ecc_src_a_q;
                 vrf_ra[2]=ecc_src_a_q; vrf_ra[3]=ecc_src_a_q;
                 st_n=S_ECC_REDUCE_LOAD_LO_WAIT;
-            end else if (ecc_sqr_repeat_q != 4'd0) begin
+            end else if (ecc_sqr_repeat_q != 7'd0) begin
                 hperm_dst_base_n=ecc_dst_q;
                 hperm_src_base_n=ecc_dst_q;
                 hperm_spread_n=1'b1;
                 ecc_src_a_n=ecc_dst_q;
                 ecc_autoreduce_n=1'b1;
-                ecc_sqr_repeat_n=ecc_sqr_repeat_q - 4'd1;
+                ecc_sqr_repeat_n=ecc_sqr_repeat_q - 7'd1;
                 vrf_ra[0]=ecc_dst_q; vrf_ra[1]=ecc_dst_q;
                 vrf_ra[2]=ecc_dst_q; vrf_ra[3]=ecc_dst_q;
                 st_n=S_RD_WAIT;
             end else begin
-                res_n={56'b0, ecc_dst_q, STATUS_OK};
-                st_n=S_RESULT;
+                if (ecc_job_active_q && (ecc_job_phase_q == ECC_PHASE_INV_SQR)) begin
+                    st_n=S_ECC_INV_AFTER_SQR;
+                end else if (ecc_job_active_q && (ecc_job_phase_q == ECC_PHASE_INV_MUL)) begin
+                    st_n=S_ECC_INV_AFTER_MUL;
+                end else begin
+                    res_n={56'b0, ecc_dst_q, STATUS_OK};
+                    st_n=S_RESULT;
+                end
             end
         end
 
@@ -1009,7 +1097,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             vrf_wd[2]=ecc_reduce_result[191:128];
             vrf_wd[3]=ecc_reduce_result[255:192];
             ecc_autoreduce_n=1'b0;
-            if (ecc_mac_q && (ecc_sqr_repeat_q == 4'd0)) begin
+            if (ecc_mac_q && (ecc_sqr_repeat_q == 7'd0)) begin
                 uop_p0_n='0;
                 uop_p0_n.valid     = 1'b1;
                 uop_p0_n.op_type   = UOP_HBIND_CHUNK;
@@ -1019,12 +1107,110 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                 uop_p0_n.chunk_idx = 2'd3;
                 p4_arch_op_n       = HDEC_ECC_MUL;
                 st_n=S_UOP_P1_RD0;
-            end else if (ecc_sqr_repeat_q == 4'd0) begin
+            end else if (ecc_sqr_repeat_q == 7'd0) begin
                 res_n={56'b0, ecc_dst_q, STATUS_OK};
                 st_n=S_ECC_WRITE_DRAIN;
             end else begin
                 st_n=S_ECC_WRITE_DRAIN;
             end
+        end
+
+        S_ECC_INV_INIT: begin
+            ecc_inv_step_n='0;
+            ecc_job_phase_n=ECC_PHASE_INV_COPY_INIT;
+            ecc_job_copy_src_n=ecc_job_src_q;
+            ecc_job_copy_dst_n=ecc_job_dst_q;
+            vrf_ra[0]=ecc_job_src_q; vrf_ra[1]=ecc_job_src_q;
+            vrf_ra[2]=ecc_job_src_q; vrf_ra[3]=ecc_job_src_q;
+            st_n=S_ECC_INV_COPY_WAIT;
+        end
+
+        S_ECC_INV_COPY_WAIT: begin
+            st_n=S_ECC_INV_COPY_WRITE;
+        end
+
+        S_ECC_INV_COPY_WRITE: begin
+            vrf_we='1;
+            vrf_wa[0]=ecc_job_copy_dst_q; vrf_wa[1]=ecc_job_copy_dst_q;
+            vrf_wa[2]=ecc_job_copy_dst_q; vrf_wa[3]=ecc_job_copy_dst_q;
+            vrf_wd=vrf_rd;
+            if (ecc_job_phase_q == ECC_PHASE_INV_COPY_TMP) begin
+                ecc_job_phase_n=ECC_PHASE_NONE;
+                st_n=S_ECC_INV_ISSUE_SQR;
+            end else begin
+                ecc_job_phase_n=ECC_PHASE_NONE;
+                st_n=S_ECC_INV_STEP;
+            end
+        end
+
+        S_ECC_INV_STEP: begin
+            if (ecc_inv_step_needs_tmp(ecc_inv_step_q)) begin
+                ecc_job_phase_n=ECC_PHASE_INV_COPY_TMP;
+                ecc_job_copy_src_n=ecc_job_dst_q;
+                ecc_job_copy_dst_n=ecc_job_dst_q + 6'd2;
+                vrf_ra[0]=ecc_job_dst_q; vrf_ra[1]=ecc_job_dst_q;
+                vrf_ra[2]=ecc_job_dst_q; vrf_ra[3]=ecc_job_dst_q;
+                st_n=S_ECC_INV_COPY_WAIT;
+            end else begin
+                st_n=S_ECC_INV_ISSUE_SQR;
+            end
+        end
+
+        S_ECC_INV_ISSUE_SQR: begin
+            hperm_dst_base_n=ecc_job_dst_q;
+            hperm_src_base_n=ecc_job_dst_q;
+            hperm_spread_n=1'b1;
+            ecc_dst_n=ecc_job_dst_q;
+            ecc_src_a_n=ecc_job_dst_q;
+            ecc_autoreduce_n=1'b1;
+            ecc_mac_n=1'b0;
+            ecc_sqr_repeat_n=ecc_inv_step_sqr_repeat(ecc_inv_step_q);
+            ecc_job_phase_n=ECC_PHASE_INV_SQR;
+            vrf_ra[0]=ecc_job_dst_q; vrf_ra[1]=ecc_job_dst_q;
+            vrf_ra[2]=ecc_job_dst_q; vrf_ra[3]=ecc_job_dst_q;
+            st_n=S_RD_WAIT;
+        end
+
+        S_ECC_INV_AFTER_SQR: begin
+            ecc_job_phase_n=ECC_PHASE_NONE;
+            if (!ecc_inv_step_has_mul(ecc_inv_step_q)) begin
+                st_n=S_ECC_JOB_DONE;
+            end else begin
+                ecc_dst_n=ecc_job_dst_q;
+                ecc_acc_dst_n='0;
+                ecc_src_a_n=ecc_job_dst_q;
+                ecc_src_b_n=ecc_inv_step_mul_src_is_orig(ecc_inv_step_q) ? ecc_job_src_q
+                                                                          : (ecc_job_dst_q + 6'd2);
+                ecc_leaf_a_n='0;
+                ecc_leaf_b_n='0;
+                ecc_leaf_prod_n='0;
+                ecc_leaf_path_n='0;
+                ecc_diag_slot_n='0;
+                ecc_fold_word_n='0;
+                ecc_autoreduce_n=1'b1;
+                ecc_mac_n=1'b0;
+                ecc_sqr_repeat_n='0;
+                ecc_pipe0_valid_n=1'b0;
+                ecc_pipe1_valid_n=1'b0;
+                ecc_job_phase_n=ECC_PHASE_INV_MUL;
+                vrf_ra[0]=ecc_job_dst_q; vrf_ra[1]=ecc_job_dst_q;
+                vrf_ra[2]=ecc_job_dst_q; vrf_ra[3]=ecc_job_dst_q;
+                st_n=S_ECC_LOAD_A_WAIT;
+            end
+        end
+
+        S_ECC_INV_AFTER_MUL: begin
+            ecc_job_phase_n=ECC_PHASE_NONE;
+            ecc_inv_step_n=ecc_inv_step_q + 4'd1;
+            st_n=S_ECC_INV_STEP;
+        end
+
+        S_ECC_JOB_DONE: begin
+            ecc_job_active_n=1'b0;
+            ecc_job_done_n=1'b1;
+            ecc_job_phase_n=ECC_PHASE_NONE;
+            res_n={32'b0, ecc_job_cycle_q, 6'b0, ecc_job_dst_q, 2'b10, STATUS_OK};
+            st_n=S_RESULT;
         end
 
         S_CLR: begin
@@ -1348,6 +1534,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             ecc_src_a_q<='0;ecc_src_b_q<='0;ecc_dst_q<='0;ecc_acc_dst_q<='0;
             ecc_leaf_a_q<='0;ecc_leaf_b_q<='0;ecc_leaf_prod_q<='0;ecc_leaf_path_q<='0;ecc_diag_slot_q<='0;ecc_fold_word_q<='0;
             ecc_autoreduce_q<=1'b0;ecc_mac_q<=1'b0;ecc_sqr_repeat_q<='0;
+            ecc_job_kind_q<=ECC_JOB_NONE;ecc_job_phase_q<=ECC_PHASE_NONE;ecc_job_active_q<=1'b0;ecc_job_done_q<=1'b0;ecc_job_cycle_q<='0;ecc_inv_step_q<='0;ecc_job_src_q<='0;ecc_job_dst_q<='0;ecc_job_copy_src_q<='0;ecc_job_copy_dst_q<='0;
             ecc_pipe0_valid_q<=1'b0;ecc_pipe1_valid_q<=1'b0;ecc_pipe0_diag_slot_q<='0;ecc_pipe1_diag_slot_q<='0;
         end
         else begin
@@ -1369,6 +1556,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             ecc_src_a_q<=ecc_src_a_n;ecc_src_b_q<=ecc_src_b_n;ecc_dst_q<=ecc_dst_n;ecc_acc_dst_q<=ecc_acc_dst_n;
             ecc_leaf_a_q<=ecc_leaf_a_n;ecc_leaf_b_q<=ecc_leaf_b_n;ecc_leaf_prod_q<=ecc_leaf_prod_n;ecc_leaf_path_q<=ecc_leaf_path_n;ecc_diag_slot_q<=ecc_diag_slot_n;ecc_fold_word_q<=ecc_fold_word_n;
             ecc_autoreduce_q<=ecc_autoreduce_n;ecc_mac_q<=ecc_mac_n;ecc_sqr_repeat_q<=ecc_sqr_repeat_n;
+            ecc_job_kind_q<=ecc_job_kind_n;ecc_job_phase_q<=ecc_job_phase_n;ecc_job_active_q<=ecc_job_active_n;ecc_job_done_q<=ecc_job_done_n;ecc_job_cycle_q<=ecc_job_cycle_n;ecc_inv_step_q<=ecc_inv_step_n;ecc_job_src_q<=ecc_job_src_n;ecc_job_dst_q<=ecc_job_dst_n;ecc_job_copy_src_q<=ecc_job_copy_src_n;ecc_job_copy_dst_q<=ecc_job_copy_dst_n;
             ecc_pipe0_valid_q<=ecc_pipe0_valid_n;ecc_pipe1_valid_q<=ecc_pipe1_valid_n;ecc_pipe0_diag_slot_q<=ecc_pipe0_diag_slot_n;ecc_pipe1_diag_slot_q<=ecc_pipe1_diag_slot_n;
         end
     end

@@ -49,7 +49,11 @@ package hdec_pkg;
         //   [17:12]=tmp/product dst, [11:6]=src_a, [5:0]=src_b
         //   [31]=auto reduce to tmp, [32]=GF_MAC acc[23:18] ^= reduce(src_a*src_b)
         HDEC_ECC_MUL   = 4'd11,   // ECC raw/GF(2^233) multiply wrapper
-        HDEC_ECC_STATUS= 4'd12,   // ECC V1 status/debug read
+        // ECC status / macro job operand:
+        //   [31]=GF_INV start, [17:12]=dst, [5:0]=src
+        //        GF_INV also uses dst+1 as product scratch and dst+2 as ITA temp.
+        //   [30]=reserved PMUL start for V17 point-multiply controller
+        HDEC_ECC_STATUS= 4'd12,   // ECC status/debug read and macro-job entry
         HDEC_ECC_ADD   = 4'd13,   // ECC V1 GF(2) add/sub via shared XOR lane
         HDEC_ECC_ALIGN = 4'd14,   // ECC V1 256-bit field row align via shared HPERM lane
         HDEC_ECC_REDUCE= 4'd15    // ECC V1 GF(2^233) reduce, f=x^233+x^74+1
@@ -216,10 +220,10 @@ package hdec_pkg;
         tbl[11].resp   = '{accept:1'b1, writeback:1'b1, register_read:2'b01};
         tbl[11].opcode = HDEC_ECC_MUL;
 
-        // 12: hdec_ecc_status (funct7=000_0011, funct3=100, no reg read)
+        // 12: hdec_ecc_status (funct7=000_0011, funct3=100, rs1)
         tbl[12].mask   = mask;
         tbl[12].instr  = base | (F7_PHASE1_EXT << 25) | (F3_ECC_STATUS << 12);
-        tbl[12].resp   = '{accept:1'b1, writeback:1'b1, register_read:2'b00};
+        tbl[12].resp   = '{accept:1'b1, writeback:1'b1, register_read:2'b01};
         tbl[12].opcode = HDEC_ECC_STATUS;
 
         // 13: hdec_ecc_add (funct7=000_0011, funct3=101, rs1)
