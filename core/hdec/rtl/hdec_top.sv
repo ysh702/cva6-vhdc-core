@@ -570,6 +570,36 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                 st_n=S_RESULT;
             end
 
+            HDEC_ECC_ADD: begin
+                uop_p0_n.valid        = 1'b1;
+                uop_p0_n.op_type      = UOP_HBIND_CHUNK;
+                uop_p0_n.src0_addr    = a_q[11:6];
+                uop_p0_n.src1_addr    = a_q[5:0];
+                uop_p0_n.dst_addr     = a_q[17:12];
+                uop_p0_n.chunk_idx    = 2'd3;
+                st_n=S_UOP_P1_RD0;
+            end
+
+            HDEC_ECC_ALIGN: begin
+                hperm_dst_base_n       = a_q[17:12];
+                hperm_src_base_n       = a_q[5:0];
+                hperm_word_off_n       = 4'd0;
+                hperm_nibble_n         = a_q[23:20];
+                hperm_bit_low_n        = a_q[19:18];
+                hperm_spread_n         = 1'b0;
+                hperm_lane_base_n      = a_q[25:24];
+                chunk_cnt_n            = 2'd3;
+                uop_p0_n.valid         = 1'b1;
+                uop_p0_n.op_type       = UOP_HPERM_CHUNK;
+                uop_p0_n.chunk_idx     = 2'd3;
+                uop_p0_n.src0_addr     = a_q[5:0];
+                uop_p0_n.src1_addr     = a_q[11:6];
+                uop_p0_n.dst_addr      = a_q[17:12];
+                uop_p0_n.perm_nibble   = a_q[23:20];
+                uop_p0_n.use_shift     = 1'b1;
+                st_n=S_UOP_P1_RD0;
+            end
+
             HDEC_HCLR: begin
                 clr_base_n={a_q[3:0],2'b00};clr_cnt_n=4'd0;st_n=S_CLR;
             end
