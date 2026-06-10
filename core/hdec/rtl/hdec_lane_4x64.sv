@@ -73,11 +73,11 @@ module hdec_lane_4x64
     input  logic [1:0]                        cnt_subgroup_i,
     output logic [LANE_WIDTH-1:0]             cnt_new_counter_o,
 
-    // ── Shift-Align Compute Path (4-bit granular, lane-local) ───────────────
+    // ── Shift-Align Compute Path (bit-granular, lane-local) ─────────────────
     input  logic                              shift_valid_i,
     input  logic [LANE_WIDTH-1:0]             shift_src_a_i,
     input  logic [LANE_WIDTH-1:0]             shift_src_b_i,
-    input  logic [3:0]                        shift_nibble_i,
+    input  logic [5:0]                        shift_bit_i,
     output logic [LANE_WIDTH-1:0]             shift_result_o,
 
     // ── Clip Compute Path (HDC counter threshold) ───────────────────────────
@@ -107,7 +107,7 @@ module hdec_lane_4x64
     hdec_lane_shift_align i_shift_align (
         .src_a_i       (shift_src_a_i),
         .src_b_i       (shift_src_b_i),
-        .nibble_shift_i(shift_nibble_i),
+        .bit_shift_i   (shift_bit_i),
         .result_o      (shift_result_o)
     );
 
