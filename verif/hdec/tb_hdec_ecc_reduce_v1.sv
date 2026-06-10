@@ -45,12 +45,31 @@ module tb_hdec_ecc_reduce_v1;
         end
     endfunction
 
+    function automatic logic [63:0] ecc_gfmul_operand(
+        input logic [5:0] dst_idx,
+        input logic [5:0] src_a_idx,
+        input logic [5:0] src_b_idx
+    );
+        begin
+            ecc_gfmul_operand = ecc_mul_operand(dst_idx, src_a_idx, src_b_idx) | (64'h1 << 31);
+        end
+    endfunction
+
     function automatic logic [63:0] hspread_operand(
         input logic [5:0] dst_idx,
         input logic [5:0] src_idx
     );
         begin
             hspread_operand = {45'd0, 1'b1, 6'd0, src_idx, dst_idx};
+        end
+    endfunction
+
+    function automatic logic [63:0] hspread_reduce_operand(
+        input logic [5:0] dst_idx,
+        input logic [5:0] src_idx
+    );
+        begin
+            hspread_reduce_operand = {44'd0, 1'b1, 1'b1, 6'd0, src_idx, dst_idx};
         end
     endfunction
 
@@ -104,6 +123,7 @@ module tb_hdec_ecc_reduce_v1;
     task automatic issue(input hdec_op_t op,
                          input logic [63:0] a,
                          output logic [63:0] result);
+        bit seen;
         begin
             while (!ready_o) @(posedge clk_i);
             @(posedge clk_i);
@@ -118,15 +138,17 @@ module tb_hdec_ecc_reduce_v1;
             operand_b_i <= '0;
 
             result = 'x;
-            for (int cycles = 0; cycles < 2000; cycles++) begin
+            seen = 1'b0;
+            for (int cycles = 0; cycles < 2000 && !seen; cycles++) begin
                 @(posedge clk_i);
                 #1;
                 if (valid_o) begin
                     result = result_o;
-                    return;
+                    seen = 1'b1;
                 end
             end
-            $fatal(1, "Timeout waiting for op %0d", op);
+            if (!seen)
+                $fatal(1, "Timeout waiting for op %0d", op);
         end
     endtask
 
@@ -249,6 +271,18 @@ module tb_hdec_ecc_reduce_v1;
             $fatal(1, "SQR->REDUCE returned bad status 0x%016h", status);
         expected = slow_reduce233(slow_square_raw233(a_field));
         check_row("SQR->REDUCE", 6'd36, expected);
+
+        issue(HDEC_ECC_MUL, ecc_gfmul_operand(6'd30, 6'd24, 6'd25), status);
+        if (status[1:0] !== STATUS_OK)
+            $fatal(1, "auto GF_MUL returned bad status 0x%016h", status);
+        expected = slow_reduce233(slow_mul_raw233(a_field, b_field));
+        check_row("auto GF_MUL", 6'd30, expected);
+
+        issue(HDEC_HPERM, hspread_reduce_operand(6'd38, 6'd24), status);
+        if (status[1:0] !== STATUS_OK)
+            $fatal(1, "auto GF_SQR returned bad status 0x%016h", status);
+        expected = slow_reduce233(slow_square_raw233(a_field));
+        check_row("auto GF_SQR", 6'd38, expected);
 
         run_reduce(6'd29, 6'd63, status);
         if (status[1:0] !== STATUS_ERROR)
