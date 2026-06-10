@@ -55,6 +55,19 @@ module tb_hdec_ecc_reduce_v1;
         end
     endfunction
 
+    function automatic logic [63:0] ecc_gfmac_operand(
+        input logic [5:0] acc_dst_idx,
+        input logic [5:0] tmp_idx,
+        input logic [5:0] src_a_idx,
+        input logic [5:0] src_b_idx
+    );
+        begin
+            ecc_gfmac_operand = ecc_mul_operand(tmp_idx, src_a_idx, src_b_idx)
+                              | ({58'd0, acc_dst_idx} << 18)
+                              | (64'h1 << 32);
+        end
+    endfunction
+
     function automatic logic [63:0] hspread_operand(
         input logic [5:0] dst_idx,
         input logic [5:0] src_idx
@@ -226,6 +239,7 @@ module tb_hdec_ecc_reduce_v1;
         logic [511:0] product;
         logic [255:0] a_field;
         logic [255:0] b_field;
+        logic [255:0] acc_field;
         logic [255:0] expected;
 
         valid_i = 1'b0;
@@ -283,6 +297,15 @@ module tb_hdec_ecc_reduce_v1;
             $fatal(1, "auto GF_SQR returned bad status 0x%016h", status);
         expected = slow_reduce233(slow_square_raw233(a_field));
         check_row("auto GF_SQR", 6'd38, expected);
+
+        acc_field = 256'h0000000000000000000000000000000123456789abcdef0011223344556677;
+        acc_field[255:233] = '0;
+        write_row(6'd42, acc_field);
+        issue(HDEC_ECC_MUL, ecc_gfmac_operand(6'd42, 6'd40, 6'd24, 6'd25), status);
+        if (status[1:0] !== STATUS_OK)
+            $fatal(1, "auto GF_MAC returned bad status 0x%016h", status);
+        expected = acc_field ^ slow_reduce233(slow_mul_raw233(a_field, b_field));
+        check_row("auto GF_MAC", 6'd42, expected);
 
         run_reduce(6'd29, 6'd63, status);
         if (status[1:0] !== STATUS_ERROR)

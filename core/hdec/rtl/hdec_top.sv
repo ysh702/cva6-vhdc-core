@@ -119,6 +119,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
     logic [VRF_IDX_W-1:0] ecc_src_a_q, ecc_src_a_n;
     logic [VRF_IDX_W-1:0] ecc_src_b_q, ecc_src_b_n;
     logic [VRF_IDX_W-1:0] ecc_dst_q,   ecc_dst_n;
+    logic [VRF_IDX_W-1:0] ecc_acc_dst_q, ecc_acc_dst_n;
     logic [31:0]          ecc_leaf_a_q,  ecc_leaf_a_n;
     logic [31:0]          ecc_leaf_b_q,  ecc_leaf_b_n;
     logic [63:0]          ecc_leaf_prod_q, ecc_leaf_prod_n;
@@ -144,6 +145,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
     logic [VRF_IDX_W-1:0] ecc_product_wb_addr;
     logic [255:0]         ecc_reduce_result;
     logic                 ecc_autoreduce_q, ecc_autoreduce_n;
+    logic                 ecc_mac_q, ecc_mac_n;
     logic                 ecc_leaf_first;
     logic                 ecc_leaf_last;
     logic                pop_d_mux;
@@ -550,13 +552,13 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
         lane_result_n=lane_result_q; lane_clip_n=lane_clip_q;
         p2_lane_compute_n=1'b0;
         p4_arch_op_n=p4_arch_op_q;
-        ecc_src_a_n=ecc_src_a_q; ecc_src_b_n=ecc_src_b_q; ecc_dst_n=ecc_dst_q;
+        ecc_src_a_n=ecc_src_a_q; ecc_src_b_n=ecc_src_b_q; ecc_dst_n=ecc_dst_q; ecc_acc_dst_n=ecc_acc_dst_q;
         ecc_leaf_a_n=ecc_leaf_a_q; ecc_leaf_b_n=ecc_leaf_b_q; ecc_leaf_prod_n=ecc_leaf_prod_q;
         ecc_diag_base_n=ecc_diag_base_q;
         ecc_leaf_path_n=ecc_leaf_path_q;
         ecc_fold_word_n=ecc_fold_word_q;
         ecc_product_we=1'b0;
-        ecc_autoreduce_n=ecc_autoreduce_q;
+        ecc_autoreduce_n=ecc_autoreduce_q; ecc_mac_n=ecc_mac_q;
         ecc_pipe0_valid_n=1'b0; ecc_pipe0_diag_n=ecc_pipe0_diag_q;
         ecc_pipe1_valid_n=ecc_pipe0_valid_q; ecc_pipe1_diag_n=ecc_pipe0_diag_q;
         lane_cnt_valid='0;
@@ -604,11 +606,14 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             HDEC_VRD64: begin vrf_ra[vaddr_bank_q]=vaddr_idx_q;bk_n=vaddr_bank_q;st_n=S_RD_WAIT;end
 
             HDEC_ECC_MUL: begin
-                if (a_q[17:12] == 6'd63) begin
-                    ecc_autoreduce_n=1'b0;
+                if ((a_q[17:12] == 6'd63)
+                 || (a_q[32] && ((a_q[23:18] == a_q[17:12])
+                               || (a_q[23:18] == (a_q[17:12] + 6'd1))))) begin
+                    ecc_autoreduce_n=1'b0; ecc_mac_n=1'b0;
                     res_n={62'b0,STATUS_ERROR};st_n=S_RESULT;
                 end else begin
                     ecc_dst_n   = a_q[17:12];
+                    ecc_acc_dst_n = a_q[23:18];
                     ecc_src_a_n = a_q[11:6];
                     ecc_src_b_n = a_q[5:0];
                     ecc_leaf_a_n  = '0;
@@ -617,7 +622,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                     ecc_leaf_path_n = '0;
                     ecc_diag_base_n = '0;
                     ecc_fold_word_n = '0;
-                    ecc_autoreduce_n = a_q[31];
+                    ecc_autoreduce_n = a_q[31] | a_q[32];
+                    ecc_mac_n = a_q[32];
                     ecc_pipe0_valid_n = 1'b0;
                     ecc_pipe1_valid_n = 1'b0;
                     vrf_ra[0]=a_q[11:6]; vrf_ra[1]=a_q[11:6];
@@ -662,7 +668,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             end
 
             HDEC_ECC_REDUCE: begin
-                ecc_autoreduce_n=1'b0;
+                ecc_autoreduce_n=1'b0; ecc_mac_n=1'b0;
                 if (a_q[5:0] == 6'd63) begin
                     res_n={62'b0,STATUS_ERROR};st_n=S_RESULT;
                 end else begin
@@ -753,13 +759,14 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             HDEC_HPERM: begin
                 if (a_q[18]) begin
                     if (a_q[5:0] == 6'd63) begin
-                        ecc_autoreduce_n=1'b0;
+                        ecc_autoreduce_n=1'b0; ecc_mac_n=1'b0;
                         res_n={62'b0,STATUS_ERROR};st_n=S_RESULT;
                     end else begin
                         hperm_dst_base_n=a_q[5:0];
                         hperm_src_base_n=a_q[11:6];
                         hperm_spread_n=1'b1;
                         ecc_autoreduce_n=a_q[19];
+                        ecc_mac_n=1'b0;
                         vrf_ra[0]=a_q[11:6]; vrf_ra[1]=a_q[11:6];
                         vrf_ra[2]=a_q[11:6]; vrf_ra[3]=a_q[11:6];
                         st_n=S_RD_WAIT;
@@ -985,8 +992,20 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             vrf_wd[2]=ecc_reduce_result[191:128];
             vrf_wd[3]=ecc_reduce_result[255:192];
             ecc_autoreduce_n=1'b0;
-            res_n={56'b0, ecc_dst_q, STATUS_OK};
-            st_n=S_ECC_WRITE_DRAIN;
+            if (ecc_mac_q) begin
+                uop_p0_n='0;
+                uop_p0_n.valid     = 1'b1;
+                uop_p0_n.op_type   = UOP_HBIND_CHUNK;
+                uop_p0_n.src0_addr = ecc_acc_dst_q;
+                uop_p0_n.src1_addr = ecc_dst_q;
+                uop_p0_n.dst_addr  = ecc_acc_dst_q;
+                uop_p0_n.chunk_idx = 2'd3;
+                p4_arch_op_n       = HDEC_ECC_MUL;
+                st_n=S_UOP_P1_RD0;
+            end else begin
+                res_n={56'b0, ecc_dst_q, STATUS_OK};
+                st_n=S_ECC_WRITE_DRAIN;
+            end
         end
 
         S_CLR: begin
@@ -1097,7 +1116,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
 
         S_UOP_P3_GLOBAL: begin
             uop_p3_n.valid  = 1'b0;
-            p4_arch_op_n    = p4_arch_from_uop(uop_p3_q.op_type);
+            p4_arch_op_n    = ecc_mac_q ? HDEC_ECC_MUL : p4_arch_from_uop(uop_p3_q.op_type);
             unique case (uop_p3_q.op_type)
             UOP_HBIND_CHUNK: begin
                 vrf_we = '1;
@@ -1271,6 +1290,10 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                 else
                     res_n = {50'b0, hmatch_best_idx_q, hmatch_best_dist_q};
                 st_n = S_RESULT;
+            end else if ((p4_arch_op_q == HDEC_ECC_MUL) && ecc_mac_q) begin
+                ecc_mac_n = 1'b0;
+                res_n = {56'b0, ecc_acc_dst_q, STATUS_OK};
+                st_n = S_RESULT;
             end else st_n = S_RESULT;
         end
 
@@ -1303,9 +1326,9 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             lane_result_q<='0;lane_clip_q<='0;
             p2_lane_compute_q<=1'b0;
             p4_arch_op_q<=HDEC_VWR64;
-            ecc_src_a_q<='0;ecc_src_b_q<='0;ecc_dst_q<='0;
+            ecc_src_a_q<='0;ecc_src_b_q<='0;ecc_dst_q<='0;ecc_acc_dst_q<='0;
             ecc_leaf_a_q<='0;ecc_leaf_b_q<='0;ecc_leaf_prod_q<='0;ecc_leaf_path_q<='0;ecc_diag_base_q<='0;ecc_fold_word_q<='0;
-            ecc_autoreduce_q<=1'b0;
+            ecc_autoreduce_q<=1'b0;ecc_mac_q<=1'b0;
             ecc_pipe0_valid_q<=1'b0;ecc_pipe1_valid_q<=1'b0;ecc_pipe0_diag_q<='0;ecc_pipe1_diag_q<='0;
         end
         else begin
@@ -1324,9 +1347,9 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             lane_result_q<=lane_result_n;lane_clip_q<=lane_clip_n;
             p2_lane_compute_q<=p2_lane_compute_n;
             p4_arch_op_q<=p4_arch_op_n;
-            ecc_src_a_q<=ecc_src_a_n;ecc_src_b_q<=ecc_src_b_n;ecc_dst_q<=ecc_dst_n;
+            ecc_src_a_q<=ecc_src_a_n;ecc_src_b_q<=ecc_src_b_n;ecc_dst_q<=ecc_dst_n;ecc_acc_dst_q<=ecc_acc_dst_n;
             ecc_leaf_a_q<=ecc_leaf_a_n;ecc_leaf_b_q<=ecc_leaf_b_n;ecc_leaf_prod_q<=ecc_leaf_prod_n;ecc_leaf_path_q<=ecc_leaf_path_n;ecc_diag_base_q<=ecc_diag_base_n;ecc_fold_word_q<=ecc_fold_word_n;
-            ecc_autoreduce_q<=ecc_autoreduce_n;
+            ecc_autoreduce_q<=ecc_autoreduce_n;ecc_mac_q<=ecc_mac_n;
             ecc_pipe0_valid_q<=ecc_pipe0_valid_n;ecc_pipe1_valid_q<=ecc_pipe1_valid_n;ecc_pipe0_diag_q<=ecc_pipe0_diag_n;ecc_pipe1_diag_q<=ecc_pipe1_diag_n;
         end
     end

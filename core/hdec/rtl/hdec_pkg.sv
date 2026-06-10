@@ -42,7 +42,10 @@ package hdec_pkg;
         HDEC_HCNTCLIP  = 4'd8,    // was HDEC_CLIP
         HDEC_HMATCH    = 4'd9,    // was HDEC_HSEARCH
         HDEC_VADDR     = 4'd10,
-        HDEC_ECC_MUL   = 4'd11,   // ECC V1 raw GF(2) 256x256 diagonal multiply
+        // ECC multiply operand:
+        //   [17:12]=tmp/product dst, [11:6]=src_a, [5:0]=src_b
+        //   [31]=auto reduce to tmp, [32]=GF_MAC acc[23:18] ^= reduce(src_a*src_b)
+        HDEC_ECC_MUL   = 4'd11,   // ECC raw/GF(2^233) multiply wrapper
         HDEC_ECC_STATUS= 4'd12,   // ECC V1 status/debug read
         HDEC_ECC_ADD   = 4'd13,   // ECC V1 GF(2) add/sub via shared XOR lane
         HDEC_ECC_ALIGN = 4'd14,   // ECC V1 256-bit field row align via shared HPERM lane
