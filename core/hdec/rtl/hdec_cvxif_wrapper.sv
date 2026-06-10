@@ -34,6 +34,9 @@ module hdec_cvxif_wrapper import hdec_pkg::*; #(
         else if (instr[31:25]==7'b0000011 && instr[14:12]==3'b010) decoded_op = HDEC_VADDR;
         else if (instr[31:25]==7'b0000011 && instr[14:12]==3'b011) decoded_op = HDEC_ECC_MUL;
         else if (instr[31:25]==7'b0000011 && instr[14:12]==3'b100) decoded_op = HDEC_ECC_STATUS;
+        else if (instr[31:25]==7'b0000011 && instr[14:12]==3'b101) decoded_op = HDEC_ECC_ADD;
+        else if (instr[31:25]==7'b0000011 && instr[14:12]==3'b110) decoded_op = HDEC_ECC_ALIGN;
+        else if (instr[31:25]==7'b0000011 && instr[14:12]==3'b111) decoded_op = HDEC_ECC_REDUCE;
     end
     assign matched = (instr[6:0]==OPCODE_HDEC) && ((instr[31:25]==F7_PHASE1_BASE)||(instr[31:25]==F7_PHASE1_EXT));
 
@@ -92,6 +95,9 @@ module hdec_cvxif_wrapper import hdec_pkg::*; #(
             HDEC_VADDR:    perf_op_name = "VADDR";
             HDEC_ECC_MUL:    perf_op_name = "ECC_MUL";
             HDEC_ECC_STATUS: perf_op_name = "ECC_STATUS";
+            HDEC_ECC_ADD:    perf_op_name = "ECC_ADD";
+            HDEC_ECC_ALIGN:  perf_op_name = "ECC_ALIGN";
+            HDEC_ECC_REDUCE: perf_op_name = "ECC_REDUCE";
             default:       perf_op_name = "UNKNOWN";
         endcase
     endfunction

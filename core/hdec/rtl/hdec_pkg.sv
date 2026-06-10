@@ -45,7 +45,8 @@ package hdec_pkg;
         HDEC_ECC_MUL   = 4'd11,   // ECC V1 raw GF(2) 256x256 diagonal multiply
         HDEC_ECC_STATUS= 4'd12,   // ECC V1 status/debug read
         HDEC_ECC_ADD   = 4'd13,   // ECC V1 GF(2) add/sub via shared XOR lane
-        HDEC_ECC_ALIGN = 4'd14    // ECC V1 256-bit field row align via shared HPERM lane
+        HDEC_ECC_ALIGN = 4'd14,   // ECC V1 256-bit field row align via shared HPERM lane
+        HDEC_ECC_REDUCE= 4'd15    // ECC V1 GF(2^233) reduce, f=x^233+x^74+1
     } hdec_op_t;
 
     // ── UOP Pipeline Types ─────────────────────────────────────────────────
@@ -111,6 +112,7 @@ package hdec_pkg;
     localparam logic [2:0] F3_ECC_STATUS = 3'b100; // funct7=000_0011
     localparam logic [2:0] F3_ECC_ADD  = 3'b101;   // funct7=000_0011
     localparam logic [2:0] F3_ECC_ALIGN = 3'b110;  // funct7=000_0011
+    localparam logic [2:0] F3_ECC_REDUCE = 3'b111; // funct7=000_0011
 
     // ── CV-X-IF Issue Response Struct ───────────────────────────────────────
     typedef struct packed {
@@ -128,7 +130,7 @@ package hdec_pkg;
     } hdec_instr_entry_t;
 
     // ── Number of Instructions in Table ─────────────────────────────────────
-    localparam int HDEC_NB_INSTR = 15;
+    localparam int HDEC_NB_INSTR = 16;
 
     // ── Instruction Table Generator ─────────────────────────────────────────
     function automatic hdec_instr_entry_t [HDEC_NB_INSTR-1:0] get_hdec_instr_table();
@@ -225,6 +227,12 @@ package hdec_pkg;
         tbl[14].instr  = base | (F7_PHASE1_EXT << 25) | (F3_ECC_ALIGN << 12);
         tbl[14].resp   = '{accept:1'b1, writeback:1'b1, register_read:2'b01};
         tbl[14].opcode = HDEC_ECC_ALIGN;
+
+        // 15: hdec_ecc_reduce (funct7=000_0011, funct3=111, rs1)
+        tbl[15].mask   = mask;
+        tbl[15].instr  = base | (F7_PHASE1_EXT << 25) | (F3_ECC_REDUCE << 12);
+        tbl[15].resp   = '{accept:1'b1, writeback:1'b1, register_read:2'b01};
+        tbl[15].opcode = HDEC_ECC_REDUCE;
 
         return tbl;
     endfunction

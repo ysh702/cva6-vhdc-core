@@ -26,6 +26,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
         S_ECC_DIAG_ISSUE, S_ECC_DIAG_WAIT, S_ECC_DIAG_ACCUM,
         S_ECC_LEAF_FOLD,
         S_ECC_WRITE_PAIR, S_ECC_WRITE_DRAIN,
+        S_ECC_REDUCE_LOAD_LO_WAIT, S_ECC_REDUCE_LOAD_LO, S_ECC_REDUCE_LOAD_HI_WAIT, S_ECC_REDUCE_WRITE,
         S_HSPREAD_LO_WRITE, S_HSPREAD_HI_WRITE
     } st_t;
     st_t st_q, st_n;
@@ -140,6 +141,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
     logic [63:0]          ecc_product_even_contrib;
     logic [63:0]          ecc_product_odd_contrib;
     logic [VRF_IDX_W-1:0] ecc_product_wb_addr;
+    logic [255:0]         ecc_reduce_result;
     logic                 ecc_leaf_first;
     logic                 ecc_leaf_last;
     logic                pop_d_mux;
@@ -171,6 +173,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
     assign ecc_product_pair_wdata = (ecc_leaf_first ? '0 : ecc_product_pair_rdata)
                                   ^ {ecc_product_odd_contrib, ecc_product_even_contrib};
     assign ecc_product_wb_addr = ecc_dst_q + {5'b0, ecc_fold_word_q[1]};
+    assign ecc_reduce_result = ecc_reduce233({vrf_rd[3], vrf_rd[2], vrf_rd[1], vrf_rd[0],
+                                              hdc_src0_q[3], hdc_src0_q[2], hdc_src0_q[1], hdc_src0_q[0]});
     assign ecc_diag8_parity = {lane_popcnt_part_q[3][1][0], lane_popcnt_part_q[3][0][0],
                               lane_popcnt_part_q[2][1][0], lane_popcnt_part_q[2][0][0],
                               lane_popcnt_part_q[1][1][0], lane_popcnt_part_q[1][0][0],
@@ -226,6 +230,27 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             hspread_half64 = '0;
             for (int bit_idx = 0; bit_idx < 32; bit_idx++)
                 hspread_half64[bit_idx << 1] = half_word[bit_idx];
+        end
+    endfunction
+
+    function automatic logic [255:0] ecc_reduce233(
+        input logic [511:0] product
+    );
+        logic [352:0] stage1;
+        logic [119:0] stage2_hi;
+        begin
+            stage1 = '0;
+            // GF(2^233), f(x)=x^233+x^74+1:
+            // every coefficient at x^(233+j) folds to x^j and x^(74+j).
+            stage1[232:0] = product[232:0];
+            stage1[278:0] = stage1[278:0] ^ product[511:233];
+            stage1[352:74] = stage1[352:74] ^ product[511:233];
+
+            stage2_hi = stage1[352:233];
+            ecc_reduce233 = '0;
+            ecc_reduce233[232:0] = stage1[232:0];
+            ecc_reduce233[119:0] = ecc_reduce233[119:0] ^ stage2_hi;
+            ecc_reduce233[193:74] = ecc_reduce233[193:74] ^ stage2_hi;
         end
     endfunction
 
@@ -600,6 +625,18 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                 st_n=S_UOP_P1_RD0;
             end
 
+            HDEC_ECC_REDUCE: begin
+                if (a_q[5:0] == 6'd63) begin
+                    res_n={62'b0,STATUS_ERROR};st_n=S_RESULT;
+                end else begin
+                    ecc_dst_n = a_q[17:12];
+                    ecc_src_a_n = a_q[5:0];
+                    vrf_ra[0]=a_q[5:0]; vrf_ra[1]=a_q[5:0];
+                    vrf_ra[2]=a_q[5:0]; vrf_ra[3]=a_q[5:0];
+                    st_n=S_ECC_REDUCE_LOAD_LO_WAIT;
+                end
+            end
+
             HDEC_HCLR: begin
                 clr_base_n={a_q[3:0],2'b00};clr_cnt_n=4'd0;st_n=S_CLR;
             end
@@ -725,13 +762,14 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
         S_RD_CAPTURE: begin res_n=vrf_rd[bk_q];st_n=S_RESULT;end
 
         S_HSPREAD_LO_WRITE: begin
+            hdc_src0_n = vrf_rd;
             vrf_we = '1;
             vrf_wa[0]=hperm_dst_base_q; vrf_wa[1]=hperm_dst_base_q;
             vrf_wa[2]=hperm_dst_base_q; vrf_wa[3]=hperm_dst_base_q;
             vrf_wd[0]=hspread_half64(vrf_rd[0], 1'b0);
-            vrf_wd[1]=hspread_half64(vrf_rd[1], 1'b0);
-            vrf_wd[2]=hspread_half64(vrf_rd[2], 1'b0);
-            vrf_wd[3]=hspread_half64(vrf_rd[3], 1'b0);
+            vrf_wd[1]=hspread_half64(vrf_rd[0], 1'b1);
+            vrf_wd[2]=hspread_half64(vrf_rd[1], 1'b0);
+            vrf_wd[3]=hspread_half64(vrf_rd[1], 1'b1);
             st_n=S_HSPREAD_HI_WRITE;
         end
 
@@ -739,10 +777,10 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             vrf_we = '1;
             vrf_wa[0]=hperm_dst_base_q + 6'd1; vrf_wa[1]=hperm_dst_base_q + 6'd1;
             vrf_wa[2]=hperm_dst_base_q + 6'd1; vrf_wa[3]=hperm_dst_base_q + 6'd1;
-            vrf_wd[0]=hspread_half64(vrf_rd[0], 1'b1);
-            vrf_wd[1]=hspread_half64(vrf_rd[1], 1'b1);
-            vrf_wd[2]=hspread_half64(vrf_rd[2], 1'b1);
-            vrf_wd[3]=hspread_half64(vrf_rd[3], 1'b1);
+            vrf_wd[0]=hspread_half64(hdc_src0_q[2], 1'b0);
+            vrf_wd[1]=hspread_half64(hdc_src0_q[2], 1'b1);
+            vrf_wd[2]=hspread_half64(hdc_src0_q[3], 1'b0);
+            vrf_wd[3]=hspread_half64(hdc_src0_q[3], 1'b1);
             hperm_spread_n=1'b0;
             res_n={62'b0,STATUS_OK};
             st_n=S_RESULT;
@@ -868,6 +906,33 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
         S_ECC_WRITE_DRAIN: begin
             res_n={56'b0, ecc_dst_q, STATUS_OK};
             st_n=S_RESULT;
+        end
+
+        S_ECC_REDUCE_LOAD_LO_WAIT: begin
+            st_n=S_ECC_REDUCE_LOAD_LO;
+        end
+
+        S_ECC_REDUCE_LOAD_LO: begin
+            hdc_src0_n = vrf_rd;
+            vrf_ra[0]=ecc_src_a_q + 6'd1; vrf_ra[1]=ecc_src_a_q + 6'd1;
+            vrf_ra[2]=ecc_src_a_q + 6'd1; vrf_ra[3]=ecc_src_a_q + 6'd1;
+            st_n=S_ECC_REDUCE_LOAD_HI_WAIT;
+        end
+
+        S_ECC_REDUCE_LOAD_HI_WAIT: begin
+            st_n=S_ECC_REDUCE_WRITE;
+        end
+
+        S_ECC_REDUCE_WRITE: begin
+            vrf_we = '1;
+            vrf_wa[0]=ecc_dst_q; vrf_wa[1]=ecc_dst_q;
+            vrf_wa[2]=ecc_dst_q; vrf_wa[3]=ecc_dst_q;
+            vrf_wd[0]=ecc_reduce_result[63:0];
+            vrf_wd[1]=ecc_reduce_result[127:64];
+            vrf_wd[2]=ecc_reduce_result[191:128];
+            vrf_wd[3]=ecc_reduce_result[255:192];
+            res_n={56'b0, ecc_dst_q, STATUS_OK};
+            st_n=S_ECC_WRITE_DRAIN;
         end
 
         S_CLR: begin

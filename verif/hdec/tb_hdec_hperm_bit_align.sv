@@ -170,12 +170,16 @@ module tb_hdec_hperm_bit_align;
     task automatic check_spread_entry(input logic [5:0] idx,
                                       input logic       hi);
         logic [63:0] got;
+        int word_idx;
+        logic half_sel;
         begin
             for (int bank = 0; bank < 4; bank++) begin
                 read_vrf64(2'(bank), idx, got);
-                if (got !== spread_word(bank, hi)) begin
+                word_idx = hi ? (2 + (bank >> 1)) : (bank >> 1);
+                half_sel = bank[0];
+                if (got !== spread_word(word_idx, half_sel)) begin
                     $error("HSPREAD hi=%0d bank=%0d got=0x%016h expected=0x%016h",
-                           hi, bank, got, spread_word(bank, hi));
+                           hi, bank, got, spread_word(word_idx, half_sel));
                     $fatal(1);
                 end
             end

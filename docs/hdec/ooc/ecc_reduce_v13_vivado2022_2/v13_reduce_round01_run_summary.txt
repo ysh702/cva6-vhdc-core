@@ -1,0 +1,9 @@
+run_label=v13_reduce_round01_5ns
+period_ns=5.0
+part=xc7z020clg400-2
+top=hdec_top
+wns=0.193
+worst_data_delay_ns=4.836
+fmax_est_mhz=208.030
+top_endpoint=lane_result_q_reg[0][27]/D
+vivado_version=2022.2
