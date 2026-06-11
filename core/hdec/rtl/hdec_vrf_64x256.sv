@@ -21,38 +21,17 @@ module hdec_vrf_64x256
     output logic        vrf_ready_o
 );
 
-    (* ram_style = "distributed" *) logic [LANE_WIDTH-1:0] vrf_b0 [0:VRF_ENTRIES-1];
-    (* ram_style = "distributed" *) logic [LANE_WIDTH-1:0] vrf_b1 [0:VRF_ENTRIES-1];
-    (* ram_style = "distributed" *) logic [LANE_WIDTH-1:0] vrf_b2 [0:VRF_ENTRIES-1];
-    (* ram_style = "distributed" *) logic [LANE_WIDTH-1:0] vrf_b3 [0:VRF_ENTRIES-1];
-
     assign vrf_ready_o = 1'b1;
 
-    always_ff @(posedge clk_i) begin
-        if (bank_we_i[0])
-            vrf_b0[bank_wa_addr_i[0]] <= bank_wdata_i[0];
-    end
+    for (genvar bid = 0; bid < LANE_NUM; bid++) begin : gen_bank
+        (* ram_style = "distributed" *) logic [LANE_WIDTH-1:0] vrf_mem [0:VRF_ENTRIES-1];
 
-    always_ff @(posedge clk_i) begin
-        if (bank_we_i[1])
-            vrf_b1[bank_wa_addr_i[1]] <= bank_wdata_i[1];
-    end
+        always_ff @(posedge clk_i) begin
+            if (bank_we_i[bid])
+                vrf_mem[bank_wa_addr_i[bid]] <= bank_wdata_i[bid];
 
-    always_ff @(posedge clk_i) begin
-        if (bank_we_i[2])
-            vrf_b2[bank_wa_addr_i[2]] <= bank_wdata_i[2];
-    end
-
-    always_ff @(posedge clk_i) begin
-        if (bank_we_i[3])
-            vrf_b3[bank_wa_addr_i[3]] <= bank_wdata_i[3];
-    end
-
-    always_ff @(posedge clk_i) begin
-        bank_ra_data_o[0] <= vrf_b0[bank_ra_addr_i[0]];
-        bank_ra_data_o[1] <= vrf_b1[bank_ra_addr_i[1]];
-        bank_ra_data_o[2] <= vrf_b2[bank_ra_addr_i[2]];
-        bank_ra_data_o[3] <= vrf_b3[bank_ra_addr_i[3]];
+            bank_ra_data_o[bid] <= vrf_mem[bank_ra_addr_i[bid]];
+        end
     end
 
 endmodule

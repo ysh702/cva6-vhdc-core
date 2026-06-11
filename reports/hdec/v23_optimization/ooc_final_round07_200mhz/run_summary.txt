@@ -1,0 +1,9 @@
+run_label=hdec_v23_round07_vrf_generate
+period_ns=5.000
+part=xc7z020clg400-2
+top=hdec_top
+wns=0.159
+worst_data_delay_ns=4.630
+fmax_est_mhz=206.569
+top_endpoint=ecc_inv_step_q_reg[0]/CE
+vivado_version=2024.2
