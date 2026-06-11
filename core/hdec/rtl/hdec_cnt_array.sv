@@ -9,8 +9,6 @@
 // =============================================================================
 
 module hdec_cnt_array (
-    input  logic        clear_i,
-    input  logic        update_i,
     input  logic [63:0] old_counter_i,
     input  logic [63:0] hv_word_i,
     input  logic [1:0]  subgroup_i,

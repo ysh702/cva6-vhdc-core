@@ -11,9 +11,6 @@ module hdec_lane_4x64
 #(
     parameter int LANE_ID = 0   // 0, 1, 2, or 3
 ) (
-    input  logic        clk_i,
-    input  logic        rst_ni,
-
     // ── VRF Bank Connection (this lane ↔ its bank) ──────────────────────────
     output logic [VRF_IDX_W-1:0]              vrf_ra_addr_o,
     input  logic [LANE_WIDTH-1:0]             vrf_ra_data_i,
@@ -93,8 +90,6 @@ module hdec_lane_4x64
 
     // ── HDCU CNT array update ──────────────────────────────────────────────
     hdec_cnt_array i_cnt_array (
-        .clear_i         (1'b0),
-        .update_i        (cnt_valid_i),
         .old_counter_i   (cnt_old_counter_i),
         .hv_word_i       (cnt_hv_word_i),
         .subgroup_i      (cnt_subgroup_i),
