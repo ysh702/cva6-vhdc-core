@@ -10,7 +10,6 @@ module hdec_vrf_64x256
     import hdec_resource_pkg::*;
 (
     input  logic        clk_i,
-    input  logic        rst_ni,
 
     input  logic [LANE_NUM-1:0][VRF_IDX_W-1:0]  bank_ra_addr_i,
     output logic [LANE_NUM-1:0][LANE_WIDTH-1:0] bank_ra_data_o,
