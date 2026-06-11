@@ -1,0 +1,9 @@
+run_label=v19_round04_remove_seen_flag_200
+period_ns=5.000
+part=xc7z020clg400-2
+top=hdec_top
+wns=0.326
+worst_data_delay_ns=4.700
+fmax_est_mhz=213.950
+top_endpoint=group_dist_q_reg[8]/D
+vivado_version=2024.2

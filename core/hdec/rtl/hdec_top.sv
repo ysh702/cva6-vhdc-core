@@ -337,6 +337,16 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
         endcase
     endfunction
 
+    function automatic logic [63:0] ecc_scalar_word_from_row(input logic [3:0][63:0] row,
+                                                             input logic [7:0] bit_idx);
+        unique case (bit_idx[7:6])
+            2'd0: ecc_scalar_word_from_row = row[0];
+            2'd1: ecc_scalar_word_from_row = row[1];
+            2'd2: ecc_scalar_word_from_row = row[2];
+            default: ecc_scalar_word_from_row = row[3];
+        endcase
+    endfunction
+
     function automatic logic [63:0] hperm_pick_word(input logic [2:0] sel, input logic [3:0][63:0] blk_a, input logic [3:0][63:0] blk_b);
         case(sel)
             3'd0: hperm_pick_word = blk_a[0];
@@ -1353,6 +1363,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
 
         S_ECC_PMUL_READ_SCALAR: begin
             ecc_pmul_scalar_bit_n=ecc_scalar_bit_from_row(vrf_rd, ecc_pmul_bit_q);
+            b_n=ecc_scalar_word_from_row(vrf_rd, ecc_pmul_bit_q);
             st_n=S_ECC_PMUL_START_ADD;
         end
 
@@ -1365,24 +1376,43 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             ecc_pmul_out_x_n=ecc_pmul_scalar_bit_q ? ECC_PMUL_R0X : ECC_PMUL_R1X;
             ecc_pmul_out_y_n=ecc_pmul_scalar_bit_q ? ECC_PMUL_R0Y : ECC_PMUL_R1Y;
             ecc_pmul_out_z_n=ecc_pmul_scalar_bit_q ? ECC_PMUL_R0Z : ECC_PMUL_R1Z;
-            if (ecc_pmul_r0_inf_q && ecc_pmul_r1_inf_q) begin
-                ecc_pmul_subop_n=ECC_PMUL_SUB_NONE;
-                ecc_pmul_out_inf_n=1'b1;
-                st_n=S_ECC_PMUL_STEP_NEXT;
-            end else if (ecc_pmul_r0_inf_q) begin
-                ecc_pmul_subop_n=ECC_PMUL_SUB_COPY_POINT;
-                ecc_pmul_x1_n=ECC_PMUL_R1X; ecc_pmul_y1_n=ECC_PMUL_R1Y; ecc_pmul_z1_n=ECC_PMUL_R1Z;
-                ecc_pmul_out_inf_n=ecc_pmul_r1_inf_q;
-                st_n=S_ECC_PMUL_STEP;
+            if (ecc_pmul_r0_inf_q && !ecc_pmul_scalar_bit_q) begin
+                if (ecc_pmul_bit_q == 8'd0) begin
+                    ecc_pmul_ctrl_n=ECC_PMUL_CTRL_FINAL;
+                    ecc_pmul_subop_n=ECC_PMUL_SUB_ZERO_OUT;
+                    ecc_pmul_step_n='0;
+                    st_n=S_ECC_PMUL_STEP;
+                end else begin
+                    ecc_pmul_bit_n=ecc_pmul_bit_q - 8'd1;
+                    if (ecc_pmul_bit_q[5:0] == 6'd0) begin
+                        vrf_ra[0]=ecc_job_src_q; vrf_ra[1]=ecc_job_src_q;
+                        vrf_ra[2]=ecc_job_src_q; vrf_ra[3]=ecc_job_src_q;
+                        st_n=S_ECC_PMUL_READ_SCALAR_WAIT;
+                    end else begin
+                        ecc_pmul_scalar_bit_n=b_q[ecc_pmul_bit_q[5:0] - 6'd1];
+                        st_n=S_ECC_PMUL_START_ADD;
+                    end
+                end
             end else if (ecc_pmul_r1_inf_q) begin
                 ecc_pmul_subop_n=ECC_PMUL_SUB_COPY_POINT;
                 ecc_pmul_x1_n=ECC_PMUL_R0X; ecc_pmul_y1_n=ECC_PMUL_R0Y; ecc_pmul_z1_n=ECC_PMUL_R0Z;
                 ecc_pmul_out_inf_n=ecc_pmul_r0_inf_q;
                 st_n=S_ECC_PMUL_STEP;
             end else begin
-                ecc_pmul_subop_n=ECC_PMUL_SUB_ADD;
-                ecc_pmul_out_inf_n=1'b0;
-                st_n=S_ECC_PMUL_STEP;
+                if (ecc_pmul_r0_inf_q && ecc_pmul_r1_inf_q) begin
+                    ecc_pmul_subop_n=ECC_PMUL_SUB_NONE;
+                    ecc_pmul_out_inf_n=1'b1;
+                    st_n=S_ECC_PMUL_STEP_NEXT;
+                end else if (ecc_pmul_r0_inf_q) begin
+                    ecc_pmul_subop_n=ECC_PMUL_SUB_COPY_POINT;
+                    ecc_pmul_x1_n=ECC_PMUL_R1X; ecc_pmul_y1_n=ECC_PMUL_R1Y; ecc_pmul_z1_n=ECC_PMUL_R1Z;
+                    ecc_pmul_out_inf_n=ecc_pmul_r1_inf_q;
+                    st_n=S_ECC_PMUL_STEP;
+                end else begin
+                    ecc_pmul_subop_n=ECC_PMUL_SUB_ADD;
+                    ecc_pmul_out_inf_n=1'b0;
+                    st_n=S_ECC_PMUL_STEP;
+                end
             end
         end
 
@@ -1601,7 +1631,13 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                     st_n=S_ECC_PMUL_READ_SCALAR_WAIT;
                 end
                 ECC_PMUL_CTRL_ADD: begin
-                    st_n=S_ECC_PMUL_START_DBL;
+                    if ((ecc_pmul_bit_q == 8'd0) && ecc_pmul_scalar_bit_q) begin
+                        ecc_pmul_ctrl_n=ECC_PMUL_CTRL_FINAL;
+                        ecc_pmul_subop_n=ecc_pmul_out_inf_q ? ECC_PMUL_SUB_ZERO_OUT : ECC_PMUL_SUB_AFFINE;
+                        st_n=S_ECC_PMUL_STEP;
+                    end else begin
+                        st_n=S_ECC_PMUL_START_DBL;
+                    end
                 end
                 ECC_PMUL_CTRL_DBL: begin
                     if (ecc_pmul_bit_q == 8'd0) begin
@@ -1610,9 +1646,14 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                         st_n=S_ECC_PMUL_STEP;
                     end else begin
                         ecc_pmul_bit_n=ecc_pmul_bit_q - 8'd1;
-                        vrf_ra[0]=ecc_job_src_q; vrf_ra[1]=ecc_job_src_q;
-                        vrf_ra[2]=ecc_job_src_q; vrf_ra[3]=ecc_job_src_q;
-                        st_n=S_ECC_PMUL_READ_SCALAR_WAIT;
+                        if (ecc_pmul_bit_q[5:0] == 6'd0) begin
+                            vrf_ra[0]=ecc_job_src_q; vrf_ra[1]=ecc_job_src_q;
+                            vrf_ra[2]=ecc_job_src_q; vrf_ra[3]=ecc_job_src_q;
+                            st_n=S_ECC_PMUL_READ_SCALAR_WAIT;
+                        end else begin
+                            ecc_pmul_scalar_bit_n=b_q[ecc_pmul_bit_q[5:0] - 6'd1];
+                            st_n=S_ECC_PMUL_START_ADD;
+                        end
                     end
                 end
                 default: begin
