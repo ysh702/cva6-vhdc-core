@@ -216,20 +216,15 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
     logic [7:0]         ecc_pmul_bit_q, ecc_pmul_bit_n;
     logic               ecc_pmul_scalar_bit_q, ecc_pmul_scalar_bit_n;
     logic               ecc_pmul_r0_inf_q, ecc_pmul_r0_inf_n;
-    logic               ecc_pmul_r1_inf_q, ecc_pmul_r1_inf_n;
     logic               ecc_pmul_out_sel_q, ecc_pmul_out_sel_n;
-    logic               ecc_pmul_out_inf_q, ecc_pmul_out_inf_n;
     logic               ecc_pmul_const_one_q, ecc_pmul_const_one_n;
     logic [VRF_IDX_W-1:0] ecc_pmul_result_q, ecc_pmul_result_n;
     logic [VRF_IDX_W-1:0] ecc_pmul_point_q, ecc_pmul_point_n;
     logic [VRF_IDX_W-1:0] ecc_pmul_x1_q, ecc_pmul_x1_n;
-    logic [VRF_IDX_W-1:0] ecc_pmul_y1_q, ecc_pmul_y1_n;
     logic [VRF_IDX_W-1:0] ecc_pmul_z1_q, ecc_pmul_z1_n;
     logic [VRF_IDX_W-1:0] ecc_pmul_x2_q, ecc_pmul_x2_n;
-    logic [VRF_IDX_W-1:0] ecc_pmul_y2_q, ecc_pmul_y2_n;
     logic [VRF_IDX_W-1:0] ecc_pmul_z2_q, ecc_pmul_z2_n;
     logic [VRF_IDX_W-1:0] ecc_pmul_out_x_q, ecc_pmul_out_x_n;
-    logic [VRF_IDX_W-1:0] ecc_pmul_out_y_q, ecc_pmul_out_y_n;
     logic [VRF_IDX_W-1:0] ecc_pmul_out_z_q, ecc_pmul_out_z_n;
     logic                pop_d_mux;
     logic                xor_d_mux;
@@ -317,11 +312,11 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
     function automatic logic ecc_pmul_subop_last(input ecc_pmul_subop_e subop,
                                                  input logic [5:0] step);
         unique case (subop)
-            ECC_PMUL_SUB_INIT:       ecc_pmul_subop_last = (step == 6'd2);
+            ECC_PMUL_SUB_INIT:       ecc_pmul_subop_last = (step == 6'd3);
             ECC_PMUL_SUB_COPY_POINT: ecc_pmul_subop_last = (step == 6'd2);
-            ECC_PMUL_SUB_ADD:        ecc_pmul_subop_last = (step == 6'd28);
-            ECC_PMUL_SUB_DBL:        ecc_pmul_subop_last = (step == 6'd13);
-            ECC_PMUL_SUB_AFFINE:     ecc_pmul_subop_last = (step == 6'd5);
+            ECC_PMUL_SUB_ADD:        ecc_pmul_subop_last = (step == 6'd9);
+            ECC_PMUL_SUB_DBL:        ecc_pmul_subop_last = (step == 6'd5);
+            ECC_PMUL_SUB_AFFINE:     ecc_pmul_subop_last = (step == 6'd23);
             ECC_PMUL_SUB_ZERO_OUT:   ecc_pmul_subop_last = (step == 6'd1);
             default:                 ecc_pmul_subop_last = 1'b1;
         endcase
@@ -713,12 +708,12 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
         ecc_pmul_ctrl_n=ecc_pmul_ctrl_q; ecc_pmul_subop_n=ecc_pmul_subop_q;
         ecc_pmul_step_n=ecc_pmul_step_q; ecc_pmul_bit_n=ecc_pmul_bit_q;
         ecc_pmul_scalar_bit_n=ecc_pmul_scalar_bit_q;
-        ecc_pmul_r0_inf_n=ecc_pmul_r0_inf_q; ecc_pmul_r1_inf_n=ecc_pmul_r1_inf_q;
-        ecc_pmul_out_sel_n=ecc_pmul_out_sel_q; ecc_pmul_out_inf_n=ecc_pmul_out_inf_q;
+        ecc_pmul_r0_inf_n=ecc_pmul_r0_inf_q;
+        ecc_pmul_out_sel_n=ecc_pmul_out_sel_q;
         ecc_pmul_const_one_n=ecc_pmul_const_one_q; ecc_pmul_result_n=ecc_pmul_result_q; ecc_pmul_point_n=ecc_pmul_point_q;
-        ecc_pmul_x1_n=ecc_pmul_x1_q; ecc_pmul_y1_n=ecc_pmul_y1_q; ecc_pmul_z1_n=ecc_pmul_z1_q;
-        ecc_pmul_x2_n=ecc_pmul_x2_q; ecc_pmul_y2_n=ecc_pmul_y2_q; ecc_pmul_z2_n=ecc_pmul_z2_q;
-        ecc_pmul_out_x_n=ecc_pmul_out_x_q; ecc_pmul_out_y_n=ecc_pmul_out_y_q; ecc_pmul_out_z_n=ecc_pmul_out_z_q;
+        ecc_pmul_x1_n=ecc_pmul_x1_q; ecc_pmul_z1_n=ecc_pmul_z1_q;
+        ecc_pmul_x2_n=ecc_pmul_x2_q; ecc_pmul_z2_n=ecc_pmul_z2_q;
+        ecc_pmul_out_x_n=ecc_pmul_out_x_q; ecc_pmul_out_z_n=ecc_pmul_out_z_q;
         ecc_pipe0_valid_n=1'b0; ecc_pipe0_diag_slot_n=ecc_pipe0_diag_slot_q;
         ecc_pipe1_valid_n=ecc_pipe0_valid_q; ecc_pipe1_diag_slot_n=ecc_pipe0_diag_slot_q;
         lane_cnt_valid='0;
@@ -830,9 +825,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                         ecc_pmul_bit_n=8'd232;
                         ecc_pmul_scalar_bit_n=1'b0;
                         ecc_pmul_r0_inf_n=1'b1;
-                        ecc_pmul_r1_inf_n=1'b0;
                         ecc_pmul_out_sel_n=1'b0;
-                        ecc_pmul_out_inf_n=1'b0;
                         ecc_pmul_ctrl_n=ECC_PMUL_CTRL_INIT;
                         ecc_pmul_subop_n=ECC_PMUL_SUB_INIT;
                         ecc_pmul_step_n='0;
@@ -1370,31 +1363,15 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
         S_ECC_PMUL_START_ADD: begin
             ecc_pmul_ctrl_n=ECC_PMUL_CTRL_ADD;
             ecc_pmul_step_n='0;
-            ecc_pmul_x1_n=ECC_PMUL_R0X; ecc_pmul_y1_n=ECC_PMUL_R0Y; ecc_pmul_z1_n=ECC_PMUL_R0Z;
-            ecc_pmul_x2_n=ECC_PMUL_R1X; ecc_pmul_y2_n=ECC_PMUL_R1Y; ecc_pmul_z2_n=ECC_PMUL_R1Z;
+            ecc_pmul_x1_n=ECC_PMUL_R0X; ecc_pmul_z1_n=ECC_PMUL_R0Z;
+            ecc_pmul_x2_n=ECC_PMUL_R1X; ecc_pmul_z2_n=ECC_PMUL_R1Z;
             ecc_pmul_out_sel_n=ecc_pmul_scalar_bit_q ? 1'b0 : 1'b1;
             ecc_pmul_out_x_n=ecc_pmul_scalar_bit_q ? ECC_PMUL_R0X : ECC_PMUL_R1X;
-            ecc_pmul_out_y_n=ecc_pmul_scalar_bit_q ? ECC_PMUL_R0Y : ECC_PMUL_R1Y;
             ecc_pmul_out_z_n=ecc_pmul_scalar_bit_q ? ECC_PMUL_R0Z : ECC_PMUL_R1Z;
-            if (ecc_pmul_r0_inf_q && ecc_pmul_r1_inf_q) begin
-                ecc_pmul_subop_n=ECC_PMUL_SUB_NONE;
-                ecc_pmul_out_inf_n=1'b1;
-                st_n=S_ECC_PMUL_STEP_NEXT;
-            end else if (ecc_pmul_r0_inf_q) begin
-                ecc_pmul_subop_n=ECC_PMUL_SUB_COPY_POINT;
-                ecc_pmul_x1_n=ECC_PMUL_R1X; ecc_pmul_y1_n=ECC_PMUL_R1Y; ecc_pmul_z1_n=ECC_PMUL_R1Z;
-                ecc_pmul_out_inf_n=ecc_pmul_r1_inf_q;
-                st_n=S_ECC_PMUL_STEP;
-            end else if (ecc_pmul_r1_inf_q) begin
-                ecc_pmul_subop_n=ECC_PMUL_SUB_COPY_POINT;
-                ecc_pmul_x1_n=ECC_PMUL_R0X; ecc_pmul_y1_n=ECC_PMUL_R0Y; ecc_pmul_z1_n=ECC_PMUL_R0Z;
-                ecc_pmul_out_inf_n=ecc_pmul_r0_inf_q;
-                st_n=S_ECC_PMUL_STEP;
-            end else begin
-                ecc_pmul_subop_n=ECC_PMUL_SUB_ADD;
-                ecc_pmul_out_inf_n=1'b0;
-                st_n=S_ECC_PMUL_STEP;
-            end
+            if (ecc_pmul_scalar_bit_q)
+                ecc_pmul_r0_inf_n=1'b0;
+            ecc_pmul_subop_n=ECC_PMUL_SUB_ADD;
+            st_n=S_ECC_PMUL_STEP;
         end
 
         S_ECC_PMUL_START_DBL: begin
@@ -1402,48 +1379,14 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             ecc_pmul_step_n='0;
             ecc_pmul_out_sel_n=ecc_pmul_scalar_bit_q;
             if (ecc_pmul_scalar_bit_q) begin
-                ecc_pmul_x1_n=ECC_PMUL_R1X; ecc_pmul_y1_n=ECC_PMUL_R1Y; ecc_pmul_z1_n=ECC_PMUL_R1Z;
-                ecc_pmul_out_x_n=ECC_PMUL_R1X; ecc_pmul_out_y_n=ECC_PMUL_R1Y; ecc_pmul_out_z_n=ECC_PMUL_R1Z;
-                if (ecc_pmul_r1_inf_q) begin
-                    ecc_pmul_r1_inf_n=1'b1;
-                    if (ecc_pmul_bit_q == 8'd0) begin
-                        ecc_pmul_ctrl_n=ECC_PMUL_CTRL_FINAL;
-                        ecc_pmul_step_n='0;
-                        ecc_pmul_subop_n=ecc_pmul_r0_inf_q ? ECC_PMUL_SUB_ZERO_OUT : ECC_PMUL_SUB_AFFINE;
-                        st_n=S_ECC_PMUL_STEP;
-                    end else begin
-                        ecc_pmul_bit_n=ecc_pmul_bit_q - 8'd1;
-                        vrf_ra[0]=ecc_job_src_q; vrf_ra[1]=ecc_job_src_q;
-                        vrf_ra[2]=ecc_job_src_q; vrf_ra[3]=ecc_job_src_q;
-                        st_n=S_ECC_PMUL_READ_SCALAR_WAIT;
-                    end
-                end else begin
-                    ecc_pmul_subop_n=ECC_PMUL_SUB_DBL;
-                    ecc_pmul_out_inf_n=1'b0;
-                    st_n=S_ECC_PMUL_STEP;
-                end
+                ecc_pmul_x1_n=ECC_PMUL_R1X; ecc_pmul_z1_n=ECC_PMUL_R1Z;
+                ecc_pmul_out_x_n=ECC_PMUL_R1X; ecc_pmul_out_z_n=ECC_PMUL_R1Z;
             end else begin
-                ecc_pmul_x1_n=ECC_PMUL_R0X; ecc_pmul_y1_n=ECC_PMUL_R0Y; ecc_pmul_z1_n=ECC_PMUL_R0Z;
-                ecc_pmul_out_x_n=ECC_PMUL_R0X; ecc_pmul_out_y_n=ECC_PMUL_R0Y; ecc_pmul_out_z_n=ECC_PMUL_R0Z;
-                if (ecc_pmul_r0_inf_q) begin
-                    ecc_pmul_r0_inf_n=1'b1;
-                    if (ecc_pmul_bit_q == 8'd0) begin
-                        ecc_pmul_ctrl_n=ECC_PMUL_CTRL_FINAL;
-                        ecc_pmul_step_n='0;
-                        ecc_pmul_subop_n=ECC_PMUL_SUB_ZERO_OUT;
-                        st_n=S_ECC_PMUL_STEP;
-                    end else begin
-                        ecc_pmul_bit_n=ecc_pmul_bit_q - 8'd1;
-                        vrf_ra[0]=ecc_job_src_q; vrf_ra[1]=ecc_job_src_q;
-                        vrf_ra[2]=ecc_job_src_q; vrf_ra[3]=ecc_job_src_q;
-                        st_n=S_ECC_PMUL_READ_SCALAR_WAIT;
-                    end
-                end else begin
-                    ecc_pmul_subop_n=ECC_PMUL_SUB_DBL;
-                    ecc_pmul_out_inf_n=1'b0;
-                    st_n=S_ECC_PMUL_STEP;
-                end
+                ecc_pmul_x1_n=ECC_PMUL_R0X; ecc_pmul_z1_n=ECC_PMUL_R0Z;
+                ecc_pmul_out_x_n=ECC_PMUL_R0X; ecc_pmul_out_z_n=ECC_PMUL_R0Z;
             end
+            ecc_pmul_subop_n=ECC_PMUL_SUB_DBL;
+            st_n=S_ECC_PMUL_STEP;
         end
 
         S_ECC_PMUL_STEP: begin
@@ -1459,12 +1402,14 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                     st_n=S_ECC_INV_COPY_WAIT;
                 end
                 6'd1: begin
-                    ecc_job_phase_n=ECC_PHASE_PMUL_COPY;
-                    ecc_job_copy_src_n=ecc_pmul_point_q + 6'd1;
-                    ecc_job_copy_dst_n=ECC_PMUL_R1Y;
-                    vrf_ra[0]=ecc_pmul_point_q + 6'd1; vrf_ra[1]=ecc_pmul_point_q + 6'd1;
-                    vrf_ra[2]=ecc_pmul_point_q + 6'd1; vrf_ra[3]=ecc_pmul_point_q + 6'd1;
-                    st_n=S_ECC_INV_COPY_WAIT;
+                    ecc_job_copy_dst_n=ECC_PMUL_R0X;
+                    ecc_pmul_const_one_n=1'b1;
+                    st_n=S_ECC_PMUL_CONST_WRITE;
+                end
+                6'd2: begin
+                    ecc_job_copy_dst_n=ECC_PMUL_R0Z;
+                    ecc_pmul_const_one_n=1'b0;
+                    st_n=S_ECC_PMUL_CONST_WRITE;
                 end
                 default: begin
                     ecc_job_copy_dst_n=ECC_PMUL_R1Z;
@@ -1472,17 +1417,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                     st_n=S_ECC_PMUL_CONST_WRITE;
                 end
                 endcase
-            end
-            ECC_PMUL_SUB_COPY_POINT: begin
-                ecc_job_phase_n=ECC_PHASE_PMUL_COPY;
-                unique case (ecc_pmul_step_q)
-                6'd0: begin ecc_job_copy_src_n=ecc_pmul_x1_q; ecc_job_copy_dst_n=ecc_pmul_out_x_q; end
-                6'd1: begin ecc_job_copy_src_n=ecc_pmul_y1_q; ecc_job_copy_dst_n=ecc_pmul_out_y_q; end
-                default: begin ecc_job_copy_src_n=ecc_pmul_z1_q; ecc_job_copy_dst_n=ecc_pmul_out_z_q; end
-                endcase
-                vrf_ra[0]=ecc_job_copy_src_n; vrf_ra[1]=ecc_job_copy_src_n;
-                vrf_ra[2]=ecc_job_copy_src_n; vrf_ra[3]=ecc_job_copy_src_n;
-                st_n=S_ECC_INV_COPY_WAIT;
             end
             ECC_PMUL_SUB_ZERO_OUT: begin
                 ecc_job_copy_dst_n=(ecc_pmul_step_q == 6'd0) ? ecc_pmul_result_q : (ecc_pmul_result_q + 6'd1);
@@ -1507,87 +1441,189 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                     st_n=S_ECC_LOAD_A_WAIT;
                 end
                 6'd2: begin
-                    hperm_dst_base_n=ECC_PMUL_T6; hperm_src_base_n=ECC_PMUL_T0; hperm_spread_n=1'b1;
-                    ecc_dst_n=ECC_PMUL_T6; ecc_src_a_n=ECC_PMUL_T6;
-                    ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0;
-                    ecc_job_phase_n=ECC_PHASE_PMUL_FIELD;
-                    vrf_ra[0]=ECC_PMUL_T0; vrf_ra[1]=ECC_PMUL_T0; vrf_ra[2]=ECC_PMUL_T0; vrf_ra[3]=ECC_PMUL_T0;
-                    st_n=S_RD_WAIT;
+                    ecc_job_src_n=ECC_PMUL_R1Z;
+                    ecc_job_dst_n=ECC_PMUL_T1;
+                    ecc_inv_step_n='0;
+                    st_n=S_ECC_INV_INIT;
                 end
                 6'd3: begin
-                    ecc_dst_n=ECC_PMUL_T8; ecc_src_a_n=ECC_PMUL_R0Y; ecc_src_b_n=ECC_PMUL_T6;
+                    ecc_dst_n=ECC_PMUL_T6; ecc_src_a_n=ECC_PMUL_R1X; ecc_src_b_n=ECC_PMUL_T1;
                     ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0;
                     ecc_leaf_a_n='0; ecc_leaf_b_n='0; ecc_leaf_prod_n='0; ecc_leaf_path_n='0;
                     ecc_diag_slot_n='0; ecc_fold_word_n='0; ecc_pipe0_valid_n=1'b0; ecc_pipe1_valid_n=1'b0;
                     ecc_job_phase_n=ECC_PHASE_PMUL_FIELD;
-                    vrf_ra[0]=ECC_PMUL_R0Y; vrf_ra[1]=ECC_PMUL_R0Y; vrf_ra[2]=ECC_PMUL_R0Y; vrf_ra[3]=ECC_PMUL_R0Y;
+                    vrf_ra[0]=ECC_PMUL_R1X; vrf_ra[1]=ECC_PMUL_R1X; vrf_ra[2]=ECC_PMUL_R1X; vrf_ra[3]=ECC_PMUL_R1X;
                     st_n=S_ECC_LOAD_A_WAIT;
                 end
                 6'd4: begin
+                    uop_p0_n='0; uop_p0_n.valid=1'b1; uop_p0_n.op_type=UOP_HBIND_CHUNK;
+                    uop_p0_n.src0_addr=ECC_PMUL_T4; uop_p0_n.src1_addr=ecc_pmul_point_q;
+                    uop_p0_n.dst_addr=ECC_PMUL_T2; uop_p0_n.chunk_idx=2'd3;
+                    ecc_job_phase_n=ECC_PHASE_PMUL_ADD; st_n=S_UOP_P1_RD0;
+                end
+                6'd5: begin
+                    uop_p0_n='0; uop_p0_n.valid=1'b1; uop_p0_n.op_type=UOP_HBIND_CHUNK;
+                    uop_p0_n.src0_addr=ECC_PMUL_T6; uop_p0_n.src1_addr=ECC_PMUL_T4;
+                    uop_p0_n.dst_addr=ECC_PMUL_T3; uop_p0_n.chunk_idx=2'd3;
+                    ecc_job_phase_n=ECC_PHASE_PMUL_ADD; st_n=S_UOP_P1_RD0;
+                end
+                6'd6: begin
+                    uop_p0_n='0; uop_p0_n.valid=1'b1; uop_p0_n.op_type=UOP_HBIND_CHUNK;
+                    uop_p0_n.src0_addr=ECC_PMUL_T3; uop_p0_n.src1_addr=ecc_pmul_point_q;
+                    uop_p0_n.dst_addr=ECC_PMUL_T3; uop_p0_n.chunk_idx=2'd3;
+                    ecc_job_phase_n=ECC_PHASE_PMUL_ADD; st_n=S_UOP_P1_RD0;
+                end
+                6'd7: begin
+                    hperm_dst_base_n=ECC_PMUL_T5; hperm_src_base_n=ECC_PMUL_T4; hperm_spread_n=1'b1;
+                    ecc_dst_n=ECC_PMUL_T5; ecc_src_a_n=ECC_PMUL_T5;
+                    ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0;
+                    ecc_job_phase_n=ECC_PHASE_PMUL_FIELD;
+                    vrf_ra[0]=ECC_PMUL_T4; vrf_ra[1]=ECC_PMUL_T4; vrf_ra[2]=ECC_PMUL_T4; vrf_ra[3]=ECC_PMUL_T4;
+                    st_n=S_RD_WAIT;
+                end
+                6'd8: begin
+                    ecc_dst_n=ECC_PMUL_T7; ecc_src_a_n=ECC_PMUL_T5; ecc_src_b_n=ECC_PMUL_T4;
+                    ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0;
+                    ecc_leaf_a_n='0; ecc_leaf_b_n='0; ecc_leaf_prod_n='0; ecc_leaf_path_n='0;
+                    ecc_diag_slot_n='0; ecc_fold_word_n='0; ecc_pipe0_valid_n=1'b0; ecc_pipe1_valid_n=1'b0;
+                    ecc_job_phase_n=ECC_PHASE_PMUL_FIELD;
+                    vrf_ra[0]=ECC_PMUL_T5; vrf_ra[1]=ECC_PMUL_T5; vrf_ra[2]=ECC_PMUL_T5; vrf_ra[3]=ECC_PMUL_T5;
+                    st_n=S_ECC_LOAD_A_WAIT;
+                end
+                6'd9: begin
+                    ecc_job_copy_dst_n=ECC_PMUL_T9;
+                    ecc_pmul_const_one_n=1'b1;
+                    st_n=S_ECC_PMUL_CONST_WRITE;
+                end
+                6'd10: begin
+                    uop_p0_n='0; uop_p0_n.valid=1'b1; uop_p0_n.op_type=UOP_HBIND_CHUNK;
+                    uop_p0_n.src0_addr=ECC_PMUL_T7; uop_p0_n.src1_addr=ECC_PMUL_T9;
+                    uop_p0_n.dst_addr=ECC_PMUL_T7; uop_p0_n.chunk_idx=2'd3;
+                    ecc_job_phase_n=ECC_PHASE_PMUL_ADD; st_n=S_UOP_P1_RD0;
+                end
+                6'd11: begin
+                    hperm_dst_base_n=ECC_PMUL_T8; hperm_src_base_n=ECC_PMUL_T2; hperm_spread_n=1'b1;
+                    ecc_dst_n=ECC_PMUL_T8; ecc_src_a_n=ECC_PMUL_T8;
+                    ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0;
+                    ecc_job_phase_n=ECC_PHASE_PMUL_FIELD;
+                    vrf_ra[0]=ECC_PMUL_T2; vrf_ra[1]=ECC_PMUL_T2; vrf_ra[2]=ECC_PMUL_T2; vrf_ra[3]=ECC_PMUL_T2;
+                    st_n=S_RD_WAIT;
+                end
+                6'd12: begin
+                    ecc_dst_n=ECC_PMUL_T8; ecc_src_a_n=ECC_PMUL_T3; ecc_src_b_n=ECC_PMUL_T8;
+                    ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0;
+                    ecc_leaf_a_n='0; ecc_leaf_b_n='0; ecc_leaf_prod_n='0; ecc_leaf_path_n='0;
+                    ecc_diag_slot_n='0; ecc_fold_word_n='0; ecc_pipe0_valid_n=1'b0; ecc_pipe1_valid_n=1'b0;
+                    ecc_job_phase_n=ECC_PHASE_PMUL_FIELD;
+                    vrf_ra[0]=ECC_PMUL_T3; vrf_ra[1]=ECC_PMUL_T3; vrf_ra[2]=ECC_PMUL_T3; vrf_ra[3]=ECC_PMUL_T3;
+                    st_n=S_ECC_LOAD_A_WAIT;
+                end
+                6'd13: begin
+                    uop_p0_n='0; uop_p0_n.valid=1'b1; uop_p0_n.op_type=UOP_HBIND_CHUNK;
+                    uop_p0_n.src0_addr=ECC_PMUL_T7; uop_p0_n.src1_addr=ECC_PMUL_T8;
+                    uop_p0_n.dst_addr=ECC_PMUL_T7; uop_p0_n.chunk_idx=2'd3;
+                    ecc_job_phase_n=ECC_PHASE_PMUL_ADD; st_n=S_UOP_P1_RD0;
+                end
+                6'd14: begin
+                    hperm_dst_base_n=ECC_PMUL_T8; hperm_src_base_n=ecc_pmul_point_q + 6'd1; hperm_spread_n=1'b1;
+                    ecc_dst_n=ECC_PMUL_T8; ecc_src_a_n=ECC_PMUL_T8;
+                    ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0;
+                    ecc_job_phase_n=ECC_PHASE_PMUL_FIELD;
+                    vrf_ra[0]=ecc_pmul_point_q + 6'd1; vrf_ra[1]=ecc_pmul_point_q + 6'd1;
+                    vrf_ra[2]=ecc_pmul_point_q + 6'd1; vrf_ra[3]=ecc_pmul_point_q + 6'd1;
+                    st_n=S_RD_WAIT;
+                end
+                6'd15: begin
+                    uop_p0_n='0; uop_p0_n.valid=1'b1; uop_p0_n.op_type=UOP_HBIND_CHUNK;
+                    uop_p0_n.src0_addr=ECC_PMUL_T7; uop_p0_n.src1_addr=ECC_PMUL_T8;
+                    uop_p0_n.dst_addr=ECC_PMUL_T7; uop_p0_n.chunk_idx=2'd3;
+                    ecc_job_phase_n=ECC_PHASE_PMUL_ADD; st_n=S_UOP_P1_RD0;
+                end
+                6'd16: begin
+                    ecc_dst_n=ECC_PMUL_T8; ecc_src_a_n=ECC_PMUL_T4; ecc_src_b_n=ecc_pmul_point_q + 6'd1;
+                    ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0;
+                    ecc_leaf_a_n='0; ecc_leaf_b_n='0; ecc_leaf_prod_n='0; ecc_leaf_path_n='0;
+                    ecc_diag_slot_n='0; ecc_fold_word_n='0; ecc_pipe0_valid_n=1'b0; ecc_pipe1_valid_n=1'b0;
+                    ecc_job_phase_n=ECC_PHASE_PMUL_FIELD;
+                    vrf_ra[0]=ECC_PMUL_T4; vrf_ra[1]=ECC_PMUL_T4; vrf_ra[2]=ECC_PMUL_T4; vrf_ra[3]=ECC_PMUL_T4;
+                    st_n=S_ECC_LOAD_A_WAIT;
+                end
+                6'd17: begin
+                    uop_p0_n='0; uop_p0_n.valid=1'b1; uop_p0_n.op_type=UOP_HBIND_CHUNK;
+                    uop_p0_n.src0_addr=ECC_PMUL_T7; uop_p0_n.src1_addr=ECC_PMUL_T8;
+                    uop_p0_n.dst_addr=ECC_PMUL_T7; uop_p0_n.chunk_idx=2'd3;
+                    ecc_job_phase_n=ECC_PHASE_PMUL_ADD; st_n=S_UOP_P1_RD0;
+                end
+                6'd18: begin
+                    ecc_dst_n=ECC_PMUL_T8; ecc_src_a_n=ecc_pmul_point_q; ecc_src_b_n=ECC_PMUL_T2;
+                    ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0;
+                    ecc_leaf_a_n='0; ecc_leaf_b_n='0; ecc_leaf_prod_n='0; ecc_leaf_path_n='0;
+                    ecc_diag_slot_n='0; ecc_fold_word_n='0; ecc_pipe0_valid_n=1'b0; ecc_pipe1_valid_n=1'b0;
+                    ecc_job_phase_n=ECC_PHASE_PMUL_FIELD;
+                    vrf_ra[0]=ecc_pmul_point_q; vrf_ra[1]=ecc_pmul_point_q; vrf_ra[2]=ecc_pmul_point_q; vrf_ra[3]=ecc_pmul_point_q;
+                    st_n=S_ECC_LOAD_A_WAIT;
+                end
+                6'd19: begin
+                    ecc_job_src_n=ECC_PMUL_T8;
+                    ecc_job_dst_n=ECC_PMUL_T5;
+                    ecc_inv_step_n='0;
+                    st_n=S_ECC_INV_INIT;
+                end
+                6'd20: begin
+                    ecc_dst_n=ECC_PMUL_T8; ecc_src_a_n=ECC_PMUL_T7; ecc_src_b_n=ECC_PMUL_T5;
+                    ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0;
+                    ecc_leaf_a_n='0; ecc_leaf_b_n='0; ecc_leaf_prod_n='0; ecc_leaf_path_n='0;
+                    ecc_diag_slot_n='0; ecc_fold_word_n='0; ecc_pipe0_valid_n=1'b0; ecc_pipe1_valid_n=1'b0;
+                    ecc_job_phase_n=ECC_PHASE_PMUL_FIELD;
+                    vrf_ra[0]=ECC_PMUL_T7; vrf_ra[1]=ECC_PMUL_T7; vrf_ra[2]=ECC_PMUL_T7; vrf_ra[3]=ECC_PMUL_T7;
+                    st_n=S_ECC_LOAD_A_WAIT;
+                end
+                6'd21: begin
+                    ecc_dst_n=ECC_PMUL_T8; ecc_src_a_n=ECC_PMUL_T8; ecc_src_b_n=ECC_PMUL_T2;
+                    ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0;
+                    ecc_leaf_a_n='0; ecc_leaf_b_n='0; ecc_leaf_prod_n='0; ecc_leaf_path_n='0;
+                    ecc_diag_slot_n='0; ecc_fold_word_n='0; ecc_pipe0_valid_n=1'b0; ecc_pipe1_valid_n=1'b0;
+                    ecc_job_phase_n=ECC_PHASE_PMUL_FIELD;
+                    vrf_ra[0]=ECC_PMUL_T8; vrf_ra[1]=ECC_PMUL_T8; vrf_ra[2]=ECC_PMUL_T8; vrf_ra[3]=ECC_PMUL_T8;
+                    st_n=S_ECC_LOAD_A_WAIT;
+                end
+                6'd22: begin
+                    uop_p0_n='0; uop_p0_n.valid=1'b1; uop_p0_n.op_type=UOP_HBIND_CHUNK;
+                    uop_p0_n.src0_addr=ECC_PMUL_T8; uop_p0_n.src1_addr=ecc_pmul_point_q + 6'd1;
+                    uop_p0_n.dst_addr=ecc_pmul_result_q + 6'd1; uop_p0_n.chunk_idx=2'd3;
+                    ecc_job_phase_n=ECC_PHASE_PMUL_ADD; st_n=S_UOP_P1_RD0;
+                end
+                default: begin
                     ecc_job_phase_n=ECC_PHASE_PMUL_COPY;
                     ecc_job_copy_src_n=ECC_PMUL_T4;
                     ecc_job_copy_dst_n=ecc_pmul_result_q;
                     vrf_ra[0]=ECC_PMUL_T4; vrf_ra[1]=ECC_PMUL_T4; vrf_ra[2]=ECC_PMUL_T4; vrf_ra[3]=ECC_PMUL_T4;
                     st_n=S_ECC_INV_COPY_WAIT;
                 end
-                default: begin
-                    ecc_job_phase_n=ECC_PHASE_PMUL_COPY;
-                    ecc_job_copy_src_n=ECC_PMUL_T8;
-                    ecc_job_copy_dst_n=ecc_pmul_result_q + 6'd1;
-                    vrf_ra[0]=ECC_PMUL_T8; vrf_ra[1]=ECC_PMUL_T8; vrf_ra[2]=ECC_PMUL_T8; vrf_ra[3]=ECC_PMUL_T8;
-                    st_n=S_ECC_INV_COPY_WAIT;
-                end
                 endcase
             end
             ECC_PMUL_SUB_DBL: begin
                 unique case (ecc_pmul_step_q)
-                6'd0: begin hperm_dst_base_n=ECC_PMUL_T0; hperm_src_base_n=ecc_pmul_z1_q; hperm_spread_n=1'b1; ecc_dst_n=ECC_PMUL_T0; ecc_src_a_n=ECC_PMUL_T0; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_ra[0]=ecc_pmul_z1_q; vrf_ra[1]=ecc_pmul_z1_q; vrf_ra[2]=ecc_pmul_z1_q; vrf_ra[3]=ecc_pmul_z1_q; st_n=S_RD_WAIT; end
+                6'd0: begin hperm_dst_base_n=ECC_PMUL_T0; hperm_src_base_n=ecc_pmul_x1_q; hperm_spread_n=1'b1; ecc_dst_n=ECC_PMUL_T0; ecc_src_a_n=ECC_PMUL_T0; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_ra[0]=ecc_pmul_x1_q; vrf_ra[1]=ecc_pmul_x1_q; vrf_ra[2]=ecc_pmul_x1_q; vrf_ra[3]=ecc_pmul_x1_q; st_n=S_RD_WAIT; end
                 6'd1: begin hperm_dst_base_n=ECC_PMUL_T1; hperm_src_base_n=ECC_PMUL_T0; hperm_spread_n=1'b1; ecc_dst_n=ECC_PMUL_T1; ecc_src_a_n=ECC_PMUL_T1; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_ra[0]=ECC_PMUL_T0; vrf_ra[1]=ECC_PMUL_T0; vrf_ra[2]=ECC_PMUL_T0; vrf_ra[3]=ECC_PMUL_T0; st_n=S_RD_WAIT; end
-                6'd2: begin hperm_dst_base_n=ECC_PMUL_T2; hperm_src_base_n=ecc_pmul_x1_q; hperm_spread_n=1'b1; ecc_dst_n=ECC_PMUL_T2; ecc_src_a_n=ECC_PMUL_T2; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_ra[0]=ecc_pmul_x1_q; vrf_ra[1]=ecc_pmul_x1_q; vrf_ra[2]=ecc_pmul_x1_q; vrf_ra[3]=ecc_pmul_x1_q; st_n=S_RD_WAIT; end
-                6'd3: begin ecc_dst_n=ECC_PMUL_T4; ecc_src_a_n=ECC_PMUL_T0; ecc_src_b_n=ECC_PMUL_T2; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_leaf_a_n='0; ecc_leaf_b_n='0; ecc_leaf_prod_n='0; ecc_leaf_path_n='0; ecc_diag_slot_n='0; ecc_fold_word_n='0; ecc_pipe0_valid_n=1'b0; ecc_pipe1_valid_n=1'b0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_ra[0]=ECC_PMUL_T0; vrf_ra[1]=ECC_PMUL_T0; vrf_ra[2]=ECC_PMUL_T0; vrf_ra[3]=ECC_PMUL_T0; st_n=S_ECC_LOAD_A_WAIT; end
-                6'd4: begin hperm_dst_base_n=ECC_PMUL_T3; hperm_src_base_n=ECC_PMUL_T2; hperm_spread_n=1'b1; ecc_dst_n=ECC_PMUL_T3; ecc_src_a_n=ECC_PMUL_T3; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_ra[0]=ECC_PMUL_T2; vrf_ra[1]=ECC_PMUL_T2; vrf_ra[2]=ECC_PMUL_T2; vrf_ra[3]=ECC_PMUL_T2; st_n=S_RD_WAIT; end
-                6'd5: begin uop_p0_n='0; uop_p0_n.valid=1'b1; uop_p0_n.op_type=UOP_HBIND_CHUNK; uop_p0_n.src0_addr=ECC_PMUL_T3; uop_p0_n.src1_addr=ECC_PMUL_T1; uop_p0_n.dst_addr=ECC_PMUL_T7; uop_p0_n.chunk_idx=2'd3; ecc_job_phase_n=ECC_PHASE_PMUL_ADD; st_n=S_UOP_P1_RD0; end
-                6'd6: begin hperm_dst_base_n=ECC_PMUL_T5; hperm_src_base_n=ecc_pmul_y1_q; hperm_spread_n=1'b1; ecc_dst_n=ECC_PMUL_T5; ecc_src_a_n=ECC_PMUL_T5; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_ra[0]=ecc_pmul_y1_q; vrf_ra[1]=ecc_pmul_y1_q; vrf_ra[2]=ecc_pmul_y1_q; vrf_ra[3]=ecc_pmul_y1_q; st_n=S_RD_WAIT; end
-                6'd7: begin uop_p0_n='0; uop_p0_n.valid=1'b1; uop_p0_n.op_type=UOP_HBIND_CHUNK; uop_p0_n.src0_addr=ECC_PMUL_T5; uop_p0_n.src1_addr=ECC_PMUL_T1; uop_p0_n.dst_addr=ECC_PMUL_T5; uop_p0_n.chunk_idx=2'd3; ecc_job_phase_n=ECC_PHASE_PMUL_ADD; st_n=S_UOP_P1_RD0; end
-                6'd8: begin ecc_dst_n=ECC_PMUL_T5; ecc_src_a_n=ECC_PMUL_T5; ecc_src_b_n=ECC_PMUL_T7; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_leaf_a_n='0; ecc_leaf_b_n='0; ecc_leaf_prod_n='0; ecc_leaf_path_n='0; ecc_diag_slot_n='0; ecc_fold_word_n='0; ecc_pipe0_valid_n=1'b0; ecc_pipe1_valid_n=1'b0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_ra[0]=ECC_PMUL_T5; vrf_ra[1]=ECC_PMUL_T5; vrf_ra[2]=ECC_PMUL_T5; vrf_ra[3]=ECC_PMUL_T5; st_n=S_ECC_LOAD_A_WAIT; end
-                6'd9: begin ecc_dst_n=ECC_PMUL_T6; ecc_src_a_n=ECC_PMUL_T4; ecc_src_b_n=ECC_PMUL_T1; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_leaf_a_n='0; ecc_leaf_b_n='0; ecc_leaf_prod_n='0; ecc_leaf_path_n='0; ecc_diag_slot_n='0; ecc_fold_word_n='0; ecc_pipe0_valid_n=1'b0; ecc_pipe1_valid_n=1'b0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_ra[0]=ECC_PMUL_T4; vrf_ra[1]=ECC_PMUL_T4; vrf_ra[2]=ECC_PMUL_T4; vrf_ra[3]=ECC_PMUL_T4; st_n=S_ECC_LOAD_A_WAIT; end
-                6'd10: begin uop_p0_n='0; uop_p0_n.valid=1'b1; uop_p0_n.op_type=UOP_HBIND_CHUNK; uop_p0_n.src0_addr=ECC_PMUL_T5; uop_p0_n.src1_addr=ECC_PMUL_T6; uop_p0_n.dst_addr=ECC_PMUL_T8; uop_p0_n.chunk_idx=2'd3; ecc_job_phase_n=ECC_PHASE_PMUL_ADD; st_n=S_UOP_P1_RD0; end
-                6'd11: begin ecc_job_phase_n=ECC_PHASE_PMUL_COPY; ecc_job_copy_src_n=ECC_PMUL_T7; ecc_job_copy_dst_n=ecc_pmul_out_x_q; vrf_ra[0]=ECC_PMUL_T7; vrf_ra[1]=ECC_PMUL_T7; vrf_ra[2]=ECC_PMUL_T7; vrf_ra[3]=ECC_PMUL_T7; st_n=S_ECC_INV_COPY_WAIT; end
-                6'd12: begin ecc_job_phase_n=ECC_PHASE_PMUL_COPY; ecc_job_copy_src_n=ECC_PMUL_T8; ecc_job_copy_dst_n=ecc_pmul_out_y_q; vrf_ra[0]=ECC_PMUL_T8; vrf_ra[1]=ECC_PMUL_T8; vrf_ra[2]=ECC_PMUL_T8; vrf_ra[3]=ECC_PMUL_T8; st_n=S_ECC_INV_COPY_WAIT; end
-                default: begin ecc_job_phase_n=ECC_PHASE_PMUL_COPY; ecc_job_copy_src_n=ECC_PMUL_T4; ecc_job_copy_dst_n=ecc_pmul_out_z_q; vrf_ra[0]=ECC_PMUL_T4; vrf_ra[1]=ECC_PMUL_T4; vrf_ra[2]=ECC_PMUL_T4; vrf_ra[3]=ECC_PMUL_T4; st_n=S_ECC_INV_COPY_WAIT; end
+                6'd2: begin hperm_dst_base_n=ECC_PMUL_T4; hperm_src_base_n=ecc_pmul_z1_q; hperm_spread_n=1'b1; ecc_dst_n=ECC_PMUL_T4; ecc_src_a_n=ECC_PMUL_T4; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_ra[0]=ecc_pmul_z1_q; vrf_ra[1]=ecc_pmul_z1_q; vrf_ra[2]=ecc_pmul_z1_q; vrf_ra[3]=ecc_pmul_z1_q; st_n=S_RD_WAIT; end
+                6'd3: begin hperm_dst_base_n=ECC_PMUL_T5; hperm_src_base_n=ECC_PMUL_T4; hperm_spread_n=1'b1; ecc_dst_n=ECC_PMUL_T5; ecc_src_a_n=ECC_PMUL_T5; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_ra[0]=ECC_PMUL_T4; vrf_ra[1]=ECC_PMUL_T4; vrf_ra[2]=ECC_PMUL_T4; vrf_ra[3]=ECC_PMUL_T4; st_n=S_RD_WAIT; end
+                6'd4: begin uop_p0_n='0; uop_p0_n.valid=1'b1; uop_p0_n.op_type=UOP_HBIND_CHUNK; uop_p0_n.src0_addr=ECC_PMUL_T1; uop_p0_n.src1_addr=ECC_PMUL_T5; uop_p0_n.dst_addr=ecc_pmul_out_x_q; uop_p0_n.chunk_idx=2'd3; ecc_job_phase_n=ECC_PHASE_PMUL_ADD; st_n=S_UOP_P1_RD0; end
+                default: begin hperm_dst_base_n=ecc_pmul_out_z_q; hperm_src_base_n=ecc_pmul_out_sel_q ? ECC_PMUL_T3 : ECC_PMUL_T2; hperm_spread_n=1'b1; ecc_dst_n=ecc_pmul_out_z_q; ecc_src_a_n=ecc_pmul_out_z_q; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_ra[0]=hperm_src_base_n; vrf_ra[1]=hperm_src_base_n; vrf_ra[2]=hperm_src_base_n; vrf_ra[3]=hperm_src_base_n; st_n=S_RD_WAIT; end
                 endcase
             end
             ECC_PMUL_SUB_ADD: begin
                 unique case (ecc_pmul_step_q)
                 6'd0: begin ecc_dst_n=ECC_PMUL_T0; ecc_src_a_n=ecc_pmul_x1_q; ecc_src_b_n=ecc_pmul_z2_q; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_leaf_a_n='0; ecc_leaf_b_n='0; ecc_leaf_prod_n='0; ecc_leaf_path_n='0; ecc_diag_slot_n='0; ecc_fold_word_n='0; ecc_pipe0_valid_n=1'b0; ecc_pipe1_valid_n=1'b0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_ra[0]=ecc_pmul_x1_q; vrf_ra[1]=ecc_pmul_x1_q; vrf_ra[2]=ecc_pmul_x1_q; vrf_ra[3]=ecc_pmul_x1_q; st_n=S_ECC_LOAD_A_WAIT; end
                 6'd1: begin ecc_dst_n=ECC_PMUL_T1; ecc_src_a_n=ecc_pmul_x2_q; ecc_src_b_n=ecc_pmul_z1_q; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_leaf_a_n='0; ecc_leaf_b_n='0; ecc_leaf_prod_n='0; ecc_leaf_path_n='0; ecc_diag_slot_n='0; ecc_fold_word_n='0; ecc_pipe0_valid_n=1'b0; ecc_pipe1_valid_n=1'b0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_ra[0]=ecc_pmul_x2_q; vrf_ra[1]=ecc_pmul_x2_q; vrf_ra[2]=ecc_pmul_x2_q; vrf_ra[3]=ecc_pmul_x2_q; st_n=S_ECC_LOAD_A_WAIT; end
-                6'd2: begin hperm_dst_base_n=ECC_PMUL_T2; hperm_src_base_n=ECC_PMUL_T0; hperm_spread_n=1'b1; ecc_dst_n=ECC_PMUL_T2; ecc_src_a_n=ECC_PMUL_T2; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_ra[0]=ECC_PMUL_T0; vrf_ra[1]=ECC_PMUL_T0; vrf_ra[2]=ECC_PMUL_T0; vrf_ra[3]=ECC_PMUL_T0; st_n=S_RD_WAIT; end
-                6'd3: begin hperm_dst_base_n=ECC_PMUL_T3; hperm_src_base_n=ECC_PMUL_T1; hperm_spread_n=1'b1; ecc_dst_n=ECC_PMUL_T3; ecc_src_a_n=ECC_PMUL_T3; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_ra[0]=ECC_PMUL_T1; vrf_ra[1]=ECC_PMUL_T1; vrf_ra[2]=ECC_PMUL_T1; vrf_ra[3]=ECC_PMUL_T1; st_n=S_RD_WAIT; end
-                6'd4: begin uop_p0_n='0; uop_p0_n.valid=1'b1; uop_p0_n.op_type=UOP_HBIND_CHUNK; uop_p0_n.src0_addr=ECC_PMUL_T0; uop_p0_n.src1_addr=ECC_PMUL_T1; uop_p0_n.dst_addr=ECC_PMUL_T4; uop_p0_n.chunk_idx=2'd3; ecc_job_phase_n=ECC_PHASE_PMUL_ADD; st_n=S_UOP_P1_RD0; end
-                6'd5: begin uop_p0_n='0; uop_p0_n.valid=1'b1; uop_p0_n.op_type=UOP_HBIND_CHUNK; uop_p0_n.src0_addr=ECC_PMUL_T2; uop_p0_n.src1_addr=ECC_PMUL_T3; uop_p0_n.dst_addr=ECC_PMUL_T5; uop_p0_n.chunk_idx=2'd3; ecc_job_phase_n=ECC_PHASE_PMUL_ADD; st_n=S_UOP_P1_RD0; end
-                6'd6: begin hperm_dst_base_n=ECC_PMUL_T6; hperm_src_base_n=ecc_pmul_z2_q; hperm_spread_n=1'b1; ecc_dst_n=ECC_PMUL_T6; ecc_src_a_n=ECC_PMUL_T6; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_ra[0]=ecc_pmul_z2_q; vrf_ra[1]=ecc_pmul_z2_q; vrf_ra[2]=ecc_pmul_z2_q; vrf_ra[3]=ecc_pmul_z2_q; st_n=S_RD_WAIT; end
-                6'd7: begin ecc_dst_n=ECC_PMUL_T6; ecc_src_a_n=ecc_pmul_y1_q; ecc_src_b_n=ECC_PMUL_T6; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_leaf_a_n='0; ecc_leaf_b_n='0; ecc_leaf_prod_n='0; ecc_leaf_path_n='0; ecc_diag_slot_n='0; ecc_fold_word_n='0; ecc_pipe0_valid_n=1'b0; ecc_pipe1_valid_n=1'b0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_ra[0]=ecc_pmul_y1_q; vrf_ra[1]=ecc_pmul_y1_q; vrf_ra[2]=ecc_pmul_y1_q; vrf_ra[3]=ecc_pmul_y1_q; st_n=S_ECC_LOAD_A_WAIT; end
-                6'd8: begin hperm_dst_base_n=ECC_PMUL_T7; hperm_src_base_n=ecc_pmul_z1_q; hperm_spread_n=1'b1; ecc_dst_n=ECC_PMUL_T7; ecc_src_a_n=ECC_PMUL_T7; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_ra[0]=ecc_pmul_z1_q; vrf_ra[1]=ecc_pmul_z1_q; vrf_ra[2]=ecc_pmul_z1_q; vrf_ra[3]=ecc_pmul_z1_q; st_n=S_RD_WAIT; end
-                6'd9: begin ecc_dst_n=ECC_PMUL_T7; ecc_src_a_n=ecc_pmul_y2_q; ecc_src_b_n=ECC_PMUL_T7; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_leaf_a_n='0; ecc_leaf_b_n='0; ecc_leaf_prod_n='0; ecc_leaf_path_n='0; ecc_diag_slot_n='0; ecc_fold_word_n='0; ecc_pipe0_valid_n=1'b0; ecc_pipe1_valid_n=1'b0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_ra[0]=ecc_pmul_y2_q; vrf_ra[1]=ecc_pmul_y2_q; vrf_ra[2]=ecc_pmul_y2_q; vrf_ra[3]=ecc_pmul_y2_q; st_n=S_ECC_LOAD_A_WAIT; end
-                6'd10: begin uop_p0_n='0; uop_p0_n.valid=1'b1; uop_p0_n.op_type=UOP_HBIND_CHUNK; uop_p0_n.src0_addr=ECC_PMUL_T6; uop_p0_n.src1_addr=ECC_PMUL_T7; uop_p0_n.dst_addr=ECC_PMUL_T8; uop_p0_n.chunk_idx=2'd3; ecc_job_phase_n=ECC_PHASE_PMUL_ADD; st_n=S_UOP_P1_RD0; end
-                6'd11: begin ecc_dst_n=ECC_PMUL_T8; ecc_src_a_n=ECC_PMUL_T8; ecc_src_b_n=ECC_PMUL_T4; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_leaf_a_n='0; ecc_leaf_b_n='0; ecc_leaf_prod_n='0; ecc_leaf_path_n='0; ecc_diag_slot_n='0; ecc_fold_word_n='0; ecc_pipe0_valid_n=1'b0; ecc_pipe1_valid_n=1'b0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_ra[0]=ECC_PMUL_T8; vrf_ra[1]=ECC_PMUL_T8; vrf_ra[2]=ECC_PMUL_T8; vrf_ra[3]=ECC_PMUL_T8; st_n=S_ECC_LOAD_A_WAIT; end
-                6'd12: begin ecc_dst_n=ECC_PMUL_T4; ecc_src_a_n=ECC_PMUL_T5; ecc_src_b_n=ecc_pmul_z1_q; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_leaf_a_n='0; ecc_leaf_b_n='0; ecc_leaf_prod_n='0; ecc_leaf_path_n='0; ecc_diag_slot_n='0; ecc_fold_word_n='0; ecc_pipe0_valid_n=1'b0; ecc_pipe1_valid_n=1'b0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_ra[0]=ECC_PMUL_T5; vrf_ra[1]=ECC_PMUL_T5; vrf_ra[2]=ECC_PMUL_T5; vrf_ra[3]=ECC_PMUL_T5; st_n=S_ECC_LOAD_A_WAIT; end
-                6'd13: begin ecc_dst_n=ECC_PMUL_T4; ecc_src_a_n=ECC_PMUL_T4; ecc_src_b_n=ecc_pmul_z2_q; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_leaf_a_n='0; ecc_leaf_b_n='0; ecc_leaf_prod_n='0; ecc_leaf_path_n='0; ecc_diag_slot_n='0; ecc_fold_word_n='0; ecc_pipe0_valid_n=1'b0; ecc_pipe1_valid_n=1'b0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_ra[0]=ECC_PMUL_T4; vrf_ra[1]=ECC_PMUL_T4; vrf_ra[2]=ECC_PMUL_T4; vrf_ra[3]=ECC_PMUL_T4; st_n=S_ECC_LOAD_A_WAIT; end
-                6'd14: begin uop_p0_n='0; uop_p0_n.valid=1'b1; uop_p0_n.op_type=UOP_HBIND_CHUNK; uop_p0_n.src0_addr=ECC_PMUL_T7; uop_p0_n.src1_addr=ECC_PMUL_T3; uop_p0_n.dst_addr=ECC_PMUL_T9; uop_p0_n.chunk_idx=2'd3; ecc_job_phase_n=ECC_PHASE_PMUL_ADD; st_n=S_UOP_P1_RD0; end
-                6'd15: begin ecc_dst_n=ECC_PMUL_T9; ecc_src_a_n=ECC_PMUL_T0; ecc_src_b_n=ECC_PMUL_T9; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_leaf_a_n='0; ecc_leaf_b_n='0; ecc_leaf_prod_n='0; ecc_leaf_path_n='0; ecc_diag_slot_n='0; ecc_fold_word_n='0; ecc_pipe0_valid_n=1'b0; ecc_pipe1_valid_n=1'b0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_ra[0]=ECC_PMUL_T0; vrf_ra[1]=ECC_PMUL_T0; vrf_ra[2]=ECC_PMUL_T0; vrf_ra[3]=ECC_PMUL_T0; st_n=S_ECC_LOAD_A_WAIT; end
-                6'd16: begin uop_p0_n='0; uop_p0_n.valid=1'b1; uop_p0_n.op_type=UOP_HBIND_CHUNK; uop_p0_n.src0_addr=ECC_PMUL_T2; uop_p0_n.src1_addr=ECC_PMUL_T6; uop_p0_n.dst_addr=ECC_PMUL_T7; uop_p0_n.chunk_idx=2'd3; ecc_job_phase_n=ECC_PHASE_PMUL_ADD; st_n=S_UOP_P1_RD0; end
-                6'd17: begin ecc_dst_n=ECC_PMUL_T7; ecc_src_a_n=ECC_PMUL_T1; ecc_src_b_n=ECC_PMUL_T7; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_leaf_a_n='0; ecc_leaf_b_n='0; ecc_leaf_prod_n='0; ecc_leaf_path_n='0; ecc_diag_slot_n='0; ecc_fold_word_n='0; ecc_pipe0_valid_n=1'b0; ecc_pipe1_valid_n=1'b0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_ra[0]=ECC_PMUL_T1; vrf_ra[1]=ECC_PMUL_T1; vrf_ra[2]=ECC_PMUL_T1; vrf_ra[3]=ECC_PMUL_T1; st_n=S_ECC_LOAD_A_WAIT; end
-                6'd18: begin uop_p0_n='0; uop_p0_n.valid=1'b1; uop_p0_n.op_type=UOP_HBIND_CHUNK; uop_p0_n.src0_addr=ECC_PMUL_T9; uop_p0_n.src1_addr=ECC_PMUL_T7; uop_p0_n.dst_addr=ECC_PMUL_T7; uop_p0_n.chunk_idx=2'd3; ecc_job_phase_n=ECC_PHASE_PMUL_ADD; st_n=S_UOP_P1_RD0; end
-                6'd19: begin ecc_dst_n=ECC_PMUL_T9; ecc_src_a_n=ECC_PMUL_T0; ecc_src_b_n=ECC_PMUL_T8; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_leaf_a_n='0; ecc_leaf_b_n='0; ecc_leaf_prod_n='0; ecc_leaf_path_n='0; ecc_diag_slot_n='0; ecc_fold_word_n='0; ecc_pipe0_valid_n=1'b0; ecc_pipe1_valid_n=1'b0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_ra[0]=ECC_PMUL_T0; vrf_ra[1]=ECC_PMUL_T0; vrf_ra[2]=ECC_PMUL_T0; vrf_ra[3]=ECC_PMUL_T0; st_n=S_ECC_LOAD_A_WAIT; end
-                6'd20: begin ecc_dst_n=ECC_PMUL_T3; ecc_src_a_n=ECC_PMUL_T5; ecc_src_b_n=ECC_PMUL_T6; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_leaf_a_n='0; ecc_leaf_b_n='0; ecc_leaf_prod_n='0; ecc_leaf_path_n='0; ecc_diag_slot_n='0; ecc_fold_word_n='0; ecc_pipe0_valid_n=1'b0; ecc_pipe1_valid_n=1'b0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_ra[0]=ECC_PMUL_T5; vrf_ra[1]=ECC_PMUL_T5; vrf_ra[2]=ECC_PMUL_T5; vrf_ra[3]=ECC_PMUL_T5; st_n=S_ECC_LOAD_A_WAIT; end
-                6'd21: begin uop_p0_n='0; uop_p0_n.valid=1'b1; uop_p0_n.op_type=UOP_HBIND_CHUNK; uop_p0_n.src0_addr=ECC_PMUL_T9; uop_p0_n.src1_addr=ECC_PMUL_T3; uop_p0_n.dst_addr=ECC_PMUL_T9; uop_p0_n.chunk_idx=2'd3; ecc_job_phase_n=ECC_PHASE_PMUL_ADD; st_n=S_UOP_P1_RD0; end
-                6'd22: begin ecc_dst_n=ECC_PMUL_T9; ecc_src_a_n=ECC_PMUL_T9; ecc_src_b_n=ECC_PMUL_T5; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_leaf_a_n='0; ecc_leaf_b_n='0; ecc_leaf_prod_n='0; ecc_leaf_path_n='0; ecc_diag_slot_n='0; ecc_fold_word_n='0; ecc_pipe0_valid_n=1'b0; ecc_pipe1_valid_n=1'b0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_ra[0]=ECC_PMUL_T9; vrf_ra[1]=ECC_PMUL_T9; vrf_ra[2]=ECC_PMUL_T9; vrf_ra[3]=ECC_PMUL_T9; st_n=S_ECC_LOAD_A_WAIT; end
-                6'd23: begin uop_p0_n='0; uop_p0_n.valid=1'b1; uop_p0_n.op_type=UOP_HBIND_CHUNK; uop_p0_n.src0_addr=ECC_PMUL_T8; uop_p0_n.src1_addr=ECC_PMUL_T4; uop_p0_n.dst_addr=ECC_PMUL_T3; uop_p0_n.chunk_idx=2'd3; ecc_job_phase_n=ECC_PHASE_PMUL_ADD; st_n=S_UOP_P1_RD0; end
-                6'd24: begin ecc_dst_n=ECC_PMUL_T3; ecc_src_a_n=ECC_PMUL_T3; ecc_src_b_n=ECC_PMUL_T7; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_leaf_a_n='0; ecc_leaf_b_n='0; ecc_leaf_prod_n='0; ecc_leaf_path_n='0; ecc_diag_slot_n='0; ecc_fold_word_n='0; ecc_pipe0_valid_n=1'b0; ecc_pipe1_valid_n=1'b0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_ra[0]=ECC_PMUL_T3; vrf_ra[1]=ECC_PMUL_T3; vrf_ra[2]=ECC_PMUL_T3; vrf_ra[3]=ECC_PMUL_T3; st_n=S_ECC_LOAD_A_WAIT; end
-                6'd25: begin uop_p0_n='0; uop_p0_n.valid=1'b1; uop_p0_n.op_type=UOP_HBIND_CHUNK; uop_p0_n.src0_addr=ECC_PMUL_T9; uop_p0_n.src1_addr=ECC_PMUL_T3; uop_p0_n.dst_addr=ECC_PMUL_T8; uop_p0_n.chunk_idx=2'd3; ecc_job_phase_n=ECC_PHASE_PMUL_ADD; st_n=S_UOP_P1_RD0; end
-                6'd26: begin ecc_job_phase_n=ECC_PHASE_PMUL_COPY; ecc_job_copy_src_n=ECC_PMUL_T7; ecc_job_copy_dst_n=ecc_pmul_out_x_q; vrf_ra[0]=ECC_PMUL_T7; vrf_ra[1]=ECC_PMUL_T7; vrf_ra[2]=ECC_PMUL_T7; vrf_ra[3]=ECC_PMUL_T7; st_n=S_ECC_INV_COPY_WAIT; end
-                6'd27: begin ecc_job_phase_n=ECC_PHASE_PMUL_COPY; ecc_job_copy_src_n=ECC_PMUL_T8; ecc_job_copy_dst_n=ecc_pmul_out_y_q; vrf_ra[0]=ECC_PMUL_T8; vrf_ra[1]=ECC_PMUL_T8; vrf_ra[2]=ECC_PMUL_T8; vrf_ra[3]=ECC_PMUL_T8; st_n=S_ECC_INV_COPY_WAIT; end
-                default: begin ecc_job_phase_n=ECC_PHASE_PMUL_COPY; ecc_job_copy_src_n=ECC_PMUL_T4; ecc_job_copy_dst_n=ecc_pmul_out_z_q; vrf_ra[0]=ECC_PMUL_T4; vrf_ra[1]=ECC_PMUL_T4; vrf_ra[2]=ECC_PMUL_T4; vrf_ra[3]=ECC_PMUL_T4; st_n=S_ECC_INV_COPY_WAIT; end
+                6'd2: begin uop_p0_n='0; uop_p0_n.valid=1'b1; uop_p0_n.op_type=UOP_HBIND_CHUNK; uop_p0_n.src0_addr=ECC_PMUL_T0; uop_p0_n.src1_addr=ECC_PMUL_T1; uop_p0_n.dst_addr=ECC_PMUL_T4; uop_p0_n.chunk_idx=2'd3; ecc_job_phase_n=ECC_PHASE_PMUL_ADD; st_n=S_UOP_P1_RD0; end
+                6'd3: begin hperm_dst_base_n=ECC_PMUL_T5; hperm_src_base_n=ECC_PMUL_T4; hperm_spread_n=1'b1; ecc_dst_n=ECC_PMUL_T5; ecc_src_a_n=ECC_PMUL_T5; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_ra[0]=ECC_PMUL_T4; vrf_ra[1]=ECC_PMUL_T4; vrf_ra[2]=ECC_PMUL_T4; vrf_ra[3]=ECC_PMUL_T4; st_n=S_RD_WAIT; end
+                6'd4: begin ecc_dst_n=ECC_PMUL_T2; ecc_src_a_n=ecc_pmul_x1_q; ecc_src_b_n=ecc_pmul_z1_q; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_leaf_a_n='0; ecc_leaf_b_n='0; ecc_leaf_prod_n='0; ecc_leaf_path_n='0; ecc_diag_slot_n='0; ecc_fold_word_n='0; ecc_pipe0_valid_n=1'b0; ecc_pipe1_valid_n=1'b0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_ra[0]=ecc_pmul_x1_q; vrf_ra[1]=ecc_pmul_x1_q; vrf_ra[2]=ecc_pmul_x1_q; vrf_ra[3]=ecc_pmul_x1_q; st_n=S_ECC_LOAD_A_WAIT; end
+                6'd5: begin ecc_dst_n=ECC_PMUL_T3; ecc_src_a_n=ecc_pmul_x2_q; ecc_src_b_n=ecc_pmul_z2_q; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_leaf_a_n='0; ecc_leaf_b_n='0; ecc_leaf_prod_n='0; ecc_leaf_path_n='0; ecc_diag_slot_n='0; ecc_fold_word_n='0; ecc_pipe0_valid_n=1'b0; ecc_pipe1_valid_n=1'b0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_ra[0]=ecc_pmul_x2_q; vrf_ra[1]=ecc_pmul_x2_q; vrf_ra[2]=ecc_pmul_x2_q; vrf_ra[3]=ecc_pmul_x2_q; st_n=S_ECC_LOAD_A_WAIT; end
+                6'd6: begin ecc_dst_n=ECC_PMUL_T6; ecc_src_a_n=ECC_PMUL_T2; ecc_src_b_n=ECC_PMUL_T3; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_leaf_a_n='0; ecc_leaf_b_n='0; ecc_leaf_prod_n='0; ecc_leaf_path_n='0; ecc_diag_slot_n='0; ecc_fold_word_n='0; ecc_pipe0_valid_n=1'b0; ecc_pipe1_valid_n=1'b0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_ra[0]=ECC_PMUL_T2; vrf_ra[1]=ECC_PMUL_T2; vrf_ra[2]=ECC_PMUL_T2; vrf_ra[3]=ECC_PMUL_T2; st_n=S_ECC_LOAD_A_WAIT; end
+                6'd7: begin ecc_dst_n=ECC_PMUL_T7; ecc_src_a_n=ecc_pmul_point_q; ecc_src_b_n=ECC_PMUL_T5; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_leaf_a_n='0; ecc_leaf_b_n='0; ecc_leaf_prod_n='0; ecc_leaf_path_n='0; ecc_diag_slot_n='0; ecc_fold_word_n='0; ecc_pipe0_valid_n=1'b0; ecc_pipe1_valid_n=1'b0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_ra[0]=ecc_pmul_point_q; vrf_ra[1]=ecc_pmul_point_q; vrf_ra[2]=ecc_pmul_point_q; vrf_ra[3]=ecc_pmul_point_q; st_n=S_ECC_LOAD_A_WAIT; end
+                6'd8: begin uop_p0_n='0; uop_p0_n.valid=1'b1; uop_p0_n.op_type=UOP_HBIND_CHUNK; uop_p0_n.src0_addr=ECC_PMUL_T7; uop_p0_n.src1_addr=ECC_PMUL_T6; uop_p0_n.dst_addr=ecc_pmul_out_x_q; uop_p0_n.chunk_idx=2'd3; ecc_job_phase_n=ECC_PHASE_PMUL_ADD; st_n=S_UOP_P1_RD0; end
+                default: begin ecc_job_phase_n=ECC_PHASE_PMUL_COPY; ecc_job_copy_src_n=ECC_PMUL_T5; ecc_job_copy_dst_n=ecc_pmul_out_z_q; vrf_ra[0]=ECC_PMUL_T5; vrf_ra[1]=ECC_PMUL_T5; vrf_ra[2]=ECC_PMUL_T5; vrf_ra[3]=ECC_PMUL_T5; st_n=S_ECC_INV_COPY_WAIT; end
                 endcase
             end
             default: begin
@@ -1599,12 +1635,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
         S_ECC_PMUL_STEP_NEXT: begin
             if (ecc_pmul_subop_last(ecc_pmul_subop_q, ecc_pmul_step_q)) begin
                 ecc_pmul_step_n='0;
-                if ((ecc_pmul_ctrl_q == ECC_PMUL_CTRL_ADD) || (ecc_pmul_ctrl_q == ECC_PMUL_CTRL_DBL)) begin
-                    if (ecc_pmul_out_sel_q)
-                        ecc_pmul_r1_inf_n=ecc_pmul_out_inf_q;
-                    else
-                        ecc_pmul_r0_inf_n=ecc_pmul_out_inf_q;
-                end
                 unique case (ecc_pmul_ctrl_q)
                 ECC_PMUL_CTRL_INIT: begin
                     vrf_ra[0]=ecc_job_src_q; vrf_ra[1]=ecc_job_src_q;
@@ -1983,8 +2013,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             ecc_autoreduce_q<=1'b0;ecc_mac_q<=1'b0;ecc_sqr_repeat_q<='0;
             ecc_job_kind_q<=ECC_JOB_NONE;ecc_job_phase_q<=ECC_PHASE_NONE;ecc_job_active_q<=1'b0;ecc_job_done_q<=1'b0;ecc_job_cycle_q<='0;ecc_inv_step_q<='0;ecc_job_src_q<='0;ecc_job_dst_q<='0;ecc_job_copy_src_q<='0;ecc_job_copy_dst_q<='0;
             ecc_pmul_ctrl_q<=ECC_PMUL_CTRL_INIT;ecc_pmul_subop_q<=ECC_PMUL_SUB_NONE;ecc_pmul_step_q<='0;ecc_pmul_bit_q<='0;ecc_pmul_scalar_bit_q<=1'b0;
-            ecc_pmul_r0_inf_q<=1'b1;ecc_pmul_r1_inf_q<=1'b1;ecc_pmul_out_sel_q<=1'b0;ecc_pmul_out_inf_q<=1'b0;ecc_pmul_const_one_q<=1'b0;ecc_pmul_result_q<='0;ecc_pmul_point_q<='0;
-            ecc_pmul_x1_q<='0;ecc_pmul_y1_q<='0;ecc_pmul_z1_q<='0;ecc_pmul_x2_q<='0;ecc_pmul_y2_q<='0;ecc_pmul_z2_q<='0;ecc_pmul_out_x_q<='0;ecc_pmul_out_y_q<='0;ecc_pmul_out_z_q<='0;
+            ecc_pmul_r0_inf_q<=1'b1;ecc_pmul_out_sel_q<=1'b0;ecc_pmul_const_one_q<=1'b0;ecc_pmul_result_q<='0;ecc_pmul_point_q<='0;
+            ecc_pmul_x1_q<='0;ecc_pmul_z1_q<='0;ecc_pmul_x2_q<='0;ecc_pmul_z2_q<='0;ecc_pmul_out_x_q<='0;ecc_pmul_out_z_q<='0;
             ecc_pipe0_valid_q<=1'b0;ecc_pipe1_valid_q<=1'b0;ecc_pipe0_diag_slot_q<='0;ecc_pipe1_diag_slot_q<='0;
         end
         else begin
@@ -2008,8 +2038,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             ecc_autoreduce_q<=ecc_autoreduce_n;ecc_mac_q<=ecc_mac_n;ecc_sqr_repeat_q<=ecc_sqr_repeat_n;
             ecc_job_kind_q<=ecc_job_kind_n;ecc_job_phase_q<=ecc_job_phase_n;ecc_job_active_q<=ecc_job_active_n;ecc_job_done_q<=ecc_job_done_n;ecc_job_cycle_q<=ecc_job_cycle_n;ecc_inv_step_q<=ecc_inv_step_n;ecc_job_src_q<=ecc_job_src_n;ecc_job_dst_q<=ecc_job_dst_n;ecc_job_copy_src_q<=ecc_job_copy_src_n;ecc_job_copy_dst_q<=ecc_job_copy_dst_n;
             ecc_pmul_ctrl_q<=ecc_pmul_ctrl_n;ecc_pmul_subop_q<=ecc_pmul_subop_n;ecc_pmul_step_q<=ecc_pmul_step_n;ecc_pmul_bit_q<=ecc_pmul_bit_n;ecc_pmul_scalar_bit_q<=ecc_pmul_scalar_bit_n;
-            ecc_pmul_r0_inf_q<=ecc_pmul_r0_inf_n;ecc_pmul_r1_inf_q<=ecc_pmul_r1_inf_n;ecc_pmul_out_sel_q<=ecc_pmul_out_sel_n;ecc_pmul_out_inf_q<=ecc_pmul_out_inf_n;ecc_pmul_const_one_q<=ecc_pmul_const_one_n;ecc_pmul_result_q<=ecc_pmul_result_n;ecc_pmul_point_q<=ecc_pmul_point_n;
-            ecc_pmul_x1_q<=ecc_pmul_x1_n;ecc_pmul_y1_q<=ecc_pmul_y1_n;ecc_pmul_z1_q<=ecc_pmul_z1_n;ecc_pmul_x2_q<=ecc_pmul_x2_n;ecc_pmul_y2_q<=ecc_pmul_y2_n;ecc_pmul_z2_q<=ecc_pmul_z2_n;ecc_pmul_out_x_q<=ecc_pmul_out_x_n;ecc_pmul_out_y_q<=ecc_pmul_out_y_n;ecc_pmul_out_z_q<=ecc_pmul_out_z_n;
+            ecc_pmul_r0_inf_q<=ecc_pmul_r0_inf_n;ecc_pmul_out_sel_q<=ecc_pmul_out_sel_n;ecc_pmul_const_one_q<=ecc_pmul_const_one_n;ecc_pmul_result_q<=ecc_pmul_result_n;ecc_pmul_point_q<=ecc_pmul_point_n;
+            ecc_pmul_x1_q<=ecc_pmul_x1_n;ecc_pmul_z1_q<=ecc_pmul_z1_n;ecc_pmul_x2_q<=ecc_pmul_x2_n;ecc_pmul_z2_q<=ecc_pmul_z2_n;ecc_pmul_out_x_q<=ecc_pmul_out_x_n;ecc_pmul_out_z_q<=ecc_pmul_out_z_n;
             ecc_pipe0_valid_q<=ecc_pipe0_valid_n;ecc_pipe1_valid_q<=ecc_pipe1_valid_n;ecc_pipe0_diag_slot_q<=ecc_pipe0_diag_slot_n;ecc_pipe1_diag_slot_q<=ecc_pipe1_diag_slot_n;
         end
     end
