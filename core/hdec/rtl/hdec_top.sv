@@ -337,6 +337,16 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
         endcase
     endfunction
 
+    function automatic logic [63:0] ecc_scalar_word_from_row(input logic [3:0][63:0] row,
+                                                             input logic [7:0] bit_idx);
+        unique case (bit_idx[7:6])
+            2'd0: ecc_scalar_word_from_row = row[0];
+            2'd1: ecc_scalar_word_from_row = row[1];
+            2'd2: ecc_scalar_word_from_row = row[2];
+            default: ecc_scalar_word_from_row = row[3];
+        endcase
+    endfunction
+
     function automatic logic [63:0] hperm_pick_word(input logic [2:0] sel, input logic [3:0][63:0] blk_a, input logic [3:0][63:0] blk_b);
         case(sel)
             3'd0: hperm_pick_word = blk_a[0];
@@ -1353,6 +1363,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
 
         S_ECC_PMUL_READ_SCALAR: begin
             ecc_pmul_scalar_bit_n=ecc_scalar_bit_from_row(vrf_rd, ecc_pmul_bit_q);
+            a_n=ecc_scalar_word_from_row(vrf_rd, ecc_pmul_bit_q);
             st_n=S_ECC_PMUL_START_ADD;
         end
 
@@ -1610,9 +1621,14 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                         st_n=S_ECC_PMUL_STEP;
                     end else begin
                         ecc_pmul_bit_n=ecc_pmul_bit_q - 8'd1;
-                        vrf_ra[0]=ecc_job_src_q; vrf_ra[1]=ecc_job_src_q;
-                        vrf_ra[2]=ecc_job_src_q; vrf_ra[3]=ecc_job_src_q;
-                        st_n=S_ECC_PMUL_READ_SCALAR_WAIT;
+                        if (ecc_pmul_bit_q[5:0] == 6'd0) begin
+                            vrf_ra[0]=ecc_job_src_q; vrf_ra[1]=ecc_job_src_q;
+                            vrf_ra[2]=ecc_job_src_q; vrf_ra[3]=ecc_job_src_q;
+                            st_n=S_ECC_PMUL_READ_SCALAR_WAIT;
+                        end else begin
+                            ecc_pmul_scalar_bit_n=a_q[ecc_pmul_bit_q[5:0] - 6'd1];
+                            st_n=S_ECC_PMUL_START_ADD;
+                        end
                     end
                 end
                 default: begin
