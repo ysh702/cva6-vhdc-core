@@ -92,11 +92,6 @@ package hdec_pkg;
         // ── Compute Parameters ──
         logic [3:0]             perm_nibble;
 
-        // ── Compute Enables ──
-        logic                   use_counter;
-        logic                   use_clip;
-        logic                   use_shift;
-
         // ── Op Type Tags ──
         logic                   is_last_class;
     } hdec_uop_t;

@@ -90,3 +90,51 @@ Round 03 artifacts:
 - `round03_addr_pmul_derive/ooc_200/utilization_hier.rpt`
 - `round03_addr_pmul_derive/ooc_200/timing_top200.csv`
 - `round03_addr_pmul_derive/ooc_200/timing_summary_top50.rpt`
+
+## Retained round 06: uop state trim with ECC_STATUS CE fix
+
+Round 06 continues the same area policy: remove state that is either already carried in the uop pipeline or derivable from the uop type.
+
+- Remove dead HPERM source-base, word-offset, and high-shift registers.
+- Remove HBIND base registers; continuation chunks now increment the already issued uop addresses.
+- Remove redundant `use_counter`, `use_clip`, and `use_shift` fields from `hdec_uop_t`; P2 derives those enables from `op_type`.
+- Add a timing fix for ECC_STATUS job start: job source/destination registers accept the requested addresses whenever an INV/PMUL start bit is present, so their CE no longer depends on range checks.
+
+The un-fixed trim point had good area but failed the 200 MHz target:
+
+| Version | WNS (ns) | Est. Fmax (MHz) | Slice LUT | Logic LUT | LUTRAM | FF | PMUL cycles | Decision |
+|---|---:|---:|---:|---:|---:|---:|---:|---|
+| Round 06 before CE fix | -0.158 | 193.874 | 6540 | 6068 | 472 | 2125 | 6005 | Rejected, timing below 200 MHz |
+
+Retained Vivado 2022.2 result:
+
+| Version | WNS (ns) | Est. Fmax (MHz) | Slice LUT | Logic LUT | LUTRAM | FF | CARRY4 | PMUL cycles | HDC full-flow |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---|
+| V22 baseline, V21 RTL | 0.147 | 206.058 | 6756 | 6284 | 472 | 2153 | 22 | 6005 | PASS |
+| V22 round 03 | 0.331 | 214.179 | 6582 | 6110 | 472 | 2165 | 20 | 6005 | PASS |
+| V22 round 06 | 0.096 | 203.915 | 6463 | 5991 | 472 | 2128 | 20 | 6005 | PASS |
+| Delta vs local baseline | -0.051 | -2.143 | -293 | -293 | 0 | -25 | -2 | 0 | - |
+| Delta vs round 03 | -0.235 | -10.264 | -119 | -119 | 0 | -37 | 0 | 0 | - |
+
+Comparison against the remote V21 Vivado 2024.2 report:
+
+| Version | Vivado | Slice LUT | Logic LUT | LUTRAM | FF | PMUL cycles |
+|---|---|---:|---:|---:|---:|---:|
+| V21 remote report | 2024.2 | 6459 | 5987 | 472 | 2150 | 6005 |
+| V22 round 06 | 2022.2 | 6463 | 5991 | 472 | 2128 | 6005 |
+| Delta, tool-version mixed | - | +4 | +4 | 0 | -22 | 0 |
+
+Round 06's worst retained path is `ecc_pmul_step_q_reg[3]/C` to `ecc_pmul_bit_q_reg[0]/CE`, with 0.096 ns WNS at 5.000 ns. This is close to the 200 MHz floor but still acceptable for the current area-first pass.
+
+Round 06 artifacts:
+
+- `round06_uop_state_trim/xsim/ecc_pmul_xsim.log`
+- `round06_uop_state_trim/xsim/hdc_full_flow_xsim.log`
+- `round06_uop_state_trim/ooc_200/run_summary.txt`
+- `round06_uop_state_trim/ooc_200/utilization.rpt`
+- `round06_uop_state_trim/ooc_200/utilization_hier.rpt`
+- `round06_uop_state_trim/ooc_200/timing_top200.csv`
+- `round06_uop_state_trim/ooc_200/timing_summary_top50.rpt`
+- `round06_uop_state_trim/rejected_pre_timing_fix/run_summary.txt`
+- `round06_uop_state_trim/rejected_pre_timing_fix/utilization.rpt`
+- `round06_uop_state_trim/rejected_pre_timing_fix/timing_top200.csv`

@@ -1,0 +1,9 @@
+run_label=v22_round06_uop_state_trim_fix
+period_ns=5.000
+part=xc7z020clg400-2
+top=hdec_top
+wns=0.096
+worst_data_delay_ns=4.693
+fmax_est_mhz=203.915
+top_endpoint=ecc_pmul_bit_q_reg[0]/CE
+vivado_version=2022.2
