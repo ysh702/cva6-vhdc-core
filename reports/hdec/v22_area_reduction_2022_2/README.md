@@ -138,3 +138,43 @@ Round 06 artifacts:
 - `round06_uop_state_trim/rejected_pre_timing_fix/run_summary.txt`
 - `round06_uop_state_trim/rejected_pre_timing_fix/utilization.rpt`
 - `round06_uop_state_trim/rejected_pre_timing_fix/timing_top200.csv`
+
+## Retained round 09: HCNT uop progress reuse
+
+Round 09 removes HCNT progress mirrors and lets the existing uop fields carry the counter operation's progress:
+
+- HCNTADD lane subgroup is driven by `uop_p2_q.subgroup_idx`.
+- HCNTADD next subgroup and next chunk addresses are derived from the current uop address fields.
+- The HCNTADD `hv_slot`, `acc_sel`, and subgroup mirror registers are removed.
+- The already-pruned HCNTCLIP subgroup mirror is removed from source RTL.
+
+Retained Vivado 2022.2 result:
+
+| Version | WNS (ns) | Est. Fmax (MHz) | Slice LUT | Logic LUT | LUTRAM | FF | CARRY4 | PMUL cycles | HDC full-flow |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---|
+| V22 baseline, V21 RTL | 0.147 | 206.058 | 6756 | 6284 | 472 | 2153 | 22 | 6005 | PASS |
+| V22 round 03 | 0.331 | 214.179 | 6582 | 6110 | 472 | 2165 | 20 | 6005 | PASS |
+| V22 round 06 | 0.096 | 203.915 | 6463 | 5991 | 472 | 2128 | 20 | 6005 | PASS |
+| V22 round 09 | 0.243 | 210.217 | 6429 | 5957 | 472 | 2119 | 20 | 6005 | PASS |
+| Delta vs local baseline | +0.096 | +4.159 | -327 | -327 | 0 | -34 | -2 | 0 | - |
+| Delta vs round 06 | +0.147 | +6.302 | -34 | -34 | 0 | -9 | 0 | 0 | - |
+
+Comparison against the remote V21 Vivado 2024.2 report:
+
+| Version | Vivado | Slice LUT | Logic LUT | LUTRAM | FF | PMUL cycles |
+|---|---|---:|---:|---:|---:|---:|
+| V21 remote report | 2024.2 | 6459 | 5987 | 472 | 2150 | 6005 |
+| V22 round 09 | 2022.2 | 6429 | 5957 | 472 | 2119 | 6005 |
+| Delta, tool-version mixed | - | -30 | -30 | 0 | -31 | 0 |
+
+Round 09's worst retained path is `uop_p2_q_reg[valid]/C` to `lane_result_q_reg[0][27]/D`, with 0.243 ns WNS at 5.000 ns.
+
+Round 09 artifacts:
+
+- `round09_hcnt_uop_progress/xsim/ecc_pmul_xsim.log`
+- `round09_hcnt_uop_progress/xsim/hdc_full_flow_xsim.log`
+- `round09_hcnt_uop_progress/ooc_200/run_summary.txt`
+- `round09_hcnt_uop_progress/ooc_200/utilization.rpt`
+- `round09_hcnt_uop_progress/ooc_200/utilization_hier.rpt`
+- `round09_hcnt_uop_progress/ooc_200/timing_top200.csv`
+- `round09_hcnt_uop_progress/ooc_200/timing_summary_top50.rpt`
