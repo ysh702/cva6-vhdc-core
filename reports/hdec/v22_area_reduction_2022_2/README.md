@@ -54,3 +54,39 @@ The V22 loop is:
 4. For a retained round, commit the RTL/report state and compare against both the local V22 baseline and the remote V21 report.
 
 The acceptance target is at least 200 MHz. Frequency above 200 MHz is useful margin but not the primary objective. PMUL cycles should stay at 6005 or decrease; small cycle increases are not desired for this version. The primary goal is lower LUT/FF.
+
+## Retained round 03: address and PMUL selector cleanup
+
+Round 03 contains two small cleanups and one structural PMUL-control refactor:
+
+- Remove the HPERM chunk counter register and advance continuation chunks by incrementing the already issued micro-op addresses.
+- Remove the unused XOR-only valid output from the P2 popcount slice.
+- Replace PMUL X-only ladder address staging registers with scalar-bit-derived addresses for the current add/double step.
+
+Vivado 2022.2 results:
+
+| Version | WNS (ns) | Est. Fmax (MHz) | Slice LUT | Logic LUT | LUTRAM | FF | CARRY4 | PMUL cycles | HDC full-flow |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---|
+| V22 baseline, V21 RTL | 0.147 | 206.058 | 6756 | 6284 | 472 | 2153 | 22 | 6005 | PASS |
+| V22 round 03 | 0.331 | 214.179 | 6582 | 6110 | 472 | 2165 | 20 | 6005 | PASS |
+| Delta vs local baseline | +0.184 | +8.121 | -174 | -174 | 0 | +12 | -2 | 0 | - |
+
+Comparison against the remote V21 Vivado 2024.2 report:
+
+| Version | Vivado | Slice LUT | Logic LUT | LUTRAM | FF | PMUL cycles |
+|---|---|---:|---:|---:|---:|---:|
+| V21 remote report | 2024.2 | 6459 | 5987 | 472 | 2150 | 6005 |
+| V22 round 03 | 2022.2 | 6582 | 6110 | 472 | 2165 | 6005 |
+| Delta, tool-version mixed | - | +123 | +123 | 0 | +15 | 0 |
+
+Round 03 moved the worst path from the HPERM/uop address-control path back to the P2 popcount capture path. The top endpoint is now `group_dist_q_reg[8]/D`, with 0.331 ns WNS at 5.000 ns.
+
+Round 03 artifacts:
+
+- `round03_addr_pmul_derive/xsim/ecc_pmul_xsim.log`
+- `round03_addr_pmul_derive/xsim/hdc_full_flow_xsim.log`
+- `round03_addr_pmul_derive/ooc_200/run_summary.txt`
+- `round03_addr_pmul_derive/ooc_200/utilization.rpt`
+- `round03_addr_pmul_derive/ooc_200/utilization_hier.rpt`
+- `round03_addr_pmul_derive/ooc_200/timing_top200.csv`
+- `round03_addr_pmul_derive/ooc_200/timing_summary_top50.rpt`

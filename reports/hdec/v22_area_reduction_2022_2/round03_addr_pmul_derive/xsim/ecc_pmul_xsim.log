@@ -1,0 +1,22 @@
+#-----------------------------------------------------------
+# xsim v2022.2 (64-bit)
+# SW Build 3671981 on Fri Oct 14 05:00:03 MDT 2022
+# IP Build 3669848 on Fri Oct 14 08:30:02 MDT 2022
+# Start of session at: Thu Jun 11 15:30:44 2026
+# Process ID: 27708
+# Current directory: H:/CVA6-HDEC/cva6-vhdc-core-v22/tmp/v22_round03_xsim/xsim_ecc_pmul_v18
+# Command line: xsim.exe -mode tcl -source {xsim.dir/tb_hdec_ecc_pmul_v18/xsim_script.tcl}
+# Log file: H:/CVA6-HDEC/cva6-vhdc-core-v22/tmp/v22_round03_xsim/xsim_ecc_pmul_v18/xsim.log
+# Journal file: H:/CVA6-HDEC/cva6-vhdc-core-v22/tmp/v22_round03_xsim/xsim_ecc_pmul_v18\xsim.jou
+# Running On: DESKTOP-RSKE6BB, OS: Windows, CPU Frequency: 3187 MHz, CPU Physical cores: 24, Host memory: 137128 MB
+#-----------------------------------------------------------
+source xsim.dir/tb_hdec_ecc_pmul_v18/xsim_script.tcl
+# xsim {tb_hdec_ecc_pmul_v18} -autoloadwcfg -tclbatch {H:/CVA6-HDEC/cva6-vhdc-core-v22/tmp/v22_round03_xsim/xsim_ecc_pmul_v18/run_all.tcl}
+Time resolution is 1 ps
+source H:/CVA6-HDEC/cva6-vhdc-core-v22/tmp/v22_round03_xsim/xsim_ecc_pmul_v18/run_all.tcl
+## run all
+PMUL_CYCLES=6005
+[HDEC_ECC_PMUL_V18] PASS
+$finish called at time : 2980443500 ps : File "H:/CVA6-HDEC/cva6-vhdc-core-v22/verif/hdec/tb_hdec_ecc_pmul_v18.sv" Line 171
+## quit
+INFO: [Common 17-206] Exiting xsim at Thu Jun 11 15:30:51 2026...
