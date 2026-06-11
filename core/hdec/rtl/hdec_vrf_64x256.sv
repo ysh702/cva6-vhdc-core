@@ -49,15 +49,11 @@ module hdec_vrf_64x256
             vrf_b3[bank_wa_addr_i[3]] <= bank_wdata_i[3];
     end
 
-    always_ff @(posedge clk_i or negedge rst_ni) begin
-        if (!rst_ni) begin
-            bank_ra_data_o <= '0;
-        end else begin
-            bank_ra_data_o[0] <= vrf_b0[bank_ra_addr_i[0]];
-            bank_ra_data_o[1] <= vrf_b1[bank_ra_addr_i[1]];
-            bank_ra_data_o[2] <= vrf_b2[bank_ra_addr_i[2]];
-            bank_ra_data_o[3] <= vrf_b3[bank_ra_addr_i[3]];
-        end
+    always_ff @(posedge clk_i) begin
+        bank_ra_data_o[0] <= vrf_b0[bank_ra_addr_i[0]];
+        bank_ra_data_o[1] <= vrf_b1[bank_ra_addr_i[1]];
+        bank_ra_data_o[2] <= vrf_b2[bank_ra_addr_i[2]];
+        bank_ra_data_o[3] <= vrf_b3[bank_ra_addr_i[3]];
     end
 
 endmodule
