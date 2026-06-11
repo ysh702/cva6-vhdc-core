@@ -167,6 +167,24 @@ module tb_hdec_hdc_full_flow_v20;
         end
     endtask
 
+    function automatic logic [1:0] hdc_word_bank(input int word_idx);
+        case (word_idx & 3)
+            0: hdc_word_bank = 2'd0;
+            1: hdc_word_bank = 2'd1;
+            2: hdc_word_bank = 2'd2;
+            default: hdc_word_bank = 2'd3;
+        endcase
+    endfunction
+
+    function automatic logic [5:0] hdc_word_entry_off(input int word_idx);
+        case ((word_idx >> 2) & 3)
+            0: hdc_word_entry_off = 6'd0;
+            1: hdc_word_entry_off = 6'd1;
+            2: hdc_word_entry_off = 6'd2;
+            default: hdc_word_entry_off = 6'd3;
+        endcase
+    endfunction
+
     task automatic write_vrf64(input logic [1:0] bank,
                                input logic [5:0] idx,
                                input logic [63:0] data);
@@ -193,8 +211,8 @@ module tb_hdec_hdc_full_flow_v20;
         logic [5:0] entry_idx;
         logic [1:0] bank;
         begin
-            entry_idx = {slot, 2'b00} + 6'(word_idx / 4);
-            bank = 2'(word_idx % 4);
+            entry_idx = {slot, 2'b00} + hdc_word_entry_off(word_idx);
+            bank = hdc_word_bank(word_idx);
             write_vrf64(bank, entry_idx, data);
         end
     endtask
@@ -205,17 +223,21 @@ module tb_hdec_hdc_full_flow_v20;
         logic [5:0] entry_idx;
         logic [1:0] bank;
         begin
-            entry_idx = {slot, 2'b00} + 6'(word_idx / 4);
-            bank = 2'(word_idx % 4);
+            entry_idx = {slot, 2'b00} + hdc_word_entry_off(word_idx);
+            bank = hdc_word_bank(word_idx);
             read_vrf64(bank, entry_idx, data);
         end
     endtask
 
     task automatic write_pattern_slot(input logic [3:0] slot, input logic invert);
+        logic [63:0] word_data;
         begin
-            for (int word_idx = 0; word_idx < 16; word_idx++)
-                write_hv_word(slot, word_idx, invert ? ~pattern_word(word_idx)
-                                                     :  pattern_word(word_idx));
+            for (int word_idx = 0; word_idx < 16; word_idx++) begin
+                word_data = pattern_word(word_idx);
+                if (invert)
+                    word_data = ~word_data;
+                write_hv_word(slot, word_idx, word_data);
+            end
         end
     endtask
 
@@ -242,7 +264,7 @@ module tb_hdec_hdc_full_flow_v20;
         logic [63:0] got;
         begin
             for (int bank = 0; bank < 4; bank++) begin
-                read_vrf64(2'(bank), 6'd16, got);
+                read_vrf64(hdc_word_bank(bank), 6'd16, got);
                 check_equal64($sformatf("HPERM bank%0d", bank), got,
                               align_word(bank, sh));
             end
