@@ -2,7 +2,9 @@
 // HDCU instruction subset: VWR64, VRD64, HCLR, HCNTCLR, HCNTADD,
 // HBIND, HPERM, HSIM, HCNTCLIP, HMATCH, VADDR.
 // No bundle, no add/sub counter, no BMCA.
-module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
+module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
+    parameter bit ECC_STATUS_CYCLE_COUNT = 1'b0
+) (
     input logic clk_i, rst_ni, valid_i, output logic ready_o,
     input hdec_op_t operator_i, input logic [63:0] operand_a_i, operand_b_i,
     output logic valid_o, output logic [63:0] result_o
@@ -211,6 +213,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
     logic               ecc_job_done_q, ecc_job_done_n;
     logic               ecc_job_bg_q, ecc_job_bg_n;
     logic [15:0]        ecc_job_cycle_q, ecc_job_cycle_n;
+    logic [15:0]        ecc_job_cycle_status;
     logic [3:0]         ecc_inv_step_q, ecc_inv_step_n;
     logic [VRF_IDX_W-1:0] ecc_job_src_q, ecc_job_src_n;
     logic [VRF_IDX_W-1:0] ecc_job_dst_q, ecc_job_dst_n;
@@ -228,9 +231,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
     logic [VRF_IDX_W-1:0] ecc_pmul_add_out_z;
     logic [VRF_IDX_W-1:0] ecc_pmul_dbl_x;
     logic [VRF_IDX_W-1:0] ecc_pmul_dbl_z;
-    logic                pop_d_mux;
-    logic                xor_d_mux;
-    logic                ecc_issue_pop;
 
     // ── Combinational helpers ───────────────────────────────────────────────
     assign hcntclip_acc_base = hcntclip_acc_sel_q ? 6'd48 : 6'd32;
@@ -252,13 +252,11 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
     assign uop_p2_use_counter = (uop_p2_q.op_type == UOP_HCNTADD_SUBGROUP);
     assign uop_p2_use_shift   = (uop_p2_q.op_type == UOP_HPERM_CHUNK);
     assign uop_p2_use_clip    = (uop_p2_q.op_type == UOP_HCNTCLIP_READ);
-    assign ecc_issue_pop = 1'b0;
-    assign pop_d_mux     = hdc_pop_issue || ecc_issue_pop;
-    assign xor_d_mux     = hdc_xor_issue || ecc_issue_pop;
     assign ecc_next_leaf_path = ecc_kpd32_path_inc(ecc_leaf_path_q);
     assign ecc_leaf_first = (ecc_leaf_path_q == 6'b00_00_00);
     assign ecc_leaf_last  = (ecc_leaf_path_q == 6'b10_10_10);
     assign ecc_leaf_offset_mask = ecc_kpd32_leaf_offset_mask(ecc_leaf_path_q);
+    assign ecc_job_cycle_status = ECC_STATUS_CYCLE_COUNT ? ecc_job_cycle_q : 16'd0;
     assign ecc_product_pair_rdata = ecc_product_pair[ecc_fold_word_q];
     assign ecc_product_even_contrib = ecc_kpd32_fold_word_contrib(ecc_leaf_offset_mask, {ecc_fold_word_q, 1'b0}, ecc_leaf_prod_q);
     assign ecc_product_odd_contrib  = ecc_kpd32_fold_word_contrib(ecc_leaf_offset_mask, {ecc_fold_word_q, 1'b1}, ecc_leaf_prod_q);
@@ -659,16 +657,14 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
 
     // ── 4× Lane instances ───────────────────────────────────────────────────
     for (genvar lid = 0; lid < LANE_NUM; lid++) begin : gen_lane
-        assign pop_src_a[lid] = ecc_issue_pop ? ecc_partial_vec[lid]
-                              : hdc_xor_issue ? hdc_src0_q[lid]
-                              : vrf_rd[lid];
-        assign pop_src_b[lid] = ecc_issue_pop ? '0 : vrf_rd[lid];
+        assign pop_src_a[lid] = hdc_xor_issue ? hdc_src0_q[lid] : vrf_rd[lid];
+        assign pop_src_b[lid] = vrf_rd[lid];
 
         hdec_p2_pop_slice i_p2_pop_slice (
             .clk_i,
             .rst_ni,
-            .pop_d_i          (pop_d_mux),
-            .xor_d_i          (xor_d_mux),
+            .pop_d_i          (hdc_pop_issue),
+            .xor_d_i          (hdc_xor_issue),
             .src_a_i          (pop_src_a[lid]),
             .src_b_i          (pop_src_b[lid]),
             .xor_result_o     (lane_bool_result[lid]),
@@ -740,7 +736,10 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
         ecc_job_kind_n=ecc_job_kind_q; ecc_job_phase_n=ecc_job_phase_q;
         ecc_job_active_n=ecc_job_active_q; ecc_job_done_n=ecc_job_done_q;
         ecc_job_bg_n=ecc_job_bg_q;
-        ecc_job_cycle_n=ecc_job_cycle_q + (ecc_job_active_q ? 16'd1 : 16'd0);
+        if (ECC_STATUS_CYCLE_COUNT)
+            ecc_job_cycle_n=ecc_job_cycle_q + (ecc_job_active_q ? 16'd1 : 16'd0);
+        else
+            ecc_job_cycle_n='0;
         ecc_inv_step_n=ecc_inv_step_q; ecc_job_src_n=ecc_job_src_q; ecc_job_dst_n=ecc_job_dst_q;
         ecc_job_copy_dst_n=ecc_job_copy_dst_q;
         ecc_pmul_ctrl_n=ecc_pmul_ctrl_q; ecc_pmul_subop_n=ecc_pmul_subop_q;
@@ -886,10 +885,10 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                         end
                     end
                 end else begin
-                    res_n={32'b0, ecc_job_cycle_q, 6'b0, ecc_job_dst_q,
+                    res_n={32'b0, ecc_job_cycle_status, 6'b0, ecc_job_dst_q,
                            ecc_job_done_q, ecc_job_active_q, STATUS_OK};
                     if (ecc_job_kind_q == ECC_JOB_PMUL)
-                        res_n={32'b0, ecc_job_cycle_q, 6'b0, ecc_pmul_result_q,
+                        res_n={32'b0, ecc_job_cycle_status, 6'b0, ecc_pmul_result_q,
                                ecc_job_done_q, ecc_job_active_q, STATUS_OK};
                     st_n=S_RESULT;
                 end
@@ -1648,7 +1647,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                     if (ecc_job_bg_q) begin
                         st_n=S_IDLE;
                     end else begin
-                        res_n={32'b0, ecc_job_cycle_q, 6'b0, ecc_pmul_result_q, 2'b10, STATUS_OK};
+                        res_n={32'b0, ecc_job_cycle_status, 6'b0, ecc_pmul_result_q, 2'b10, STATUS_OK};
                         st_n=S_RESULT;
                     end
                 end
@@ -1670,7 +1669,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                 if (ecc_job_bg_q) begin
                     st_n=S_IDLE;
                 end else begin
-                    res_n={32'b0, ecc_job_cycle_q, 6'b0, ecc_job_dst_q, 2'b10, STATUS_OK};
+                    res_n={32'b0, ecc_job_cycle_status, 6'b0, ecc_job_dst_q, 2'b10, STATUS_OK};
                     st_n=S_RESULT;
                 end
             end
