@@ -14,7 +14,7 @@ module tb_hdec_ecc_align_v1;
     logic [3:0][63:0] vec_a;
     logic [3:0][63:0] vec_b;
 
-    hdec_top dut (
+    hdec_top #(.ECC_DEBUG_FIELD_OPS(1'b1)) dut (
         .clk_i,
         .rst_ni,
         .valid_i,

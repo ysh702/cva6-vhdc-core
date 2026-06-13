@@ -13,7 +13,7 @@ module tb_hdec_hperm_bit_align;
 
     logic [63:0] src_words [0:15];
 
-    hdec_top dut (
+    hdec_top #(.ECC_DEBUG_FIELD_OPS(1'b1)) dut (
         .clk_i,
         .rst_ni,
         .valid_i,

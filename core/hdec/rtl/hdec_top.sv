@@ -3,7 +3,8 @@
 // HBIND, HPERM, HSIM, HCNTCLIP, HMATCH, VADDR.
 // No bundle, no add/sub counter, no BMCA.
 module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
-    parameter bit ECC_STATUS_CYCLE_COUNT = 1'b0
+    parameter bit ECC_STATUS_CYCLE_COUNT = 1'b0,
+    parameter bit ECC_DEBUG_FIELD_OPS    = 1'b0
 ) (
     input logic clk_i, rst_ni, valid_i, output logic ready_o,
     input hdec_op_t operator_i, input logic [63:0] operand_a_i, operand_b_i,
@@ -803,33 +804,39 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             HDEC_VRD64: begin vrf_req.ra=vaddr_idx_q;bk_n=vaddr_bank_q;st_n=S_RD_WAIT;end
 
             HDEC_ECC_MUL: begin
-                ecc_leaf_a_n  = '0;
-                ecc_leaf_b_n  = '0;
-                ecc_leaf_prod_n = '0;
-                ecc_leaf_path_n = '0;
-                ecc_diag_slot_n = '0;
-                ecc_fold_word_n = '0;
-                ecc_pipe0_valid_n = 1'b0;
-                if ((a_q[17:12] == 6'd63)
-                 || (a_q[32] && ((a_q[23:18] == a_q[17:12])
-                               || (a_q[23:18] == (a_q[17:12] + 6'd1))))) begin
-                    ecc_autoreduce_n=1'b0; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0;
-                    res_n={62'b0,STATUS_ERROR};st_n=S_RESULT;
+                if (!ECC_DEBUG_FIELD_OPS) begin
+                    res_n={62'b0,STATUS_NOT_IMPLEMENTED};st_n=S_RESULT;
                 end else begin
-                    ecc_dst_n   = a_q[17:12];
-                    ecc_acc_dst_n = a_q[23:18];
-                    ecc_src_a_n = a_q[11:6];
-                    ecc_src_b_n = a_q[5:0];
-                    ecc_autoreduce_n = a_q[31] | a_q[32];
-                    ecc_mac_n = a_q[32];
-                    ecc_sqr_repeat_n='0;
-                    vrf_req.ra=a_q[11:6];
-                    st_n=S_ECC_LOAD_A_WAIT;
+                    ecc_leaf_a_n  = '0;
+                    ecc_leaf_b_n  = '0;
+                    ecc_leaf_prod_n = '0;
+                    ecc_leaf_path_n = '0;
+                    ecc_diag_slot_n = '0;
+                    ecc_fold_word_n = '0;
+                    ecc_pipe0_valid_n = 1'b0;
+                    if ((a_q[17:12] == 6'd63)
+                     || (a_q[32] && ((a_q[23:18] == a_q[17:12])
+                                   || (a_q[23:18] == (a_q[17:12] + 6'd1))))) begin
+                        ecc_autoreduce_n=1'b0; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0;
+                        res_n={62'b0,STATUS_ERROR};st_n=S_RESULT;
+                    end else begin
+                        ecc_dst_n   = a_q[17:12];
+                        ecc_acc_dst_n = a_q[23:18];
+                        ecc_src_a_n = a_q[11:6];
+                        ecc_src_b_n = a_q[5:0];
+                        ecc_autoreduce_n = a_q[31] | a_q[32];
+                        ecc_mac_n = a_q[32];
+                        ecc_sqr_repeat_n='0;
+                        vrf_req.ra=a_q[11:6];
+                        st_n=S_ECC_LOAD_A_WAIT;
+                    end
                 end
             end
 
             HDEC_ECC_STATUS: begin
-                if ((a_q[31] || a_q[30]) && ecc_job_active_q) begin
+                if (a_q[31] && !ECC_DEBUG_FIELD_OPS) begin
+                    res_n={62'b0,STATUS_NOT_IMPLEMENTED};st_n=S_RESULT;
+                end else if ((a_q[31] || a_q[30]) && ecc_job_active_q) begin
                     res_n={62'b0,STATUS_ERROR};st_n=S_RESULT;
                 end else begin
                 if (a_q[31] || a_q[30]) begin
@@ -896,39 +903,51 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             end
 
             HDEC_ECC_ADD: begin
-                uop_p0_n.valid        = 1'b1;
-                uop_p0_n.op_type      = UOP_HBIND_CHUNK;
-                uop_p0_n.src0_addr    = a_q[11:6];
-                uop_p0_n.src1_addr    = a_q[5:0];
-                uop_p0_n.dst_addr     = a_q[17:12];
-                uop_p0_n.chunk_idx    = 2'd3;
-                st_n=S_UOP_P1_RD0;
+                if (!ECC_DEBUG_FIELD_OPS) begin
+                    res_n={62'b0,STATUS_NOT_IMPLEMENTED};st_n=S_RESULT;
+                end else begin
+                    uop_p0_n.valid        = 1'b1;
+                    uop_p0_n.op_type      = UOP_HBIND_CHUNK;
+                    uop_p0_n.src0_addr    = a_q[11:6];
+                    uop_p0_n.src1_addr    = a_q[5:0];
+                    uop_p0_n.dst_addr     = a_q[17:12];
+                    uop_p0_n.chunk_idx    = 2'd3;
+                    st_n=S_UOP_P1_RD0;
+                end
             end
 
             HDEC_ECC_ALIGN: begin
-                hperm_dst_base_n       = a_q[17:12];
-                hperm_bit_low_n        = a_q[19:18];
-                hperm_spread_n         = 1'b0;
-                hperm_lane_base_n      = a_q[25:24];
-                uop_p0_n.valid         = 1'b1;
-                uop_p0_n.op_type       = UOP_HPERM_CHUNK;
-                uop_p0_n.chunk_idx     = 2'd3;
-                uop_p0_n.src0_addr     = a_q[5:0];
-                uop_p0_n.src1_addr     = a_q[11:6];
-                uop_p0_n.dst_addr      = a_q[17:12];
-                uop_p0_n.perm_nibble   = a_q[23:20];
-                st_n=S_UOP_P1_RD0;
+                if (!ECC_DEBUG_FIELD_OPS) begin
+                    res_n={62'b0,STATUS_NOT_IMPLEMENTED};st_n=S_RESULT;
+                end else begin
+                    hperm_dst_base_n       = a_q[17:12];
+                    hperm_bit_low_n        = a_q[19:18];
+                    hperm_spread_n         = 1'b0;
+                    hperm_lane_base_n      = a_q[25:24];
+                    uop_p0_n.valid         = 1'b1;
+                    uop_p0_n.op_type       = UOP_HPERM_CHUNK;
+                    uop_p0_n.chunk_idx     = 2'd3;
+                    uop_p0_n.src0_addr     = a_q[5:0];
+                    uop_p0_n.src1_addr     = a_q[11:6];
+                    uop_p0_n.dst_addr      = a_q[17:12];
+                    uop_p0_n.perm_nibble   = a_q[23:20];
+                    st_n=S_UOP_P1_RD0;
+                end
             end
 
             HDEC_ECC_REDUCE: begin
-                ecc_autoreduce_n=1'b0; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0;
-                if (a_q[5:0] == 6'd63) begin
-                    res_n={62'b0,STATUS_ERROR};st_n=S_RESULT;
+                if (!ECC_DEBUG_FIELD_OPS) begin
+                    res_n={62'b0,STATUS_NOT_IMPLEMENTED};st_n=S_RESULT;
                 end else begin
-                    ecc_dst_n = a_q[17:12];
-                    ecc_src_a_n = a_q[5:0];
-                    vrf_req.ra=a_q[5:0];
-                    st_n=S_ECC_REDUCE_LOAD_LO_WAIT;
+                    ecc_autoreduce_n=1'b0; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0;
+                    if (a_q[5:0] == 6'd63) begin
+                        res_n={62'b0,STATUS_ERROR};st_n=S_RESULT;
+                    end else begin
+                        ecc_dst_n = a_q[17:12];
+                        ecc_src_a_n = a_q[5:0];
+                        vrf_req.ra=a_q[5:0];
+                        st_n=S_ECC_REDUCE_LOAD_LO_WAIT;
+                    end
                 end
             end
 
@@ -999,7 +1018,9 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
 
             HDEC_HPERM: begin
                 if (a_q[18]) begin
-                    if ((a_q[5:0] == 6'd63)
+                    if (!ECC_DEBUG_FIELD_OPS) begin
+                        res_n={62'b0,STATUS_NOT_IMPLEMENTED};st_n=S_RESULT;
+                    end else if ((a_q[5:0] == 6'd63)
                      || (a_q[20] && ((a_q[17:12] == a_q[5:0])
                                    || (a_q[17:12] == (a_q[5:0] + 6'd1))))) begin
                         ecc_autoreduce_n=1'b0; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0;

@@ -12,7 +12,7 @@ module tb_hdec_ecc_inv_v17;
     logic [63:0] result_o;
     int unsigned error_count;
 
-    hdec_top dut (
+    hdec_top #(.ECC_DEBUG_FIELD_OPS(1'b1)) dut (
         .clk_i,
         .rst_ni,
         .valid_i,
