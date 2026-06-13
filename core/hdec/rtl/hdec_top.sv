@@ -7,19 +7,19 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
     input hdec_op_t operator_i, input logic [63:0] operand_a_i, operand_b_i,
     output logic valid_o, output logic [63:0] result_o
 );
-    logic [LANE_NUM-1:0][VRF_IDX_W-1:0] vrf_ra, vrf_ra_q;
+    logic [VRF_IDX_W-1:0] vrf_ra, vrf_ra_q;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] vrf_rd;
     logic [LANE_NUM-1:0] vrf_we, vrf_we_q;
-    logic [LANE_NUM-1:0][VRF_IDX_W-1:0] vrf_wa, vrf_wa_q;
+    logic [VRF_IDX_W-1:0] vrf_wa, vrf_wa_q;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] vrf_wd, vrf_wd_q;
     typedef struct packed {
-        logic [LANE_NUM-1:0][VRF_IDX_W-1:0]   ra;
+        logic [VRF_IDX_W-1:0]                 ra;
         logic [LANE_NUM-1:0]                  we;
-        logic [LANE_NUM-1:0][VRF_IDX_W-1:0]   wa;
+        logic [VRF_IDX_W-1:0]                 wa;
         logic [LANE_NUM-1:0][LANE_WIDTH-1:0]  wd;
     } hdec_vrf_req_t;
     hdec_vrf_req_t vrf_req;
-    hdec_vrf_64x256 i_vrf(.clk_i,.bank_ra_addr_i(vrf_ra_q),.bank_ra_data_o(vrf_rd),.bank_we_i(vrf_we_q),.bank_wa_addr_i(vrf_wa_q),.bank_wdata_i(vrf_wd_q),.vrf_ready_o());
+    hdec_vrf_64x256 i_vrf(.clk_i,.row_ra_addr_i(vrf_ra_q),.bank_ra_data_o(vrf_rd),.bank_we_i(vrf_we_q),.row_wa_addr_i(vrf_wa_q),.bank_wdata_i(vrf_wd_q),.vrf_ready_o());
     logic [VRF_BNK_W-1:0] vaddr_bank_q,vaddr_bank_n; logic [VRF_IDX_W-1:0] vaddr_idx_q,vaddr_idx_n;
 
     // ── State Machine ───────────────────────────────────────────────────────
@@ -30,7 +30,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
         S_UOP_P2_LANE, S_UOP_P3_GLOBAL, S_UOP_P3_POP_CAPTURE, S_UOP_P3_VRF_WAIT, S_UOP_P3_ACCUM, S_UOP_P4_RESP,
         S_UOP_CLIP_WRITE,
         S_ECC_LOAD_A_WAIT, S_ECC_LOAD_A, S_ECC_LOAD_B_WAIT, S_ECC_LOAD_B,
-        S_ECC_DIAG_ISSUE, S_ECC_DIAG_WAIT, S_ECC_DIAG_ACCUM,
+        S_ECC_DIAG_ISSUE, S_ECC_DIAG_WAIT,
         S_ECC_LEAF_FOLD,
         S_ECC_WRITE_PAIR, S_ECC_WRITE_DRAIN,
         S_ECC_REDUCE_LOAD_LO_WAIT, S_ECC_REDUCE_LOAD_LO, S_ECC_REDUCE_LOAD_HI_WAIT, S_ECC_REDUCE_WRITE,
@@ -127,9 +127,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
     logic [2:0]           ecc_diag_slot_q, ecc_diag_slot_n;
     logic [1:0]           ecc_fold_word_q, ecc_fold_word_n;
     logic                 ecc_pipe0_valid_q, ecc_pipe0_valid_n;
-    logic                 ecc_pipe1_valid_q, ecc_pipe1_valid_n;
     logic [2:0]           ecc_pipe0_diag_slot_q, ecc_pipe0_diag_slot_n;
-    logic [2:0]           ecc_pipe1_diag_slot_q, ecc_pipe1_diag_slot_n;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] ecc_partial_vec;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] ecc_partial_pair_vec;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] pop_src_a;
@@ -741,7 +739,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
         ecc_pmul_r0_inf_n=ecc_pmul_r0_inf_q;
         ecc_pmul_const_one_n=ecc_pmul_const_one_q; ecc_pmul_result_n=ecc_pmul_result_q; ecc_pmul_point_n=ecc_pmul_point_q;
         ecc_pipe0_valid_n=1'b0; ecc_pipe0_diag_slot_n=ecc_pipe0_diag_slot_q;
-        ecc_pipe1_valid_n=ecc_pipe0_valid_q; ecc_pipe1_diag_slot_n=ecc_pipe0_diag_slot_q;
         lane_cnt_valid='0;
         lane_shift_valid='0;
         lane_shift_a='0; lane_shift_b='0; lane_shift_bit='0;
@@ -793,8 +790,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
 
         S_EXEC: begin uop_p0_n='0; unique case(op_q)
             HDEC_VADDR: begin vaddr_bank_n=a_q[7:6];vaddr_idx_n=a_q[5:0];res_n='0;st_n=S_RESULT;end
-            HDEC_VWR64: begin vrf_req.we[vaddr_bank_q]=1'b1;vrf_req.wa[vaddr_bank_q]=vaddr_idx_q;vrf_req.wd[vaddr_bank_q]=a_q;res_n='0;st_n=S_VWR_WAIT;end
-            HDEC_VRD64: begin vrf_req.ra[vaddr_bank_q]=vaddr_idx_q;bk_n=vaddr_bank_q;st_n=S_RD_WAIT;end
+            HDEC_VWR64: begin vrf_req.we[vaddr_bank_q]=1'b1;vrf_req.wa=vaddr_idx_q;vrf_req.wd[vaddr_bank_q]=a_q;res_n='0;st_n=S_VWR_WAIT;end
+            HDEC_VRD64: begin vrf_req.ra=vaddr_idx_q;bk_n=vaddr_bank_q;st_n=S_RD_WAIT;end
 
             HDEC_ECC_MUL: begin
                 ecc_leaf_a_n  = '0;
@@ -804,7 +801,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                 ecc_diag_slot_n = '0;
                 ecc_fold_word_n = '0;
                 ecc_pipe0_valid_n = 1'b0;
-                ecc_pipe1_valid_n = 1'b0;
                 if ((a_q[17:12] == 6'd63)
                  || (a_q[32] && ((a_q[23:18] == a_q[17:12])
                                || (a_q[23:18] == (a_q[17:12] + 6'd1))))) begin
@@ -818,8 +814,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                     ecc_autoreduce_n = a_q[31] | a_q[32];
                     ecc_mac_n = a_q[32];
                     ecc_sqr_repeat_n='0;
-                    vrf_req.ra[0]=a_q[11:6]; vrf_req.ra[1]=a_q[11:6];
-                    vrf_req.ra[2]=a_q[11:6]; vrf_req.ra[3]=a_q[11:6];
+                    vrf_req.ra=a_q[11:6];
                     st_n=S_ECC_LOAD_A_WAIT;
                 end
             end
@@ -923,8 +918,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                 end else begin
                     ecc_dst_n = a_q[17:12];
                     ecc_src_a_n = a_q[5:0];
-                    vrf_req.ra[0]=a_q[5:0]; vrf_req.ra[1]=a_q[5:0];
-                    vrf_req.ra[2]=a_q[5:0]; vrf_req.ra[3]=a_q[5:0];
+                    vrf_req.ra=a_q[5:0];
                     st_n=S_ECC_REDUCE_LOAD_LO_WAIT;
                 end
             end
@@ -1009,8 +1003,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                         ecc_autoreduce_n=a_q[19] | a_q[20];
                         ecc_mac_n=a_q[20];
                         ecc_sqr_repeat_n=(a_q[19] | a_q[20]) ? {3'b0, a_q[27:24]} : 7'd0;
-                        vrf_req.ra[0]=a_q[11:6]; vrf_req.ra[1]=a_q[11:6];
-                        vrf_req.ra[2]=a_q[11:6]; vrf_req.ra[3]=a_q[11:6];
+                        vrf_req.ra=a_q[11:6];
                         st_n=S_RD_WAIT;
                     end
                 end else if(a_q[3:0] == a_q[7:4])begin res_n={62'b0,STATUS_ERROR};st_n=S_RESULT;end
@@ -1049,8 +1042,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
         S_HSPREAD_LO_WRITE: begin
             hdc_src0_n = vrf_rd;
             vrf_req.we = '1;
-            vrf_req.wa[0]=hperm_dst_base_q; vrf_req.wa[1]=hperm_dst_base_q;
-            vrf_req.wa[2]=hperm_dst_base_q; vrf_req.wa[3]=hperm_dst_base_q;
+            vrf_req.wa=hperm_dst_base_q;
             vrf_req.wd[0]=hspread_half64(vrf_rd[0], 1'b0);
             vrf_req.wd[1]=hspread_half64(vrf_rd[0], 1'b1);
             vrf_req.wd[2]=hspread_half64(vrf_rd[1], 1'b0);
@@ -1060,8 +1052,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
 
         S_HSPREAD_HI_WRITE: begin
             vrf_req.we = '1;
-            vrf_req.wa[0]=hperm_dst_base_q + 6'd1; vrf_req.wa[1]=hperm_dst_base_q + 6'd1;
-            vrf_req.wa[2]=hperm_dst_base_q + 6'd1; vrf_req.wa[3]=hperm_dst_base_q + 6'd1;
+            vrf_req.wa=hperm_dst_base_q + 6'd1;
             vrf_req.wd[0]=hspread_half64(hdc_src0_q[2], 1'b0);
             vrf_req.wd[1]=hspread_half64(hdc_src0_q[2], 1'b1);
             vrf_req.wd[2]=hspread_half64(hdc_src0_q[3], 1'b0);
@@ -1084,8 +1075,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
 
         S_ECC_LOAD_A: begin
             ecc_leaf_a_n = ecc_kpd32_leaf_word({vrf_rd[3], vrf_rd[2], vrf_rd[1], vrf_rd[0]}, ecc_leaf_path_q);
-            vrf_req.ra[0]=ecc_src_b_q; vrf_req.ra[1]=ecc_src_b_q;
-            vrf_req.ra[2]=ecc_src_b_q; vrf_req.ra[3]=ecc_src_b_q;
+            vrf_req.ra=ecc_src_b_q;
             st_n=S_ECC_LOAD_B_WAIT;
         end
 
@@ -1100,7 +1090,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             ecc_diag_slot_n = 3'd0;
             ecc_fold_word_n = 2'd0;
             ecc_pipe0_valid_n = 1'b0;
-            ecc_pipe1_valid_n = 1'b0;
             ecc_diag16_pipe_n = '0;
             st_n=S_ECC_DIAG_ISSUE;
         end
@@ -1126,23 +1115,15 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             st_n=S_ECC_LEAF_FOLD;
         end
 
-        S_ECC_DIAG_ACCUM: begin
-            if (ecc_pipe1_valid_q)
-                ecc_leaf_prod_n = ecc_kpd32_leaf_store_pack(ecc_leaf_prod_q, {ecc_pipe1_diag_slot_q, 3'b000}, ecc_diag8_parity);
-            st_n=S_ECC_LEAF_FOLD;
-        end
-
         S_ECC_LEAF_FOLD: begin
             ecc_product_we = 1'b1;
             if (!ecc_leaf_last) begin
                 unique case (ecc_fold_word_q)
                     2'd0: begin
-                        vrf_req.ra[0]=ecc_src_a_q; vrf_req.ra[1]=ecc_src_a_q;
-                        vrf_req.ra[2]=ecc_src_a_q; vrf_req.ra[3]=ecc_src_a_q;
+                        vrf_req.ra=ecc_src_a_q;
                     end
                     2'd1: begin
-                        vrf_req.ra[0]=ecc_src_b_q; vrf_req.ra[1]=ecc_src_b_q;
-                        vrf_req.ra[2]=ecc_src_b_q; vrf_req.ra[3]=ecc_src_b_q;
+                        vrf_req.ra=ecc_src_b_q;
                     end
                     2'd2: begin
                         ecc_leaf_a_n = ecc_kpd32_leaf_word({vrf_rd[3], vrf_rd[2], vrf_rd[1], vrf_rd[0]}, ecc_next_leaf_path);
@@ -1169,21 +1150,18 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
         end
 
         S_ECC_WRITE_PAIR: begin
+            vrf_req.wa=ecc_product_wb_addr;
             unique case (ecc_fold_word_q[0])
                 1'b0: begin
                     vrf_req.we[0]=1'b1;
-                    vrf_req.wa[0]=ecc_product_wb_addr;
                     vrf_req.wd[0]=ecc_product_pair_rdata[63:0];
                     vrf_req.we[1]=1'b1;
-                    vrf_req.wa[1]=ecc_product_wb_addr;
                     vrf_req.wd[1]=ecc_product_pair_rdata[127:64];
                 end
                 default: begin
                     vrf_req.we[2]=1'b1;
-                    vrf_req.wa[2]=ecc_product_wb_addr;
                     vrf_req.wd[2]=ecc_product_pair_rdata[63:0];
                     vrf_req.we[3]=1'b1;
-                    vrf_req.wa[3]=ecc_product_wb_addr;
                     vrf_req.wd[3]=ecc_product_pair_rdata[127:64];
                 end
             endcase
@@ -1201,8 +1179,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
         // ── S_CLR: shared by HCLR (4 entries) and HCNTCLR (16 entries) ──────
         S_ECC_WRITE_DRAIN: begin
             if (ecc_autoreduce_q) begin
-                vrf_req.ra[0]=ecc_src_a_q; vrf_req.ra[1]=ecc_src_a_q;
-                vrf_req.ra[2]=ecc_src_a_q; vrf_req.ra[3]=ecc_src_a_q;
+                vrf_req.ra=ecc_src_a_q;
                 st_n=S_ECC_REDUCE_LOAD_LO_WAIT;
             end else if (ecc_sqr_repeat_q != 7'd0) begin
                 hperm_dst_base_n=ecc_dst_q;
@@ -1210,8 +1187,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                 ecc_src_a_n=ecc_dst_q;
                 ecc_autoreduce_n=1'b1;
                 ecc_sqr_repeat_n=ecc_sqr_repeat_q - 7'd1;
-                vrf_req.ra[0]=ecc_dst_q; vrf_req.ra[1]=ecc_dst_q;
-                vrf_req.ra[2]=ecc_dst_q; vrf_req.ra[3]=ecc_dst_q;
+                vrf_req.ra=ecc_dst_q;
                 st_n=S_RD_WAIT;
             end else begin
                 if (ecc_job_active_q && (ecc_job_phase_q == ECC_PHASE_INV_SQR)) begin
@@ -1234,8 +1210,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
 
         S_ECC_REDUCE_LOAD_LO: begin
             hdc_src0_n = vrf_rd;
-            vrf_req.ra[0]=ecc_src_a_q + 6'd1; vrf_req.ra[1]=ecc_src_a_q + 6'd1;
-            vrf_req.ra[2]=ecc_src_a_q + 6'd1; vrf_req.ra[3]=ecc_src_a_q + 6'd1;
+            vrf_req.ra=ecc_src_a_q + 6'd1;
             st_n=S_ECC_REDUCE_LOAD_HI_WAIT;
         end
 
@@ -1245,8 +1220,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
 
         S_ECC_REDUCE_WRITE: begin
             vrf_req.we = '1;
-            vrf_req.wa[0]=ecc_dst_q; vrf_req.wa[1]=ecc_dst_q;
-            vrf_req.wa[2]=ecc_dst_q; vrf_req.wa[3]=ecc_dst_q;
+            vrf_req.wa=ecc_dst_q;
             vrf_req.wd[0]=ecc_reduce_result[63:0];
             vrf_req.wd[1]=ecc_reduce_result[127:64];
             vrf_req.wd[2]=ecc_reduce_result[191:128];
@@ -1274,8 +1248,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             ecc_inv_step_n='0;
             ecc_job_phase_n=ECC_PHASE_INV_COPY_INIT;
             ecc_job_copy_dst_n=ecc_job_dst_q;
-            vrf_req.ra[0]=ecc_job_src_q; vrf_req.ra[1]=ecc_job_src_q;
-            vrf_req.ra[2]=ecc_job_src_q; vrf_req.ra[3]=ecc_job_src_q;
+            vrf_req.ra=ecc_job_src_q;
             st_n=S_ECC_INV_COPY_WAIT;
         end
 
@@ -1285,8 +1258,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
 
         S_ECC_INV_COPY_WRITE: begin
             vrf_req.we='1;
-            vrf_req.wa[0]=ecc_job_copy_dst_q; vrf_req.wa[1]=ecc_job_copy_dst_q;
-            vrf_req.wa[2]=ecc_job_copy_dst_q; vrf_req.wa[3]=ecc_job_copy_dst_q;
+            vrf_req.wa=ecc_job_copy_dst_q;
             vrf_req.wd=vrf_rd;
             if (ecc_job_phase_q == ECC_PHASE_PMUL_COPY) begin
                 ecc_job_phase_n=ECC_PHASE_NONE;
@@ -1304,8 +1276,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             if (ecc_inv_step_needs_tmp(ecc_inv_step_q)) begin
                 ecc_job_phase_n=ECC_PHASE_INV_COPY_TMP;
                 ecc_job_copy_dst_n=ecc_job_dst_q + 6'd2;
-                vrf_req.ra[0]=ecc_job_dst_q; vrf_req.ra[1]=ecc_job_dst_q;
-                vrf_req.ra[2]=ecc_job_dst_q; vrf_req.ra[3]=ecc_job_dst_q;
+                vrf_req.ra=ecc_job_dst_q;
                 st_n=S_ECC_INV_COPY_WAIT;
             end else begin
                 st_n=S_ECC_INV_ISSUE_SQR;
@@ -1321,8 +1292,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             ecc_mac_n=1'b0;
             ecc_sqr_repeat_n=ecc_inv_step_sqr_repeat(ecc_inv_step_q);
             ecc_job_phase_n=ECC_PHASE_INV_SQR;
-            vrf_req.ra[0]=ecc_job_dst_q; vrf_req.ra[1]=ecc_job_dst_q;
-            vrf_req.ra[2]=ecc_job_dst_q; vrf_req.ra[3]=ecc_job_dst_q;
+            vrf_req.ra=ecc_job_dst_q;
             st_n=S_RD_WAIT;
         end
 
@@ -1346,10 +1316,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                 ecc_mac_n=1'b0;
                 ecc_sqr_repeat_n='0;
                 ecc_pipe0_valid_n=1'b0;
-                ecc_pipe1_valid_n=1'b0;
                 ecc_job_phase_n=ECC_PHASE_INV_MUL;
-                vrf_req.ra[0]=ecc_job_dst_q; vrf_req.ra[1]=ecc_job_dst_q;
-                vrf_req.ra[2]=ecc_job_dst_q; vrf_req.ra[3]=ecc_job_dst_q;
+                vrf_req.ra=ecc_job_dst_q;
                 st_n=S_ECC_LOAD_A_WAIT;
             end
         end
@@ -1369,8 +1337,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
 
         S_ECC_PMUL_CONST_WRITE: begin
             vrf_req.we='1;
-            vrf_req.wa[0]=ecc_job_copy_dst_q; vrf_req.wa[1]=ecc_job_copy_dst_q;
-            vrf_req.wa[2]=ecc_job_copy_dst_q; vrf_req.wa[3]=ecc_job_copy_dst_q;
+            vrf_req.wa=ecc_job_copy_dst_q;
             vrf_req.wd='0;
             if (ecc_pmul_const_one_q)
                 vrf_req.wd[0]=64'd1;
@@ -1409,8 +1376,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                 6'd0: begin
                     ecc_job_phase_n=ECC_PHASE_PMUL_COPY;
                     ecc_job_copy_dst_n=ECC_PMUL_R1X;
-                    vrf_req.ra[0]=ecc_pmul_point_q; vrf_req.ra[1]=ecc_pmul_point_q;
-                    vrf_req.ra[2]=ecc_pmul_point_q; vrf_req.ra[3]=ecc_pmul_point_q;
+                    vrf_req.ra=ecc_pmul_point_q;
                     st_n=S_ECC_INV_COPY_WAIT;
                 end
                 6'd1: begin
@@ -1447,9 +1413,9 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                     ecc_dst_n=ECC_PMUL_T4; ecc_src_a_n=ECC_PMUL_R0X; ecc_src_b_n=ECC_PMUL_T0;
                     ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0;
                     ecc_leaf_a_n='0; ecc_leaf_b_n='0; ecc_leaf_prod_n='0; ecc_leaf_path_n='0;
-                    ecc_diag_slot_n='0; ecc_fold_word_n='0; ecc_pipe0_valid_n=1'b0; ecc_pipe1_valid_n=1'b0;
+                    ecc_diag_slot_n='0; ecc_fold_word_n='0; ecc_pipe0_valid_n=1'b0;
                     ecc_job_phase_n=ECC_PHASE_PMUL_FIELD;
-                    vrf_req.ra[0]=ECC_PMUL_R0X; vrf_req.ra[1]=ECC_PMUL_R0X; vrf_req.ra[2]=ECC_PMUL_R0X; vrf_req.ra[3]=ECC_PMUL_R0X;
+                    vrf_req.ra=ECC_PMUL_R0X;
                     st_n=S_ECC_LOAD_A_WAIT;
                 end
                 6'd2: begin
@@ -1462,9 +1428,9 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                     ecc_dst_n=ECC_PMUL_T6; ecc_src_a_n=ECC_PMUL_R1X; ecc_src_b_n=ECC_PMUL_T1;
                     ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0;
                     ecc_leaf_a_n='0; ecc_leaf_b_n='0; ecc_leaf_prod_n='0; ecc_leaf_path_n='0;
-                    ecc_diag_slot_n='0; ecc_fold_word_n='0; ecc_pipe0_valid_n=1'b0; ecc_pipe1_valid_n=1'b0;
+                    ecc_diag_slot_n='0; ecc_fold_word_n='0; ecc_pipe0_valid_n=1'b0;
                     ecc_job_phase_n=ECC_PHASE_PMUL_FIELD;
-                    vrf_req.ra[0]=ECC_PMUL_R1X; vrf_req.ra[1]=ECC_PMUL_R1X; vrf_req.ra[2]=ECC_PMUL_R1X; vrf_req.ra[3]=ECC_PMUL_R1X;
+                    vrf_req.ra=ECC_PMUL_R1X;
                     st_n=S_ECC_LOAD_A_WAIT;
                 end
                 6'd4: begin
@@ -1490,16 +1456,16 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                     ecc_dst_n=ECC_PMUL_T5; ecc_src_a_n=ECC_PMUL_T5;
                     ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0;
                     ecc_job_phase_n=ECC_PHASE_PMUL_FIELD;
-                    vrf_req.ra[0]=ECC_PMUL_T4; vrf_req.ra[1]=ECC_PMUL_T4; vrf_req.ra[2]=ECC_PMUL_T4; vrf_req.ra[3]=ECC_PMUL_T4;
+                    vrf_req.ra=ECC_PMUL_T4;
                     st_n=S_RD_WAIT;
                 end
                 6'd8: begin
                     ecc_dst_n=ECC_PMUL_T7; ecc_src_a_n=ECC_PMUL_T5; ecc_src_b_n=ECC_PMUL_T4;
                     ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0;
                     ecc_leaf_a_n='0; ecc_leaf_b_n='0; ecc_leaf_prod_n='0; ecc_leaf_path_n='0;
-                    ecc_diag_slot_n='0; ecc_fold_word_n='0; ecc_pipe0_valid_n=1'b0; ecc_pipe1_valid_n=1'b0;
+                    ecc_diag_slot_n='0; ecc_fold_word_n='0; ecc_pipe0_valid_n=1'b0;
                     ecc_job_phase_n=ECC_PHASE_PMUL_FIELD;
-                    vrf_req.ra[0]=ECC_PMUL_T5; vrf_req.ra[1]=ECC_PMUL_T5; vrf_req.ra[2]=ECC_PMUL_T5; vrf_req.ra[3]=ECC_PMUL_T5;
+                    vrf_req.ra=ECC_PMUL_T5;
                     st_n=S_ECC_LOAD_A_WAIT;
                 end
                 6'd9: begin
@@ -1518,16 +1484,16 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                     ecc_dst_n=ECC_PMUL_T8; ecc_src_a_n=ECC_PMUL_T8;
                     ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0;
                     ecc_job_phase_n=ECC_PHASE_PMUL_FIELD;
-                    vrf_req.ra[0]=ECC_PMUL_T2; vrf_req.ra[1]=ECC_PMUL_T2; vrf_req.ra[2]=ECC_PMUL_T2; vrf_req.ra[3]=ECC_PMUL_T2;
+                    vrf_req.ra=ECC_PMUL_T2;
                     st_n=S_RD_WAIT;
                 end
                 6'd12: begin
                     ecc_dst_n=ECC_PMUL_T8; ecc_src_a_n=ECC_PMUL_T3; ecc_src_b_n=ECC_PMUL_T8;
                     ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0;
                     ecc_leaf_a_n='0; ecc_leaf_b_n='0; ecc_leaf_prod_n='0; ecc_leaf_path_n='0;
-                    ecc_diag_slot_n='0; ecc_fold_word_n='0; ecc_pipe0_valid_n=1'b0; ecc_pipe1_valid_n=1'b0;
+                    ecc_diag_slot_n='0; ecc_fold_word_n='0; ecc_pipe0_valid_n=1'b0;
                     ecc_job_phase_n=ECC_PHASE_PMUL_FIELD;
-                    vrf_req.ra[0]=ECC_PMUL_T3; vrf_req.ra[1]=ECC_PMUL_T3; vrf_req.ra[2]=ECC_PMUL_T3; vrf_req.ra[3]=ECC_PMUL_T3;
+                    vrf_req.ra=ECC_PMUL_T3;
                     st_n=S_ECC_LOAD_A_WAIT;
                 end
                 6'd13: begin
@@ -1541,8 +1507,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                     ecc_dst_n=ECC_PMUL_T8; ecc_src_a_n=ECC_PMUL_T8;
                     ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0;
                     ecc_job_phase_n=ECC_PHASE_PMUL_FIELD;
-                    vrf_req.ra[0]=ecc_pmul_point_q + 6'd1; vrf_req.ra[1]=ecc_pmul_point_q + 6'd1;
-                    vrf_req.ra[2]=ecc_pmul_point_q + 6'd1; vrf_req.ra[3]=ecc_pmul_point_q + 6'd1;
+                    vrf_req.ra=ecc_pmul_point_q + 6'd1;
                     st_n=S_RD_WAIT;
                 end
                 6'd15: begin
@@ -1555,9 +1520,9 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                     ecc_dst_n=ECC_PMUL_T8; ecc_src_a_n=ECC_PMUL_T4; ecc_src_b_n=ecc_pmul_point_q + 6'd1;
                     ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0;
                     ecc_leaf_a_n='0; ecc_leaf_b_n='0; ecc_leaf_prod_n='0; ecc_leaf_path_n='0;
-                    ecc_diag_slot_n='0; ecc_fold_word_n='0; ecc_pipe0_valid_n=1'b0; ecc_pipe1_valid_n=1'b0;
+                    ecc_diag_slot_n='0; ecc_fold_word_n='0; ecc_pipe0_valid_n=1'b0;
                     ecc_job_phase_n=ECC_PHASE_PMUL_FIELD;
-                    vrf_req.ra[0]=ECC_PMUL_T4; vrf_req.ra[1]=ECC_PMUL_T4; vrf_req.ra[2]=ECC_PMUL_T4; vrf_req.ra[3]=ECC_PMUL_T4;
+                    vrf_req.ra=ECC_PMUL_T4;
                     st_n=S_ECC_LOAD_A_WAIT;
                 end
                 6'd17: begin
@@ -1570,9 +1535,9 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                     ecc_dst_n=ECC_PMUL_T8; ecc_src_a_n=ecc_pmul_point_q; ecc_src_b_n=ECC_PMUL_T2;
                     ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0;
                     ecc_leaf_a_n='0; ecc_leaf_b_n='0; ecc_leaf_prod_n='0; ecc_leaf_path_n='0;
-                    ecc_diag_slot_n='0; ecc_fold_word_n='0; ecc_pipe0_valid_n=1'b0; ecc_pipe1_valid_n=1'b0;
+                    ecc_diag_slot_n='0; ecc_fold_word_n='0; ecc_pipe0_valid_n=1'b0;
                     ecc_job_phase_n=ECC_PHASE_PMUL_FIELD;
-                    vrf_req.ra[0]=ecc_pmul_point_q; vrf_req.ra[1]=ecc_pmul_point_q; vrf_req.ra[2]=ecc_pmul_point_q; vrf_req.ra[3]=ecc_pmul_point_q;
+                    vrf_req.ra=ecc_pmul_point_q;
                     st_n=S_ECC_LOAD_A_WAIT;
                 end
                 6'd19: begin
@@ -1585,18 +1550,18 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                     ecc_dst_n=ECC_PMUL_T8; ecc_src_a_n=ECC_PMUL_T7; ecc_src_b_n=ECC_PMUL_T5;
                     ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0;
                     ecc_leaf_a_n='0; ecc_leaf_b_n='0; ecc_leaf_prod_n='0; ecc_leaf_path_n='0;
-                    ecc_diag_slot_n='0; ecc_fold_word_n='0; ecc_pipe0_valid_n=1'b0; ecc_pipe1_valid_n=1'b0;
+                    ecc_diag_slot_n='0; ecc_fold_word_n='0; ecc_pipe0_valid_n=1'b0;
                     ecc_job_phase_n=ECC_PHASE_PMUL_FIELD;
-                    vrf_req.ra[0]=ECC_PMUL_T7; vrf_req.ra[1]=ECC_PMUL_T7; vrf_req.ra[2]=ECC_PMUL_T7; vrf_req.ra[3]=ECC_PMUL_T7;
+                    vrf_req.ra=ECC_PMUL_T7;
                     st_n=S_ECC_LOAD_A_WAIT;
                 end
                 6'd21: begin
                     ecc_dst_n=ECC_PMUL_T8; ecc_src_a_n=ECC_PMUL_T8; ecc_src_b_n=ECC_PMUL_T2;
                     ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0;
                     ecc_leaf_a_n='0; ecc_leaf_b_n='0; ecc_leaf_prod_n='0; ecc_leaf_path_n='0;
-                    ecc_diag_slot_n='0; ecc_fold_word_n='0; ecc_pipe0_valid_n=1'b0; ecc_pipe1_valid_n=1'b0;
+                    ecc_diag_slot_n='0; ecc_fold_word_n='0; ecc_pipe0_valid_n=1'b0;
                     ecc_job_phase_n=ECC_PHASE_PMUL_FIELD;
-                    vrf_req.ra[0]=ECC_PMUL_T8; vrf_req.ra[1]=ECC_PMUL_T8; vrf_req.ra[2]=ECC_PMUL_T8; vrf_req.ra[3]=ECC_PMUL_T8;
+                    vrf_req.ra=ECC_PMUL_T8;
                     st_n=S_ECC_LOAD_A_WAIT;
                 end
                 6'd22: begin
@@ -1608,33 +1573,33 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                 default: begin
                     ecc_job_phase_n=ECC_PHASE_PMUL_COPY;
                     ecc_job_copy_dst_n=ecc_pmul_result_q;
-                    vrf_req.ra[0]=ECC_PMUL_T4; vrf_req.ra[1]=ECC_PMUL_T4; vrf_req.ra[2]=ECC_PMUL_T4; vrf_req.ra[3]=ECC_PMUL_T4;
+                    vrf_req.ra=ECC_PMUL_T4;
                     st_n=S_ECC_INV_COPY_WAIT;
                 end
                 endcase
             end
             ECC_PMUL_SUB_DBL: begin
                 unique case (ecc_pmul_step_q)
-                6'd0: begin hperm_dst_base_n=ECC_PMUL_T0; hperm_spread_n=1'b1; ecc_dst_n=ECC_PMUL_T0; ecc_src_a_n=ECC_PMUL_T0; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_req.ra[0]=ecc_pmul_dbl_x; vrf_req.ra[1]=ecc_pmul_dbl_x; vrf_req.ra[2]=ecc_pmul_dbl_x; vrf_req.ra[3]=ecc_pmul_dbl_x; st_n=S_RD_WAIT; end
-                6'd1: begin hperm_dst_base_n=ECC_PMUL_T1; hperm_spread_n=1'b1; ecc_dst_n=ECC_PMUL_T1; ecc_src_a_n=ECC_PMUL_T1; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_req.ra[0]=ECC_PMUL_T0; vrf_req.ra[1]=ECC_PMUL_T0; vrf_req.ra[2]=ECC_PMUL_T0; vrf_req.ra[3]=ECC_PMUL_T0; st_n=S_RD_WAIT; end
-                6'd2: begin hperm_dst_base_n=ECC_PMUL_T4; hperm_spread_n=1'b1; ecc_dst_n=ECC_PMUL_T4; ecc_src_a_n=ECC_PMUL_T4; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_req.ra[0]=ecc_pmul_dbl_z; vrf_req.ra[1]=ecc_pmul_dbl_z; vrf_req.ra[2]=ecc_pmul_dbl_z; vrf_req.ra[3]=ecc_pmul_dbl_z; st_n=S_RD_WAIT; end
-                6'd3: begin hperm_dst_base_n=ECC_PMUL_T5; hperm_spread_n=1'b1; ecc_dst_n=ECC_PMUL_T5; ecc_src_a_n=ECC_PMUL_T5; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_req.ra[0]=ECC_PMUL_T4; vrf_req.ra[1]=ECC_PMUL_T4; vrf_req.ra[2]=ECC_PMUL_T4; vrf_req.ra[3]=ECC_PMUL_T4; st_n=S_RD_WAIT; end
+                6'd0: begin hperm_dst_base_n=ECC_PMUL_T0; hperm_spread_n=1'b1; ecc_dst_n=ECC_PMUL_T0; ecc_src_a_n=ECC_PMUL_T0; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_req.ra=ecc_pmul_dbl_x; st_n=S_RD_WAIT; end
+                6'd1: begin hperm_dst_base_n=ECC_PMUL_T1; hperm_spread_n=1'b1; ecc_dst_n=ECC_PMUL_T1; ecc_src_a_n=ECC_PMUL_T1; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_req.ra=ECC_PMUL_T0; st_n=S_RD_WAIT; end
+                6'd2: begin hperm_dst_base_n=ECC_PMUL_T4; hperm_spread_n=1'b1; ecc_dst_n=ECC_PMUL_T4; ecc_src_a_n=ECC_PMUL_T4; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_req.ra=ecc_pmul_dbl_z; st_n=S_RD_WAIT; end
+                6'd3: begin hperm_dst_base_n=ECC_PMUL_T5; hperm_spread_n=1'b1; ecc_dst_n=ECC_PMUL_T5; ecc_src_a_n=ECC_PMUL_T5; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_req.ra=ECC_PMUL_T4; st_n=S_RD_WAIT; end
                 6'd4: begin uop_p0_n='0; uop_p0_n.valid=1'b1; uop_p0_n.op_type=UOP_HBIND_CHUNK; uop_p0_n.src0_addr=ECC_PMUL_T1; uop_p0_n.src1_addr=ECC_PMUL_T5; uop_p0_n.dst_addr=ecc_pmul_dbl_x; uop_p0_n.chunk_idx=2'd3; ecc_job_phase_n=ECC_PHASE_PMUL_ADD; st_n=S_UOP_P1_RD0; end
-                default: begin hperm_dst_base_n=ecc_pmul_dbl_z; hperm_spread_n=1'b1; ecc_dst_n=ecc_pmul_dbl_z; ecc_src_a_n=ecc_pmul_dbl_z; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_req.ra[0]=ecc_pmul_scalar_bit_q ? ECC_PMUL_T3 : ECC_PMUL_T2; vrf_req.ra[1]=vrf_req.ra[0]; vrf_req.ra[2]=vrf_req.ra[0]; vrf_req.ra[3]=vrf_req.ra[0]; st_n=S_RD_WAIT; end
+                default: begin hperm_dst_base_n=ecc_pmul_dbl_z; hperm_spread_n=1'b1; ecc_dst_n=ecc_pmul_dbl_z; ecc_src_a_n=ecc_pmul_dbl_z; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_req.ra=ecc_pmul_scalar_bit_q ? ECC_PMUL_T3 : ECC_PMUL_T2; st_n=S_RD_WAIT; end
                 endcase
             end
             ECC_PMUL_SUB_ADD: begin
                 unique case (ecc_pmul_step_q)
-                6'd0: begin ecc_dst_n=ECC_PMUL_T0; ecc_src_a_n=ECC_PMUL_R0X; ecc_src_b_n=ECC_PMUL_R1Z; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_leaf_a_n='0; ecc_leaf_b_n='0; ecc_leaf_prod_n='0; ecc_leaf_path_n='0; ecc_diag_slot_n='0; ecc_fold_word_n='0; ecc_pipe0_valid_n=1'b0; ecc_pipe1_valid_n=1'b0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_req.ra[0]=ECC_PMUL_R0X; vrf_req.ra[1]=ECC_PMUL_R0X; vrf_req.ra[2]=ECC_PMUL_R0X; vrf_req.ra[3]=ECC_PMUL_R0X; st_n=S_ECC_LOAD_A_WAIT; end
-                6'd1: begin ecc_dst_n=ECC_PMUL_T1; ecc_src_a_n=ECC_PMUL_R1X; ecc_src_b_n=ECC_PMUL_R0Z; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_leaf_a_n='0; ecc_leaf_b_n='0; ecc_leaf_prod_n='0; ecc_leaf_path_n='0; ecc_diag_slot_n='0; ecc_fold_word_n='0; ecc_pipe0_valid_n=1'b0; ecc_pipe1_valid_n=1'b0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_req.ra[0]=ECC_PMUL_R1X; vrf_req.ra[1]=ECC_PMUL_R1X; vrf_req.ra[2]=ECC_PMUL_R1X; vrf_req.ra[3]=ECC_PMUL_R1X; st_n=S_ECC_LOAD_A_WAIT; end
+                6'd0: begin ecc_dst_n=ECC_PMUL_T0; ecc_src_a_n=ECC_PMUL_R0X; ecc_src_b_n=ECC_PMUL_R1Z; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_leaf_a_n='0; ecc_leaf_b_n='0; ecc_leaf_prod_n='0; ecc_leaf_path_n='0; ecc_diag_slot_n='0; ecc_fold_word_n='0; ecc_pipe0_valid_n=1'b0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_req.ra=ECC_PMUL_R0X; st_n=S_ECC_LOAD_A_WAIT; end
+                6'd1: begin ecc_dst_n=ECC_PMUL_T1; ecc_src_a_n=ECC_PMUL_R1X; ecc_src_b_n=ECC_PMUL_R0Z; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_leaf_a_n='0; ecc_leaf_b_n='0; ecc_leaf_prod_n='0; ecc_leaf_path_n='0; ecc_diag_slot_n='0; ecc_fold_word_n='0; ecc_pipe0_valid_n=1'b0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_req.ra=ECC_PMUL_R1X; st_n=S_ECC_LOAD_A_WAIT; end
                 6'd2: begin uop_p0_n='0; uop_p0_n.valid=1'b1; uop_p0_n.op_type=UOP_HBIND_CHUNK; uop_p0_n.src0_addr=ECC_PMUL_T0; uop_p0_n.src1_addr=ECC_PMUL_T1; uop_p0_n.dst_addr=ECC_PMUL_T4; uop_p0_n.chunk_idx=2'd3; ecc_job_phase_n=ECC_PHASE_PMUL_ADD; st_n=S_UOP_P1_RD0; end
-                6'd3: begin hperm_dst_base_n=ECC_PMUL_T5; hperm_spread_n=1'b1; ecc_dst_n=ECC_PMUL_T5; ecc_src_a_n=ECC_PMUL_T5; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_req.ra[0]=ECC_PMUL_T4; vrf_req.ra[1]=ECC_PMUL_T4; vrf_req.ra[2]=ECC_PMUL_T4; vrf_req.ra[3]=ECC_PMUL_T4; st_n=S_RD_WAIT; end
-                6'd4: begin ecc_dst_n=ECC_PMUL_T2; ecc_src_a_n=ECC_PMUL_R0X; ecc_src_b_n=ECC_PMUL_R0Z; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_leaf_a_n='0; ecc_leaf_b_n='0; ecc_leaf_prod_n='0; ecc_leaf_path_n='0; ecc_diag_slot_n='0; ecc_fold_word_n='0; ecc_pipe0_valid_n=1'b0; ecc_pipe1_valid_n=1'b0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_req.ra[0]=ECC_PMUL_R0X; vrf_req.ra[1]=ECC_PMUL_R0X; vrf_req.ra[2]=ECC_PMUL_R0X; vrf_req.ra[3]=ECC_PMUL_R0X; st_n=S_ECC_LOAD_A_WAIT; end
-                6'd5: begin ecc_dst_n=ECC_PMUL_T3; ecc_src_a_n=ECC_PMUL_R1X; ecc_src_b_n=ECC_PMUL_R1Z; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_leaf_a_n='0; ecc_leaf_b_n='0; ecc_leaf_prod_n='0; ecc_leaf_path_n='0; ecc_diag_slot_n='0; ecc_fold_word_n='0; ecc_pipe0_valid_n=1'b0; ecc_pipe1_valid_n=1'b0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_req.ra[0]=ECC_PMUL_R1X; vrf_req.ra[1]=ECC_PMUL_R1X; vrf_req.ra[2]=ECC_PMUL_R1X; vrf_req.ra[3]=ECC_PMUL_R1X; st_n=S_ECC_LOAD_A_WAIT; end
-                6'd6: begin ecc_dst_n=ECC_PMUL_T6; ecc_src_a_n=ECC_PMUL_T2; ecc_src_b_n=ECC_PMUL_T3; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_leaf_a_n='0; ecc_leaf_b_n='0; ecc_leaf_prod_n='0; ecc_leaf_path_n='0; ecc_diag_slot_n='0; ecc_fold_word_n='0; ecc_pipe0_valid_n=1'b0; ecc_pipe1_valid_n=1'b0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_req.ra[0]=ECC_PMUL_T2; vrf_req.ra[1]=ECC_PMUL_T2; vrf_req.ra[2]=ECC_PMUL_T2; vrf_req.ra[3]=ECC_PMUL_T2; st_n=S_ECC_LOAD_A_WAIT; end
-                6'd7: begin ecc_dst_n=ECC_PMUL_T7; ecc_src_a_n=ecc_pmul_point_q; ecc_src_b_n=ECC_PMUL_T5; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_leaf_a_n='0; ecc_leaf_b_n='0; ecc_leaf_prod_n='0; ecc_leaf_path_n='0; ecc_diag_slot_n='0; ecc_fold_word_n='0; ecc_pipe0_valid_n=1'b0; ecc_pipe1_valid_n=1'b0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_req.ra[0]=ecc_pmul_point_q; vrf_req.ra[1]=ecc_pmul_point_q; vrf_req.ra[2]=ecc_pmul_point_q; vrf_req.ra[3]=ecc_pmul_point_q; st_n=S_ECC_LOAD_A_WAIT; end
+                6'd3: begin hperm_dst_base_n=ECC_PMUL_T5; hperm_spread_n=1'b1; ecc_dst_n=ECC_PMUL_T5; ecc_src_a_n=ECC_PMUL_T5; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_req.ra=ECC_PMUL_T4; st_n=S_RD_WAIT; end
+                6'd4: begin ecc_dst_n=ECC_PMUL_T2; ecc_src_a_n=ECC_PMUL_R0X; ecc_src_b_n=ECC_PMUL_R0Z; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_leaf_a_n='0; ecc_leaf_b_n='0; ecc_leaf_prod_n='0; ecc_leaf_path_n='0; ecc_diag_slot_n='0; ecc_fold_word_n='0; ecc_pipe0_valid_n=1'b0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_req.ra=ECC_PMUL_R0X; st_n=S_ECC_LOAD_A_WAIT; end
+                6'd5: begin ecc_dst_n=ECC_PMUL_T3; ecc_src_a_n=ECC_PMUL_R1X; ecc_src_b_n=ECC_PMUL_R1Z; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_leaf_a_n='0; ecc_leaf_b_n='0; ecc_leaf_prod_n='0; ecc_leaf_path_n='0; ecc_diag_slot_n='0; ecc_fold_word_n='0; ecc_pipe0_valid_n=1'b0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_req.ra=ECC_PMUL_R1X; st_n=S_ECC_LOAD_A_WAIT; end
+                6'd6: begin ecc_dst_n=ECC_PMUL_T6; ecc_src_a_n=ECC_PMUL_T2; ecc_src_b_n=ECC_PMUL_T3; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_leaf_a_n='0; ecc_leaf_b_n='0; ecc_leaf_prod_n='0; ecc_leaf_path_n='0; ecc_diag_slot_n='0; ecc_fold_word_n='0; ecc_pipe0_valid_n=1'b0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_req.ra=ECC_PMUL_T2; st_n=S_ECC_LOAD_A_WAIT; end
+                6'd7: begin ecc_dst_n=ECC_PMUL_T7; ecc_src_a_n=ecc_pmul_point_q; ecc_src_b_n=ECC_PMUL_T5; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_leaf_a_n='0; ecc_leaf_b_n='0; ecc_leaf_prod_n='0; ecc_leaf_path_n='0; ecc_diag_slot_n='0; ecc_fold_word_n='0; ecc_pipe0_valid_n=1'b0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_req.ra=ecc_pmul_point_q; st_n=S_ECC_LOAD_A_WAIT; end
                 6'd8: begin uop_p0_n='0; uop_p0_n.valid=1'b1; uop_p0_n.op_type=UOP_HBIND_CHUNK; uop_p0_n.src0_addr=ECC_PMUL_T7; uop_p0_n.src1_addr=ECC_PMUL_T6; uop_p0_n.dst_addr=ecc_pmul_add_out_x; uop_p0_n.chunk_idx=2'd3; ecc_job_phase_n=ECC_PHASE_PMUL_ADD; st_n=S_UOP_P1_RD0; end
-                default: begin ecc_job_phase_n=ECC_PHASE_PMUL_COPY; ecc_job_copy_dst_n=ecc_pmul_add_out_z; vrf_req.ra[0]=ECC_PMUL_T5; vrf_req.ra[1]=ECC_PMUL_T5; vrf_req.ra[2]=ECC_PMUL_T5; vrf_req.ra[3]=ECC_PMUL_T5; st_n=S_ECC_INV_COPY_WAIT; end
+                default: begin ecc_job_phase_n=ECC_PHASE_PMUL_COPY; ecc_job_copy_dst_n=ecc_pmul_add_out_z; vrf_req.ra=ECC_PMUL_T5; st_n=S_ECC_INV_COPY_WAIT; end
                 endcase
             end
             default: begin
@@ -1648,8 +1613,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                 ecc_pmul_step_n='0;
                 unique case (ecc_pmul_ctrl_q)
                 ECC_PMUL_CTRL_INIT: begin
-                    vrf_req.ra[0]=ecc_job_src_q; vrf_req.ra[1]=ecc_job_src_q;
-                    vrf_req.ra[2]=ecc_job_src_q; vrf_req.ra[3]=ecc_job_src_q;
+                    vrf_req.ra=ecc_job_src_q;
                     st_n=S_ECC_PMUL_READ_SCALAR_WAIT;
                 end
                 ECC_PMUL_CTRL_ADD: begin
@@ -1662,8 +1626,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                         st_n=(ecc_job_bg_q && valid_i) ? S_IDLE : S_ECC_PMUL_STEP;
                     end else begin
                         ecc_pmul_bit_n=ecc_pmul_bit_q - 8'd1;
-                        vrf_req.ra[0]=ecc_job_src_q; vrf_req.ra[1]=ecc_job_src_q;
-                        vrf_req.ra[2]=ecc_job_src_q; vrf_req.ra[3]=ecc_job_src_q;
+                        vrf_req.ra=ecc_job_src_q;
                         st_n=S_ECC_PMUL_READ_SCALAR_WAIT;
                     end
                 end
@@ -1705,8 +1668,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
 
         S_CLR: begin
             vrf_req.we='1;
-            vrf_req.wa[0]=clr_base_q+clr_cnt_q; vrf_req.wa[1]=clr_base_q+clr_cnt_q;
-            vrf_req.wa[2]=clr_base_q+clr_cnt_q; vrf_req.wa[3]=clr_base_q+clr_cnt_q;
+            vrf_req.wa=clr_base_q+clr_cnt_q;
             vrf_req.wd='0;
             if((op_q==HDEC_HCLR&&clr_cnt_q==4'd3)||(op_q==HDEC_HCNTCLR&&clr_cnt_q==4'd15))begin res_n='0;st_n=S_CLR_DRAIN;end
             else clr_cnt_n=clr_cnt_q+4'd1;
@@ -1761,8 +1723,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             end
             uop_p1_n       = uop_p0_q;
             uop_p0_n.valid = 1'b0;
-            vrf_req.ra[0]=uop_p0_q.src0_addr; vrf_req.ra[1]=uop_p0_q.src0_addr;
-            vrf_req.ra[2]=uop_p0_q.src0_addr; vrf_req.ra[3]=uop_p0_q.src0_addr;
+            vrf_req.ra=uop_p0_q.src0_addr;
             st_n=S_UOP_P1_RD0_WAIT;
         end
 
@@ -1779,8 +1740,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
              || (uop_p1_q.op_type == UOP_HSIM_CHUNK)
              || (uop_p1_q.op_type == UOP_HMATCH_CHUNK))
                 hdc_src0_n = vrf_rd;
-            vrf_req.ra[0]=uop_p1_q.src1_addr; vrf_req.ra[1]=uop_p1_q.src1_addr;
-            vrf_req.ra[2]=uop_p1_q.src1_addr; vrf_req.ra[3]=uop_p1_q.src1_addr;
+            vrf_req.ra=uop_p1_q.src1_addr;
             st_n=S_UOP_P1_RD1_WAIT;
         end
 
@@ -1813,8 +1773,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             unique case (uop_p3_q.op_type)
             UOP_HBIND_CHUNK: begin
                 vrf_req.we = '1;
-                vrf_req.wa[0]=uop_p3_q.dst_addr; vrf_req.wa[1]=uop_p3_q.dst_addr;
-                vrf_req.wa[2]=uop_p3_q.dst_addr; vrf_req.wa[3]=uop_p3_q.dst_addr;
+                vrf_req.wa=uop_p3_q.dst_addr;
                 vrf_req.wd = lane_bool_result;
                 if (uop_p3_q.chunk_idx == 2'd3) st_n = S_UOP_P4_RESP;
                 else begin
@@ -1831,12 +1790,10 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             end
             UOP_HCNTADD_SUBGROUP: begin
                 vrf_req.we = '1;
-                vrf_req.wa[0]=uop_p3_q.dst_addr;
-                vrf_req.wa[1]=vrf_req.wa[0]; vrf_req.wa[2]=vrf_req.wa[0]; vrf_req.wa[3]=vrf_req.wa[0];
+                vrf_req.wa=uop_p3_q.dst_addr;
                 vrf_req.wd = lane_result_q;
                 if (uop_p3_q.subgroup_idx < 2'd3) begin
-                    vrf_req.ra[0]=uop_p3_q.dst_addr + 6'd1;
-                    vrf_req.ra[1]=vrf_req.ra[0]; vrf_req.ra[2]=vrf_req.ra[0]; vrf_req.ra[3]=vrf_req.ra[0];
+                    vrf_req.ra=uop_p3_q.dst_addr + 6'd1;
                     // Advance uop to P2 directly (skip P1_RD0/P1_RD1)
                     uop_p2_n = uop_p3_q; uop_p2_n.valid = 1'b1;
                     uop_p2_n.subgroup_idx = uop_p3_q.subgroup_idx + 2'd1;
@@ -1862,8 +1819,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
                 hcntclip_word_with_result[3][{uop_p3_q.subgroup_idx,4'b0000} +: 16] = lane_clip_q[3];
                 hdc_src0_n = hcntclip_word_with_result;
                 if (uop_p3_q.subgroup_idx < 2'd3) begin
-                    vrf_req.ra[0]=hcntclip_acc_base+{2'b00,uop_p3_q.chunk_idx,2'b00}+{4'b0,(uop_p3_q.subgroup_idx + 2'd1)};
-                    vrf_req.ra[1]=vrf_req.ra[0]; vrf_req.ra[2]=vrf_req.ra[0]; vrf_req.ra[3]=vrf_req.ra[0];
+                    vrf_req.ra=hcntclip_acc_base+{2'b00,uop_p3_q.chunk_idx,2'b00}+{4'b0,(uop_p3_q.subgroup_idx + 2'd1)};
                     uop_p2_n = uop_p3_q; uop_p2_n.valid = 1'b1;
                     uop_p2_n.subgroup_idx = uop_p3_q.subgroup_idx + 2'd1;
                     uop_p1_n.valid = 1'b0; uop_p0_n.valid = 1'b0;
@@ -1875,8 +1831,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             end
             UOP_HPERM_CHUNK: begin
                 vrf_req.we = '1;
-                vrf_req.wa[0]=uop_p3_q.dst_addr; vrf_req.wa[1]=uop_p3_q.dst_addr;
-                vrf_req.wa[2]=uop_p3_q.dst_addr; vrf_req.wa[3]=uop_p3_q.dst_addr;
+                vrf_req.wa=uop_p3_q.dst_addr;
                 vrf_req.wd = lane_result_q;
                 if (uop_p3_q.chunk_idx == 2'd3) st_n = S_UOP_P4_RESP;
                 else begin
@@ -1941,8 +1896,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
 
         S_UOP_CLIP_WRITE: begin
             vrf_req.we = '1;
-            vrf_req.wa[0]=hcntclip_dst_base_q+hcntclip_chunk_q; vrf_req.wa[1]=hcntclip_dst_base_q+hcntclip_chunk_q;
-            vrf_req.wa[2]=hcntclip_dst_base_q+hcntclip_chunk_q; vrf_req.wa[3]=hcntclip_dst_base_q+hcntclip_chunk_q;
+            vrf_req.wa=hcntclip_dst_base_q+hcntclip_chunk_q;
             vrf_req.wd = hdc_src0_q;
             hdc_src0_n = '0;
             p4_arch_op_n = HDEC_HCNTCLIP;
@@ -2026,7 +1980,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             ecc_job_kind_q<=ECC_JOB_NONE;ecc_job_phase_q<=ECC_PHASE_NONE;ecc_job_active_q<=1'b0;ecc_job_done_q<=1'b0;ecc_job_bg_q<=1'b0;ecc_job_cycle_q<='0;ecc_inv_step_q<='0;ecc_job_src_q<='0;ecc_job_dst_q<='0;ecc_job_copy_dst_q<='0;
             ecc_pmul_ctrl_q<=ECC_PMUL_CTRL_INIT;ecc_pmul_subop_q<=ECC_PMUL_SUB_NONE;ecc_pmul_step_q<='0;ecc_pmul_bit_q<='0;ecc_pmul_scalar_bit_q<=1'b0;
             ecc_pmul_r0_inf_q<=1'b1;ecc_pmul_const_one_q<=1'b0;ecc_pmul_result_q<='0;ecc_pmul_point_q<='0;
-            ecc_pipe0_valid_q<=1'b0;ecc_pipe1_valid_q<=1'b0;ecc_pipe0_diag_slot_q<='0;ecc_pipe1_diag_slot_q<='0;ecc_diag16_pipe_q<='0;
+            ecc_pipe0_valid_q<=1'b0;ecc_pipe0_diag_slot_q<='0;ecc_diag16_pipe_q<='0;
         end
         else begin
             st_q<=st_n;res_q<=res_n;op_q<=op_n;a_q<=a_n;bk_q<=bk_n;
@@ -2047,7 +2001,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; (
             ecc_job_kind_q<=ecc_job_kind_n;ecc_job_phase_q<=ecc_job_phase_n;ecc_job_active_q<=ecc_job_active_n;ecc_job_done_q<=ecc_job_done_n;ecc_job_bg_q<=ecc_job_bg_n;ecc_job_cycle_q<=ecc_job_cycle_n;ecc_inv_step_q<=ecc_inv_step_n;ecc_job_src_q<=ecc_job_src_n;ecc_job_dst_q<=ecc_job_dst_n;ecc_job_copy_dst_q<=ecc_job_copy_dst_n;
             ecc_pmul_ctrl_q<=ecc_pmul_ctrl_n;ecc_pmul_subop_q<=ecc_pmul_subop_n;ecc_pmul_step_q<=ecc_pmul_step_n;ecc_pmul_bit_q<=ecc_pmul_bit_n;ecc_pmul_scalar_bit_q<=ecc_pmul_scalar_bit_n;
             ecc_pmul_r0_inf_q<=ecc_pmul_r0_inf_n;ecc_pmul_const_one_q<=ecc_pmul_const_one_n;ecc_pmul_result_q<=ecc_pmul_result_n;ecc_pmul_point_q<=ecc_pmul_point_n;
-            ecc_pipe0_valid_q<=ecc_pipe0_valid_n;ecc_pipe1_valid_q<=ecc_pipe1_valid_n;ecc_pipe0_diag_slot_q<=ecc_pipe0_diag_slot_n;ecc_pipe1_diag_slot_q<=ecc_pipe1_diag_slot_n;ecc_diag16_pipe_q<=ecc_diag16_pipe_n;
+            ecc_pipe0_valid_q<=ecc_pipe0_valid_n;ecc_pipe0_diag_slot_q<=ecc_pipe0_diag_slot_n;ecc_diag16_pipe_q<=ecc_diag16_pipe_n;
         end
     end
 endmodule

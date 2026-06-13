@@ -11,11 +11,11 @@ module hdec_vrf_64x256
 (
     input  logic        clk_i,
 
-    input  logic [LANE_NUM-1:0][VRF_IDX_W-1:0]  bank_ra_addr_i,
+    input  logic [VRF_IDX_W-1:0]                row_ra_addr_i,
     output logic [LANE_NUM-1:0][LANE_WIDTH-1:0] bank_ra_data_o,
 
     input  logic [LANE_NUM-1:0]                 bank_we_i,
-    input  logic [LANE_NUM-1:0][VRF_IDX_W-1:0]  bank_wa_addr_i,
+    input  logic [VRF_IDX_W-1:0]                row_wa_addr_i,
     input  logic [LANE_NUM-1:0][LANE_WIDTH-1:0] bank_wdata_i,
 
     output logic        vrf_ready_o
@@ -28,9 +28,9 @@ module hdec_vrf_64x256
 
         always_ff @(posedge clk_i) begin
             if (bank_we_i[bid])
-                vrf_mem[bank_wa_addr_i[bid]] <= bank_wdata_i[bid];
+                vrf_mem[row_wa_addr_i] <= bank_wdata_i[bid];
 
-            bank_ra_data_o[bid] <= vrf_mem[bank_ra_addr_i[bid]];
+            bank_ra_data_o[bid] <= vrf_mem[row_ra_addr_i];
         end
     end
 
