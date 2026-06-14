@@ -1,0 +1,15 @@
+version_label=keep_6437a435
+repo_root=E:/HDEC/ooc-new-keep-6437a435
+freq_mhz=100
+period_ns=10.000
+part=xc7z020clg400-2
+top=hdec_top
+vivado_version=2024.2
+p2_lane_ctrl_cell_count=72
+wns=3.359
+startpoint=hsim_total_q_reg[0]/C
+endpoint=hmatch_best_dist_q_reg[0]/CE
+data_path_delay=6.430
+logic_delay=3.216
+route_delay=3.214
+logic_levels=9

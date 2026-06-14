@@ -1,0 +1,15 @@
+repo_root=E:/HDEC/cva6-vhdc-core
+commit=ff838841
+frequency_mhz=200
+period_ns=5.000
+part=xc7z020clg400-2
+top=hdec_top
+vivado_version=2024.2
+wns=-1.497
+startpoint=lane_popcnt_q_reg[3][2]/C
+endpoint=hmatch_best_idx_q_reg[0]/CE
+data_delay=6.286
+logic_delay=2.698
+route_delay=3.588
+logic_levels=11
+main_cells=CARRY4=4;FDCE=2;LUT2=1;LUT3=1;LUT4=1;LUT5=2;LUT6=2

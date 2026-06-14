@@ -1,0 +1,15 @@
+version_label=baseline_e0925738
+repo_root=E:/HDEC/ooc-baseline-e0925738
+freq_mhz=175
+period_ns=5.714
+part=xc7z020clg400-2
+top=hdec_top
+vivado_version=2024.2
+p2_lane_ctrl_cell_count=0
+wns=-0.827
+startpoint=hsim_total_q_reg[0]/C
+endpoint=hmatch_best_dist_q_reg[0]/CE
+data_path_delay=6.330
+logic_delay=3.206
+route_delay=3.124
+logic_levels=9

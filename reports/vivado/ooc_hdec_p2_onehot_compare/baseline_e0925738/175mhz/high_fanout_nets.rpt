@@ -1,0 +1,31 @@
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2024 Advanced Micro Devices, Inc. All Rights Reserved.
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2024.2 (win64) Build 5239630 Fri Nov 08 22:35:27 MST 2024
+| Date         : Sat Jun  6 11:51:55 2026
+| Host         : WIN-20240824NZS running 64-bit major release  (build 9200)
+| Command      : report_high_fanout_nets -fanout_greater_than 20 -file E:/HDEC/cva6-vhdc-core/reports/vivado/ooc_hdec_p2_onehot_compare/baseline_e0925738/175mhz/high_fanout_nets.rpt
+| Design       : hdec_top
+| Device       : xc7z020
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+High Fan-out Nets Information
+
+1. Summary
+----------
+
++-------------------------------------+--------+-------------+
+| Net Name                            | Fanout | Driver Type |
++-------------------------------------+--------+-------------+
+| i_vrf/rst_ni_0                      |   2188 | LUT1        |
+| i_vrf/lane_shift_valid[0]           |    509 | LUT2        |
+| uop_p3_n                            |    454 | FDCE        |
+| uop_p2_q_reg[use_xor]__0            |    290 | FDCE        |
+| FSM_onehot_st_q_reg_n_0_[8]         |    288 | FDCE        |
+| i_vrf/p_0_in[0]                     |    287 | FDCE        |
+| i_vrf/init_state_q[0]               |    282 | FDCE        |
+| i_vrf/lane_result_q[3][63]_i_16_n_0 |    262 | LUT6        |
+| i_vrf/hperm_a_n                     |    262 | LUT4        |
+| i_vrf/uop_p1_q_reg[op_type][1]      |    261 | LUT4        |
++-------------------------------------+--------+-------------+
+
+

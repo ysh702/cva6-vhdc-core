@@ -1,0 +1,31 @@
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2024 Advanced Micro Devices, Inc. All Rights Reserved.
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2024.2 (win64) Build 5239630 Fri Nov 08 22:35:27 MST 2024
+| Date         : Sat Jun  6 12:05:26 2026
+| Host         : WIN-20240824NZS running 64-bit major release  (build 9200)
+| Command      : report_high_fanout_nets -fanout_greater_than 20 -file E:/HDEC/cva6-vhdc-core/reports/vivado/ooc_hdec_p2_onehot_compare/keep_6437a435/150mhz/high_fanout_nets.rpt
+| Design       : hdec_top
+| Device       : xc7z020
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+High Fan-out Nets Information
+
+1. Summary
+----------
+
++------------------------------------------------------+--------+-------------+
+| Net Name                                             | Fanout | Driver Type |
++------------------------------------------------------+--------+-------------+
+| i_vrf/rst_ni_0                                       |   2220 | LUT1        |
+| uop_p3_n                                             |    572 | FDCE        |
+| FSM_onehot_st_q_reg_n_0_[7]                          |    458 | FDCE        |
+| gen_lane[0].i_p2_lane_slice/p2_lane_ctrl_q[do_shift] |    297 | FDCE        |
+| gen_lane[2].i_p2_lane_slice/p2_lane_ctrl_q[do_shift] |    293 | FDCE        |
+| gen_lane[1].i_p2_lane_slice/p2_lane_ctrl_q[do_shift] |    293 | FDCE        |
+| gen_lane[3].i_p2_lane_slice/p2_lane_ctrl_q[do_shift] |    288 | FDCE        |
+| FSM_onehot_st_q_reg_n_0_[8]                          |    287 | FDCE        |
+| i_vrf/p_0_in[0]                                      |    287 | FDCE        |
+| i_vrf/init_state_q[0]                                |    282 | FDCE        |
++------------------------------------------------------+--------+-------------+
+
+

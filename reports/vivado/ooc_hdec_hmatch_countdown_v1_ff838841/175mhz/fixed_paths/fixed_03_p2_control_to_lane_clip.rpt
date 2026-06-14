@@ -1,0 +1,2567 @@
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2024 Advanced Micro Devices, Inc. All Rights Reserved.
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2024.2 (win64) Build 5239630 Fri Nov 08 22:35:27 MST 2024
+| Date         : Sun Jun  7 12:02:29 2026
+| Host         : WIN-20240824NZS running 64-bit major release  (build 9200)
+| Command      : report_timing -delay_type max -sort_by slack -max_paths 50 -nworst 1 -from [get_pins -quiet -of_objects {i_vrf/lane_result_q[3][8]_i_7/I2} -filter {DIRECTION == OUT}] -to {i_vrf/lane_result_q[3][8]_i_7/I2} -file E:/HDEC/cva6-vhdc-core/reports/vivado/ooc_hdec_hmatch_countdown_v1_ff838841/175mhz/fixed_paths/fixed_03_p2_control_to_lane_clip.rpt
+| Design       : hdec_top
+| Device       : 7z020-clg400
+| Speed File   : -2  PRODUCTION 1.12 2019-11-22
+| Design State : Synthesized
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Timing Report
+
+Slack (MET) :             2.857ns  (required time - arrival time)
+  Source:                 uop_p2_q_reg[valid]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            lane_clip_q_reg[0][0]/CE
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        2.646ns  (logic 0.875ns (33.069%)  route 1.771ns (66.931%))
+  Logic Levels:           3  (LUT2=1 LUT3=1 LUT5=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2885, unset)         0.787     0.787    clk_i
+                         FDCE                                         r  uop_p2_q_reg[valid]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 f  uop_p2_q_reg[valid]/Q
+                         net (fo=9, unplaced)         0.403     1.623    i_vrf/uop_p2_q_reg[valid]__0
+                         LUT2 (Prop_lut2_I0_O)        0.232     1.855 f  i_vrf/lane_result_q[3][63]_i_10/O
+                         net (fo=260, unplaced)       0.471     2.326    i_vrf/lane_result_q[3][63]_i_10_n_0
+                         LUT3 (Prop_lut3_I0_O)        0.105     2.431 f  i_vrf/lane_result_q[3][63]_i_3/O
+                         net (fo=88, unplaced)        0.443     2.874    i_vrf_n_561
+                         LUT5 (Prop_lut5_I4_O)        0.105     2.979 r  lane_clip_q[3][15]_i_1/O
+                         net (fo=64, unplaced)        0.454     3.433    lane_clip_n
+                         FDCE                                         r  lane_clip_q_reg[0][0]/CE
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2885, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  lane_clip_q_reg[0][0]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_CE)      -0.136     6.290    lane_clip_q_reg[0][0]
+  -------------------------------------------------------------------
+                         required time                          6.290    
+                         arrival time                          -3.433    
+  -------------------------------------------------------------------
+                         slack                                  2.857    
+
+Slack (MET) :             2.857ns  (required time - arrival time)
+  Source:                 uop_p2_q_reg[valid]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            lane_clip_q_reg[0][10]/CE
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        2.646ns  (logic 0.875ns (33.069%)  route 1.771ns (66.931%))
+  Logic Levels:           3  (LUT2=1 LUT3=1 LUT5=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2885, unset)         0.787     0.787    clk_i
+                         FDCE                                         r  uop_p2_q_reg[valid]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 f  uop_p2_q_reg[valid]/Q
+                         net (fo=9, unplaced)         0.403     1.623    i_vrf/uop_p2_q_reg[valid]__0
+                         LUT2 (Prop_lut2_I0_O)        0.232     1.855 f  i_vrf/lane_result_q[3][63]_i_10/O
+                         net (fo=260, unplaced)       0.471     2.326    i_vrf/lane_result_q[3][63]_i_10_n_0
+                         LUT3 (Prop_lut3_I0_O)        0.105     2.431 f  i_vrf/lane_result_q[3][63]_i_3/O
+                         net (fo=88, unplaced)        0.443     2.874    i_vrf_n_561
+                         LUT5 (Prop_lut5_I4_O)        0.105     2.979 r  lane_clip_q[3][15]_i_1/O
+                         net (fo=64, unplaced)        0.454     3.433    lane_clip_n
+                         FDCE                                         r  lane_clip_q_reg[0][10]/CE
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2885, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  lane_clip_q_reg[0][10]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_CE)      -0.136     6.290    lane_clip_q_reg[0][10]
+  -------------------------------------------------------------------
+                         required time                          6.290    
+                         arrival time                          -3.433    
+  -------------------------------------------------------------------
+                         slack                                  2.857    
+
+Slack (MET) :             2.857ns  (required time - arrival time)
+  Source:                 uop_p2_q_reg[valid]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            lane_clip_q_reg[0][11]/CE
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        2.646ns  (logic 0.875ns (33.069%)  route 1.771ns (66.931%))
+  Logic Levels:           3  (LUT2=1 LUT3=1 LUT5=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2885, unset)         0.787     0.787    clk_i
+                         FDCE                                         r  uop_p2_q_reg[valid]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 f  uop_p2_q_reg[valid]/Q
+                         net (fo=9, unplaced)         0.403     1.623    i_vrf/uop_p2_q_reg[valid]__0
+                         LUT2 (Prop_lut2_I0_O)        0.232     1.855 f  i_vrf/lane_result_q[3][63]_i_10/O
+                         net (fo=260, unplaced)       0.471     2.326    i_vrf/lane_result_q[3][63]_i_10_n_0
+                         LUT3 (Prop_lut3_I0_O)        0.105     2.431 f  i_vrf/lane_result_q[3][63]_i_3/O
+                         net (fo=88, unplaced)        0.443     2.874    i_vrf_n_561
+                         LUT5 (Prop_lut5_I4_O)        0.105     2.979 r  lane_clip_q[3][15]_i_1/O
+                         net (fo=64, unplaced)        0.454     3.433    lane_clip_n
+                         FDCE                                         r  lane_clip_q_reg[0][11]/CE
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2885, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  lane_clip_q_reg[0][11]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_CE)      -0.136     6.290    lane_clip_q_reg[0][11]
+  -------------------------------------------------------------------
+                         required time                          6.290    
+                         arrival time                          -3.433    
+  -------------------------------------------------------------------
+                         slack                                  2.857    
+
+Slack (MET) :             2.857ns  (required time - arrival time)
+  Source:                 uop_p2_q_reg[valid]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            lane_clip_q_reg[0][12]/CE
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        2.646ns  (logic 0.875ns (33.069%)  route 1.771ns (66.931%))
+  Logic Levels:           3  (LUT2=1 LUT3=1 LUT5=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2885, unset)         0.787     0.787    clk_i
+                         FDCE                                         r  uop_p2_q_reg[valid]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 f  uop_p2_q_reg[valid]/Q
+                         net (fo=9, unplaced)         0.403     1.623    i_vrf/uop_p2_q_reg[valid]__0
+                         LUT2 (Prop_lut2_I0_O)        0.232     1.855 f  i_vrf/lane_result_q[3][63]_i_10/O
+                         net (fo=260, unplaced)       0.471     2.326    i_vrf/lane_result_q[3][63]_i_10_n_0
+                         LUT3 (Prop_lut3_I0_O)        0.105     2.431 f  i_vrf/lane_result_q[3][63]_i_3/O
+                         net (fo=88, unplaced)        0.443     2.874    i_vrf_n_561
+                         LUT5 (Prop_lut5_I4_O)        0.105     2.979 r  lane_clip_q[3][15]_i_1/O
+                         net (fo=64, unplaced)        0.454     3.433    lane_clip_n
+                         FDCE                                         r  lane_clip_q_reg[0][12]/CE
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2885, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  lane_clip_q_reg[0][12]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_CE)      -0.136     6.290    lane_clip_q_reg[0][12]
+  -------------------------------------------------------------------
+                         required time                          6.290    
+                         arrival time                          -3.433    
+  -------------------------------------------------------------------
+                         slack                                  2.857    
+
+Slack (MET) :             2.857ns  (required time - arrival time)
+  Source:                 uop_p2_q_reg[valid]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            lane_clip_q_reg[0][13]/CE
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        2.646ns  (logic 0.875ns (33.069%)  route 1.771ns (66.931%))
+  Logic Levels:           3  (LUT2=1 LUT3=1 LUT5=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2885, unset)         0.787     0.787    clk_i
+                         FDCE                                         r  uop_p2_q_reg[valid]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 f  uop_p2_q_reg[valid]/Q
+                         net (fo=9, unplaced)         0.403     1.623    i_vrf/uop_p2_q_reg[valid]__0
+                         LUT2 (Prop_lut2_I0_O)        0.232     1.855 f  i_vrf/lane_result_q[3][63]_i_10/O
+                         net (fo=260, unplaced)       0.471     2.326    i_vrf/lane_result_q[3][63]_i_10_n_0
+                         LUT3 (Prop_lut3_I0_O)        0.105     2.431 f  i_vrf/lane_result_q[3][63]_i_3/O
+                         net (fo=88, unplaced)        0.443     2.874    i_vrf_n_561
+                         LUT5 (Prop_lut5_I4_O)        0.105     2.979 r  lane_clip_q[3][15]_i_1/O
+                         net (fo=64, unplaced)        0.454     3.433    lane_clip_n
+                         FDCE                                         r  lane_clip_q_reg[0][13]/CE
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2885, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  lane_clip_q_reg[0][13]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_CE)      -0.136     6.290    lane_clip_q_reg[0][13]
+  -------------------------------------------------------------------
+                         required time                          6.290    
+                         arrival time                          -3.433    
+  -------------------------------------------------------------------
+                         slack                                  2.857    
+
+Slack (MET) :             2.857ns  (required time - arrival time)
+  Source:                 uop_p2_q_reg[valid]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            lane_clip_q_reg[0][14]/CE
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        2.646ns  (logic 0.875ns (33.069%)  route 1.771ns (66.931%))
+  Logic Levels:           3  (LUT2=1 LUT3=1 LUT5=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2885, unset)         0.787     0.787    clk_i
+                         FDCE                                         r  uop_p2_q_reg[valid]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 f  uop_p2_q_reg[valid]/Q
+                         net (fo=9, unplaced)         0.403     1.623    i_vrf/uop_p2_q_reg[valid]__0
+                         LUT2 (Prop_lut2_I0_O)        0.232     1.855 f  i_vrf/lane_result_q[3][63]_i_10/O
+                         net (fo=260, unplaced)       0.471     2.326    i_vrf/lane_result_q[3][63]_i_10_n_0
+                         LUT3 (Prop_lut3_I0_O)        0.105     2.431 f  i_vrf/lane_result_q[3][63]_i_3/O
+                         net (fo=88, unplaced)        0.443     2.874    i_vrf_n_561
+                         LUT5 (Prop_lut5_I4_O)        0.105     2.979 r  lane_clip_q[3][15]_i_1/O
+                         net (fo=64, unplaced)        0.454     3.433    lane_clip_n
+                         FDCE                                         r  lane_clip_q_reg[0][14]/CE
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2885, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  lane_clip_q_reg[0][14]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_CE)      -0.136     6.290    lane_clip_q_reg[0][14]
+  -------------------------------------------------------------------
+                         required time                          6.290    
+                         arrival time                          -3.433    
+  -------------------------------------------------------------------
+                         slack                                  2.857    
+
+Slack (MET) :             2.857ns  (required time - arrival time)
+  Source:                 uop_p2_q_reg[valid]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            lane_clip_q_reg[0][15]/CE
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        2.646ns  (logic 0.875ns (33.069%)  route 1.771ns (66.931%))
+  Logic Levels:           3  (LUT2=1 LUT3=1 LUT5=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2885, unset)         0.787     0.787    clk_i
+                         FDCE                                         r  uop_p2_q_reg[valid]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 f  uop_p2_q_reg[valid]/Q
+                         net (fo=9, unplaced)         0.403     1.623    i_vrf/uop_p2_q_reg[valid]__0
+                         LUT2 (Prop_lut2_I0_O)        0.232     1.855 f  i_vrf/lane_result_q[3][63]_i_10/O
+                         net (fo=260, unplaced)       0.471     2.326    i_vrf/lane_result_q[3][63]_i_10_n_0
+                         LUT3 (Prop_lut3_I0_O)        0.105     2.431 f  i_vrf/lane_result_q[3][63]_i_3/O
+                         net (fo=88, unplaced)        0.443     2.874    i_vrf_n_561
+                         LUT5 (Prop_lut5_I4_O)        0.105     2.979 r  lane_clip_q[3][15]_i_1/O
+                         net (fo=64, unplaced)        0.454     3.433    lane_clip_n
+                         FDCE                                         r  lane_clip_q_reg[0][15]/CE
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2885, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  lane_clip_q_reg[0][15]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_CE)      -0.136     6.290    lane_clip_q_reg[0][15]
+  -------------------------------------------------------------------
+                         required time                          6.290    
+                         arrival time                          -3.433    
+  -------------------------------------------------------------------
+                         slack                                  2.857    
+
+Slack (MET) :             2.857ns  (required time - arrival time)
+  Source:                 uop_p2_q_reg[valid]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            lane_clip_q_reg[0][1]/CE
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        2.646ns  (logic 0.875ns (33.069%)  route 1.771ns (66.931%))
+  Logic Levels:           3  (LUT2=1 LUT3=1 LUT5=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2885, unset)         0.787     0.787    clk_i
+                         FDCE                                         r  uop_p2_q_reg[valid]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 f  uop_p2_q_reg[valid]/Q
+                         net (fo=9, unplaced)         0.403     1.623    i_vrf/uop_p2_q_reg[valid]__0
+                         LUT2 (Prop_lut2_I0_O)        0.232     1.855 f  i_vrf/lane_result_q[3][63]_i_10/O
+                         net (fo=260, unplaced)       0.471     2.326    i_vrf/lane_result_q[3][63]_i_10_n_0
+                         LUT3 (Prop_lut3_I0_O)        0.105     2.431 f  i_vrf/lane_result_q[3][63]_i_3/O
+                         net (fo=88, unplaced)        0.443     2.874    i_vrf_n_561
+                         LUT5 (Prop_lut5_I4_O)        0.105     2.979 r  lane_clip_q[3][15]_i_1/O
+                         net (fo=64, unplaced)        0.454     3.433    lane_clip_n
+                         FDCE                                         r  lane_clip_q_reg[0][1]/CE
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2885, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  lane_clip_q_reg[0][1]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_CE)      -0.136     6.290    lane_clip_q_reg[0][1]
+  -------------------------------------------------------------------
+                         required time                          6.290    
+                         arrival time                          -3.433    
+  -------------------------------------------------------------------
+                         slack                                  2.857    
+
+Slack (MET) :             2.857ns  (required time - arrival time)
+  Source:                 uop_p2_q_reg[valid]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            lane_clip_q_reg[0][2]/CE
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        2.646ns  (logic 0.875ns (33.069%)  route 1.771ns (66.931%))
+  Logic Levels:           3  (LUT2=1 LUT3=1 LUT5=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2885, unset)         0.787     0.787    clk_i
+                         FDCE                                         r  uop_p2_q_reg[valid]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 f  uop_p2_q_reg[valid]/Q
+                         net (fo=9, unplaced)         0.403     1.623    i_vrf/uop_p2_q_reg[valid]__0
+                         LUT2 (Prop_lut2_I0_O)        0.232     1.855 f  i_vrf/lane_result_q[3][63]_i_10/O
+                         net (fo=260, unplaced)       0.471     2.326    i_vrf/lane_result_q[3][63]_i_10_n_0
+                         LUT3 (Prop_lut3_I0_O)        0.105     2.431 f  i_vrf/lane_result_q[3][63]_i_3/O
+                         net (fo=88, unplaced)        0.443     2.874    i_vrf_n_561
+                         LUT5 (Prop_lut5_I4_O)        0.105     2.979 r  lane_clip_q[3][15]_i_1/O
+                         net (fo=64, unplaced)        0.454     3.433    lane_clip_n
+                         FDCE                                         r  lane_clip_q_reg[0][2]/CE
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2885, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  lane_clip_q_reg[0][2]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_CE)      -0.136     6.290    lane_clip_q_reg[0][2]
+  -------------------------------------------------------------------
+                         required time                          6.290    
+                         arrival time                          -3.433    
+  -------------------------------------------------------------------
+                         slack                                  2.857    
+
+Slack (MET) :             2.857ns  (required time - arrival time)
+  Source:                 uop_p2_q_reg[valid]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            lane_clip_q_reg[0][3]/CE
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        2.646ns  (logic 0.875ns (33.069%)  route 1.771ns (66.931%))
+  Logic Levels:           3  (LUT2=1 LUT3=1 LUT5=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2885, unset)         0.787     0.787    clk_i
+                         FDCE                                         r  uop_p2_q_reg[valid]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 f  uop_p2_q_reg[valid]/Q
+                         net (fo=9, unplaced)         0.403     1.623    i_vrf/uop_p2_q_reg[valid]__0
+                         LUT2 (Prop_lut2_I0_O)        0.232     1.855 f  i_vrf/lane_result_q[3][63]_i_10/O
+                         net (fo=260, unplaced)       0.471     2.326    i_vrf/lane_result_q[3][63]_i_10_n_0
+                         LUT3 (Prop_lut3_I0_O)        0.105     2.431 f  i_vrf/lane_result_q[3][63]_i_3/O
+                         net (fo=88, unplaced)        0.443     2.874    i_vrf_n_561
+                         LUT5 (Prop_lut5_I4_O)        0.105     2.979 r  lane_clip_q[3][15]_i_1/O
+                         net (fo=64, unplaced)        0.454     3.433    lane_clip_n
+                         FDCE                                         r  lane_clip_q_reg[0][3]/CE
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2885, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  lane_clip_q_reg[0][3]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_CE)      -0.136     6.290    lane_clip_q_reg[0][3]
+  -------------------------------------------------------------------
+                         required time                          6.290    
+                         arrival time                          -3.433    
+  -------------------------------------------------------------------
+                         slack                                  2.857    
+
+Slack (MET) :             2.857ns  (required time - arrival time)
+  Source:                 uop_p2_q_reg[valid]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            lane_clip_q_reg[0][4]/CE
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        2.646ns  (logic 0.875ns (33.069%)  route 1.771ns (66.931%))
+  Logic Levels:           3  (LUT2=1 LUT3=1 LUT5=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2885, unset)         0.787     0.787    clk_i
+                         FDCE                                         r  uop_p2_q_reg[valid]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 f  uop_p2_q_reg[valid]/Q
+                         net (fo=9, unplaced)         0.403     1.623    i_vrf/uop_p2_q_reg[valid]__0
+                         LUT2 (Prop_lut2_I0_O)        0.232     1.855 f  i_vrf/lane_result_q[3][63]_i_10/O
+                         net (fo=260, unplaced)       0.471     2.326    i_vrf/lane_result_q[3][63]_i_10_n_0
+                         LUT3 (Prop_lut3_I0_O)        0.105     2.431 f  i_vrf/lane_result_q[3][63]_i_3/O
+                         net (fo=88, unplaced)        0.443     2.874    i_vrf_n_561
+                         LUT5 (Prop_lut5_I4_O)        0.105     2.979 r  lane_clip_q[3][15]_i_1/O
+                         net (fo=64, unplaced)        0.454     3.433    lane_clip_n
+                         FDCE                                         r  lane_clip_q_reg[0][4]/CE
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2885, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  lane_clip_q_reg[0][4]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_CE)      -0.136     6.290    lane_clip_q_reg[0][4]
+  -------------------------------------------------------------------
+                         required time                          6.290    
+                         arrival time                          -3.433    
+  -------------------------------------------------------------------
+                         slack                                  2.857    
+
+Slack (MET) :             2.857ns  (required time - arrival time)
+  Source:                 uop_p2_q_reg[valid]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            lane_clip_q_reg[0][5]/CE
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        2.646ns  (logic 0.875ns (33.069%)  route 1.771ns (66.931%))
+  Logic Levels:           3  (LUT2=1 LUT3=1 LUT5=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2885, unset)         0.787     0.787    clk_i
+                         FDCE                                         r  uop_p2_q_reg[valid]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 f  uop_p2_q_reg[valid]/Q
+                         net (fo=9, unplaced)         0.403     1.623    i_vrf/uop_p2_q_reg[valid]__0
+                         LUT2 (Prop_lut2_I0_O)        0.232     1.855 f  i_vrf/lane_result_q[3][63]_i_10/O
+                         net (fo=260, unplaced)       0.471     2.326    i_vrf/lane_result_q[3][63]_i_10_n_0
+                         LUT3 (Prop_lut3_I0_O)        0.105     2.431 f  i_vrf/lane_result_q[3][63]_i_3/O
+                         net (fo=88, unplaced)        0.443     2.874    i_vrf_n_561
+                         LUT5 (Prop_lut5_I4_O)        0.105     2.979 r  lane_clip_q[3][15]_i_1/O
+                         net (fo=64, unplaced)        0.454     3.433    lane_clip_n
+                         FDCE                                         r  lane_clip_q_reg[0][5]/CE
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2885, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  lane_clip_q_reg[0][5]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_CE)      -0.136     6.290    lane_clip_q_reg[0][5]
+  -------------------------------------------------------------------
+                         required time                          6.290    
+                         arrival time                          -3.433    
+  -------------------------------------------------------------------
+                         slack                                  2.857    
+
+Slack (MET) :             2.857ns  (required time - arrival time)
+  Source:                 uop_p2_q_reg[valid]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            lane_clip_q_reg[0][6]/CE
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        2.646ns  (logic 0.875ns (33.069%)  route 1.771ns (66.931%))
+  Logic Levels:           3  (LUT2=1 LUT3=1 LUT5=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2885, unset)         0.787     0.787    clk_i
+                         FDCE                                         r  uop_p2_q_reg[valid]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 f  uop_p2_q_reg[valid]/Q
+                         net (fo=9, unplaced)         0.403     1.623    i_vrf/uop_p2_q_reg[valid]__0
+                         LUT2 (Prop_lut2_I0_O)        0.232     1.855 f  i_vrf/lane_result_q[3][63]_i_10/O
+                         net (fo=260, unplaced)       0.471     2.326    i_vrf/lane_result_q[3][63]_i_10_n_0
+                         LUT3 (Prop_lut3_I0_O)        0.105     2.431 f  i_vrf/lane_result_q[3][63]_i_3/O
+                         net (fo=88, unplaced)        0.443     2.874    i_vrf_n_561
+                         LUT5 (Prop_lut5_I4_O)        0.105     2.979 r  lane_clip_q[3][15]_i_1/O
+                         net (fo=64, unplaced)        0.454     3.433    lane_clip_n
+                         FDCE                                         r  lane_clip_q_reg[0][6]/CE
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2885, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  lane_clip_q_reg[0][6]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_CE)      -0.136     6.290    lane_clip_q_reg[0][6]
+  -------------------------------------------------------------------
+                         required time                          6.290    
+                         arrival time                          -3.433    
+  -------------------------------------------------------------------
+                         slack                                  2.857    
+
+Slack (MET) :             2.857ns  (required time - arrival time)
+  Source:                 uop_p2_q_reg[valid]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            lane_clip_q_reg[0][7]/CE
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        2.646ns  (logic 0.875ns (33.069%)  route 1.771ns (66.931%))
+  Logic Levels:           3  (LUT2=1 LUT3=1 LUT5=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2885, unset)         0.787     0.787    clk_i
+                         FDCE                                         r  uop_p2_q_reg[valid]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 f  uop_p2_q_reg[valid]/Q
+                         net (fo=9, unplaced)         0.403     1.623    i_vrf/uop_p2_q_reg[valid]__0
+                         LUT2 (Prop_lut2_I0_O)        0.232     1.855 f  i_vrf/lane_result_q[3][63]_i_10/O
+                         net (fo=260, unplaced)       0.471     2.326    i_vrf/lane_result_q[3][63]_i_10_n_0
+                         LUT3 (Prop_lut3_I0_O)        0.105     2.431 f  i_vrf/lane_result_q[3][63]_i_3/O
+                         net (fo=88, unplaced)        0.443     2.874    i_vrf_n_561
+                         LUT5 (Prop_lut5_I4_O)        0.105     2.979 r  lane_clip_q[3][15]_i_1/O
+                         net (fo=64, unplaced)        0.454     3.433    lane_clip_n
+                         FDCE                                         r  lane_clip_q_reg[0][7]/CE
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2885, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  lane_clip_q_reg[0][7]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_CE)      -0.136     6.290    lane_clip_q_reg[0][7]
+  -------------------------------------------------------------------
+                         required time                          6.290    
+                         arrival time                          -3.433    
+  -------------------------------------------------------------------
+                         slack                                  2.857    
+
+Slack (MET) :             2.857ns  (required time - arrival time)
+  Source:                 uop_p2_q_reg[valid]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            lane_clip_q_reg[0][8]/CE
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        2.646ns  (logic 0.875ns (33.069%)  route 1.771ns (66.931%))
+  Logic Levels:           3  (LUT2=1 LUT3=1 LUT5=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2885, unset)         0.787     0.787    clk_i
+                         FDCE                                         r  uop_p2_q_reg[valid]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 f  uop_p2_q_reg[valid]/Q
+                         net (fo=9, unplaced)         0.403     1.623    i_vrf/uop_p2_q_reg[valid]__0
+                         LUT2 (Prop_lut2_I0_O)        0.232     1.855 f  i_vrf/lane_result_q[3][63]_i_10/O
+                         net (fo=260, unplaced)       0.471     2.326    i_vrf/lane_result_q[3][63]_i_10_n_0
+                         LUT3 (Prop_lut3_I0_O)        0.105     2.431 f  i_vrf/lane_result_q[3][63]_i_3/O
+                         net (fo=88, unplaced)        0.443     2.874    i_vrf_n_561
+                         LUT5 (Prop_lut5_I4_O)        0.105     2.979 r  lane_clip_q[3][15]_i_1/O
+                         net (fo=64, unplaced)        0.454     3.433    lane_clip_n
+                         FDCE                                         r  lane_clip_q_reg[0][8]/CE
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2885, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  lane_clip_q_reg[0][8]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_CE)      -0.136     6.290    lane_clip_q_reg[0][8]
+  -------------------------------------------------------------------
+                         required time                          6.290    
+                         arrival time                          -3.433    
+  -------------------------------------------------------------------
+                         slack                                  2.857    
+
+Slack (MET) :             2.857ns  (required time - arrival time)
+  Source:                 uop_p2_q_reg[valid]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            lane_clip_q_reg[0][9]/CE
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        2.646ns  (logic 0.875ns (33.069%)  route 1.771ns (66.931%))
+  Logic Levels:           3  (LUT2=1 LUT3=1 LUT5=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2885, unset)         0.787     0.787    clk_i
+                         FDCE                                         r  uop_p2_q_reg[valid]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 f  uop_p2_q_reg[valid]/Q
+                         net (fo=9, unplaced)         0.403     1.623    i_vrf/uop_p2_q_reg[valid]__0
+                         LUT2 (Prop_lut2_I0_O)        0.232     1.855 f  i_vrf/lane_result_q[3][63]_i_10/O
+                         net (fo=260, unplaced)       0.471     2.326    i_vrf/lane_result_q[3][63]_i_10_n_0
+                         LUT3 (Prop_lut3_I0_O)        0.105     2.431 f  i_vrf/lane_result_q[3][63]_i_3/O
+                         net (fo=88, unplaced)        0.443     2.874    i_vrf_n_561
+                         LUT5 (Prop_lut5_I4_O)        0.105     2.979 r  lane_clip_q[3][15]_i_1/O
+                         net (fo=64, unplaced)        0.454     3.433    lane_clip_n
+                         FDCE                                         r  lane_clip_q_reg[0][9]/CE
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2885, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  lane_clip_q_reg[0][9]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_CE)      -0.136     6.290    lane_clip_q_reg[0][9]
+  -------------------------------------------------------------------
+                         required time                          6.290    
+                         arrival time                          -3.433    
+  -------------------------------------------------------------------
+                         slack                                  2.857    
+
+Slack (MET) :             2.857ns  (required time - arrival time)
+  Source:                 uop_p2_q_reg[valid]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            lane_clip_q_reg[1][0]/CE
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        2.646ns  (logic 0.875ns (33.069%)  route 1.771ns (66.931%))
+  Logic Levels:           3  (LUT2=1 LUT3=1 LUT5=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2885, unset)         0.787     0.787    clk_i
+                         FDCE                                         r  uop_p2_q_reg[valid]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 f  uop_p2_q_reg[valid]/Q
+                         net (fo=9, unplaced)         0.403     1.623    i_vrf/uop_p2_q_reg[valid]__0
+                         LUT2 (Prop_lut2_I0_O)        0.232     1.855 f  i_vrf/lane_result_q[3][63]_i_10/O
+                         net (fo=260, unplaced)       0.471     2.326    i_vrf/lane_result_q[3][63]_i_10_n_0
+                         LUT3 (Prop_lut3_I0_O)        0.105     2.431 f  i_vrf/lane_result_q[3][63]_i_3/O
+                         net (fo=88, unplaced)        0.443     2.874    i_vrf_n_561
+                         LUT5 (Prop_lut5_I4_O)        0.105     2.979 r  lane_clip_q[3][15]_i_1/O
+                         net (fo=64, unplaced)        0.454     3.433    lane_clip_n
+                         FDCE                                         r  lane_clip_q_reg[1][0]/CE
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2885, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  lane_clip_q_reg[1][0]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_CE)      -0.136     6.290    lane_clip_q_reg[1][0]
+  -------------------------------------------------------------------
+                         required time                          6.290    
+                         arrival time                          -3.433    
+  -------------------------------------------------------------------
+                         slack                                  2.857    
+
+Slack (MET) :             2.857ns  (required time - arrival time)
+  Source:                 uop_p2_q_reg[valid]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            lane_clip_q_reg[1][10]/CE
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        2.646ns  (logic 0.875ns (33.069%)  route 1.771ns (66.931%))
+  Logic Levels:           3  (LUT2=1 LUT3=1 LUT5=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2885, unset)         0.787     0.787    clk_i
+                         FDCE                                         r  uop_p2_q_reg[valid]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 f  uop_p2_q_reg[valid]/Q
+                         net (fo=9, unplaced)         0.403     1.623    i_vrf/uop_p2_q_reg[valid]__0
+                         LUT2 (Prop_lut2_I0_O)        0.232     1.855 f  i_vrf/lane_result_q[3][63]_i_10/O
+                         net (fo=260, unplaced)       0.471     2.326    i_vrf/lane_result_q[3][63]_i_10_n_0
+                         LUT3 (Prop_lut3_I0_O)        0.105     2.431 f  i_vrf/lane_result_q[3][63]_i_3/O
+                         net (fo=88, unplaced)        0.443     2.874    i_vrf_n_561
+                         LUT5 (Prop_lut5_I4_O)        0.105     2.979 r  lane_clip_q[3][15]_i_1/O
+                         net (fo=64, unplaced)        0.454     3.433    lane_clip_n
+                         FDCE                                         r  lane_clip_q_reg[1][10]/CE
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2885, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  lane_clip_q_reg[1][10]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_CE)      -0.136     6.290    lane_clip_q_reg[1][10]
+  -------------------------------------------------------------------
+                         required time                          6.290    
+                         arrival time                          -3.433    
+  -------------------------------------------------------------------
+                         slack                                  2.857    
+
+Slack (MET) :             2.857ns  (required time - arrival time)
+  Source:                 uop_p2_q_reg[valid]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            lane_clip_q_reg[1][11]/CE
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        2.646ns  (logic 0.875ns (33.069%)  route 1.771ns (66.931%))
+  Logic Levels:           3  (LUT2=1 LUT3=1 LUT5=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2885, unset)         0.787     0.787    clk_i
+                         FDCE                                         r  uop_p2_q_reg[valid]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 f  uop_p2_q_reg[valid]/Q
+                         net (fo=9, unplaced)         0.403     1.623    i_vrf/uop_p2_q_reg[valid]__0
+                         LUT2 (Prop_lut2_I0_O)        0.232     1.855 f  i_vrf/lane_result_q[3][63]_i_10/O
+                         net (fo=260, unplaced)       0.471     2.326    i_vrf/lane_result_q[3][63]_i_10_n_0
+                         LUT3 (Prop_lut3_I0_O)        0.105     2.431 f  i_vrf/lane_result_q[3][63]_i_3/O
+                         net (fo=88, unplaced)        0.443     2.874    i_vrf_n_561
+                         LUT5 (Prop_lut5_I4_O)        0.105     2.979 r  lane_clip_q[3][15]_i_1/O
+                         net (fo=64, unplaced)        0.454     3.433    lane_clip_n
+                         FDCE                                         r  lane_clip_q_reg[1][11]/CE
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2885, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  lane_clip_q_reg[1][11]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_CE)      -0.136     6.290    lane_clip_q_reg[1][11]
+  -------------------------------------------------------------------
+                         required time                          6.290    
+                         arrival time                          -3.433    
+  -------------------------------------------------------------------
+                         slack                                  2.857    
+
+Slack (MET) :             2.857ns  (required time - arrival time)
+  Source:                 uop_p2_q_reg[valid]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            lane_clip_q_reg[1][12]/CE
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        2.646ns  (logic 0.875ns (33.069%)  route 1.771ns (66.931%))
+  Logic Levels:           3  (LUT2=1 LUT3=1 LUT5=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2885, unset)         0.787     0.787    clk_i
+                         FDCE                                         r  uop_p2_q_reg[valid]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 f  uop_p2_q_reg[valid]/Q
+                         net (fo=9, unplaced)         0.403     1.623    i_vrf/uop_p2_q_reg[valid]__0
+                         LUT2 (Prop_lut2_I0_O)        0.232     1.855 f  i_vrf/lane_result_q[3][63]_i_10/O
+                         net (fo=260, unplaced)       0.471     2.326    i_vrf/lane_result_q[3][63]_i_10_n_0
+                         LUT3 (Prop_lut3_I0_O)        0.105     2.431 f  i_vrf/lane_result_q[3][63]_i_3/O
+                         net (fo=88, unplaced)        0.443     2.874    i_vrf_n_561
+                         LUT5 (Prop_lut5_I4_O)        0.105     2.979 r  lane_clip_q[3][15]_i_1/O
+                         net (fo=64, unplaced)        0.454     3.433    lane_clip_n
+                         FDCE                                         r  lane_clip_q_reg[1][12]/CE
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2885, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  lane_clip_q_reg[1][12]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_CE)      -0.136     6.290    lane_clip_q_reg[1][12]
+  -------------------------------------------------------------------
+                         required time                          6.290    
+                         arrival time                          -3.433    
+  -------------------------------------------------------------------
+                         slack                                  2.857    
+
+Slack (MET) :             2.857ns  (required time - arrival time)
+  Source:                 uop_p2_q_reg[valid]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            lane_clip_q_reg[1][13]/CE
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        2.646ns  (logic 0.875ns (33.069%)  route 1.771ns (66.931%))
+  Logic Levels:           3  (LUT2=1 LUT3=1 LUT5=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2885, unset)         0.787     0.787    clk_i
+                         FDCE                                         r  uop_p2_q_reg[valid]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 f  uop_p2_q_reg[valid]/Q
+                         net (fo=9, unplaced)         0.403     1.623    i_vrf/uop_p2_q_reg[valid]__0
+                         LUT2 (Prop_lut2_I0_O)        0.232     1.855 f  i_vrf/lane_result_q[3][63]_i_10/O
+                         net (fo=260, unplaced)       0.471     2.326    i_vrf/lane_result_q[3][63]_i_10_n_0
+                         LUT3 (Prop_lut3_I0_O)        0.105     2.431 f  i_vrf/lane_result_q[3][63]_i_3/O
+                         net (fo=88, unplaced)        0.443     2.874    i_vrf_n_561
+                         LUT5 (Prop_lut5_I4_O)        0.105     2.979 r  lane_clip_q[3][15]_i_1/O
+                         net (fo=64, unplaced)        0.454     3.433    lane_clip_n
+                         FDCE                                         r  lane_clip_q_reg[1][13]/CE
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2885, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  lane_clip_q_reg[1][13]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_CE)      -0.136     6.290    lane_clip_q_reg[1][13]
+  -------------------------------------------------------------------
+                         required time                          6.290    
+                         arrival time                          -3.433    
+  -------------------------------------------------------------------
+                         slack                                  2.857    
+
+Slack (MET) :             2.857ns  (required time - arrival time)
+  Source:                 uop_p2_q_reg[valid]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            lane_clip_q_reg[1][14]/CE
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        2.646ns  (logic 0.875ns (33.069%)  route 1.771ns (66.931%))
+  Logic Levels:           3  (LUT2=1 LUT3=1 LUT5=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2885, unset)         0.787     0.787    clk_i
+                         FDCE                                         r  uop_p2_q_reg[valid]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 f  uop_p2_q_reg[valid]/Q
+                         net (fo=9, unplaced)         0.403     1.623    i_vrf/uop_p2_q_reg[valid]__0
+                         LUT2 (Prop_lut2_I0_O)        0.232     1.855 f  i_vrf/lane_result_q[3][63]_i_10/O
+                         net (fo=260, unplaced)       0.471     2.326    i_vrf/lane_result_q[3][63]_i_10_n_0
+                         LUT3 (Prop_lut3_I0_O)        0.105     2.431 f  i_vrf/lane_result_q[3][63]_i_3/O
+                         net (fo=88, unplaced)        0.443     2.874    i_vrf_n_561
+                         LUT5 (Prop_lut5_I4_O)        0.105     2.979 r  lane_clip_q[3][15]_i_1/O
+                         net (fo=64, unplaced)        0.454     3.433    lane_clip_n
+                         FDCE                                         r  lane_clip_q_reg[1][14]/CE
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2885, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  lane_clip_q_reg[1][14]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_CE)      -0.136     6.290    lane_clip_q_reg[1][14]
+  -------------------------------------------------------------------
+                         required time                          6.290    
+                         arrival time                          -3.433    
+  -------------------------------------------------------------------
+                         slack                                  2.857    
+
+Slack (MET) :             2.857ns  (required time - arrival time)
+  Source:                 uop_p2_q_reg[valid]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            lane_clip_q_reg[1][15]/CE
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        2.646ns  (logic 0.875ns (33.069%)  route 1.771ns (66.931%))
+  Logic Levels:           3  (LUT2=1 LUT3=1 LUT5=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2885, unset)         0.787     0.787    clk_i
+                         FDCE                                         r  uop_p2_q_reg[valid]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 f  uop_p2_q_reg[valid]/Q
+                         net (fo=9, unplaced)         0.403     1.623    i_vrf/uop_p2_q_reg[valid]__0
+                         LUT2 (Prop_lut2_I0_O)        0.232     1.855 f  i_vrf/lane_result_q[3][63]_i_10/O
+                         net (fo=260, unplaced)       0.471     2.326    i_vrf/lane_result_q[3][63]_i_10_n_0
+                         LUT3 (Prop_lut3_I0_O)        0.105     2.431 f  i_vrf/lane_result_q[3][63]_i_3/O
+                         net (fo=88, unplaced)        0.443     2.874    i_vrf_n_561
+                         LUT5 (Prop_lut5_I4_O)        0.105     2.979 r  lane_clip_q[3][15]_i_1/O
+                         net (fo=64, unplaced)        0.454     3.433    lane_clip_n
+                         FDCE                                         r  lane_clip_q_reg[1][15]/CE
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2885, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  lane_clip_q_reg[1][15]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_CE)      -0.136     6.290    lane_clip_q_reg[1][15]
+  -------------------------------------------------------------------
+                         required time                          6.290    
+                         arrival time                          -3.433    
+  -------------------------------------------------------------------
+                         slack                                  2.857    
+
+Slack (MET) :             2.857ns  (required time - arrival time)
+  Source:                 uop_p2_q_reg[valid]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            lane_clip_q_reg[1][1]/CE
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        2.646ns  (logic 0.875ns (33.069%)  route 1.771ns (66.931%))
+  Logic Levels:           3  (LUT2=1 LUT3=1 LUT5=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2885, unset)         0.787     0.787    clk_i
+                         FDCE                                         r  uop_p2_q_reg[valid]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 f  uop_p2_q_reg[valid]/Q
+                         net (fo=9, unplaced)         0.403     1.623    i_vrf/uop_p2_q_reg[valid]__0
+                         LUT2 (Prop_lut2_I0_O)        0.232     1.855 f  i_vrf/lane_result_q[3][63]_i_10/O
+                         net (fo=260, unplaced)       0.471     2.326    i_vrf/lane_result_q[3][63]_i_10_n_0
+                         LUT3 (Prop_lut3_I0_O)        0.105     2.431 f  i_vrf/lane_result_q[3][63]_i_3/O
+                         net (fo=88, unplaced)        0.443     2.874    i_vrf_n_561
+                         LUT5 (Prop_lut5_I4_O)        0.105     2.979 r  lane_clip_q[3][15]_i_1/O
+                         net (fo=64, unplaced)        0.454     3.433    lane_clip_n
+                         FDCE                                         r  lane_clip_q_reg[1][1]/CE
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2885, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  lane_clip_q_reg[1][1]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_CE)      -0.136     6.290    lane_clip_q_reg[1][1]
+  -------------------------------------------------------------------
+                         required time                          6.290    
+                         arrival time                          -3.433    
+  -------------------------------------------------------------------
+                         slack                                  2.857    
+
+Slack (MET) :             2.857ns  (required time - arrival time)
+  Source:                 uop_p2_q_reg[valid]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            lane_clip_q_reg[1][2]/CE
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        2.646ns  (logic 0.875ns (33.069%)  route 1.771ns (66.931%))
+  Logic Levels:           3  (LUT2=1 LUT3=1 LUT5=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2885, unset)         0.787     0.787    clk_i
+                         FDCE                                         r  uop_p2_q_reg[valid]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 f  uop_p2_q_reg[valid]/Q
+                         net (fo=9, unplaced)         0.403     1.623    i_vrf/uop_p2_q_reg[valid]__0
+                         LUT2 (Prop_lut2_I0_O)        0.232     1.855 f  i_vrf/lane_result_q[3][63]_i_10/O
+                         net (fo=260, unplaced)       0.471     2.326    i_vrf/lane_result_q[3][63]_i_10_n_0
+                         LUT3 (Prop_lut3_I0_O)        0.105     2.431 f  i_vrf/lane_result_q[3][63]_i_3/O
+                         net (fo=88, unplaced)        0.443     2.874    i_vrf_n_561
+                         LUT5 (Prop_lut5_I4_O)        0.105     2.979 r  lane_clip_q[3][15]_i_1/O
+                         net (fo=64, unplaced)        0.454     3.433    lane_clip_n
+                         FDCE                                         r  lane_clip_q_reg[1][2]/CE
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2885, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  lane_clip_q_reg[1][2]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_CE)      -0.136     6.290    lane_clip_q_reg[1][2]
+  -------------------------------------------------------------------
+                         required time                          6.290    
+                         arrival time                          -3.433    
+  -------------------------------------------------------------------
+                         slack                                  2.857    
+
+Slack (MET) :             2.857ns  (required time - arrival time)
+  Source:                 uop_p2_q_reg[valid]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            lane_clip_q_reg[1][3]/CE
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        2.646ns  (logic 0.875ns (33.069%)  route 1.771ns (66.931%))
+  Logic Levels:           3  (LUT2=1 LUT3=1 LUT5=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2885, unset)         0.787     0.787    clk_i
+                         FDCE                                         r  uop_p2_q_reg[valid]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 f  uop_p2_q_reg[valid]/Q
+                         net (fo=9, unplaced)         0.403     1.623    i_vrf/uop_p2_q_reg[valid]__0
+                         LUT2 (Prop_lut2_I0_O)        0.232     1.855 f  i_vrf/lane_result_q[3][63]_i_10/O
+                         net (fo=260, unplaced)       0.471     2.326    i_vrf/lane_result_q[3][63]_i_10_n_0
+                         LUT3 (Prop_lut3_I0_O)        0.105     2.431 f  i_vrf/lane_result_q[3][63]_i_3/O
+                         net (fo=88, unplaced)        0.443     2.874    i_vrf_n_561
+                         LUT5 (Prop_lut5_I4_O)        0.105     2.979 r  lane_clip_q[3][15]_i_1/O
+                         net (fo=64, unplaced)        0.454     3.433    lane_clip_n
+                         FDCE                                         r  lane_clip_q_reg[1][3]/CE
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2885, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  lane_clip_q_reg[1][3]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_CE)      -0.136     6.290    lane_clip_q_reg[1][3]
+  -------------------------------------------------------------------
+                         required time                          6.290    
+                         arrival time                          -3.433    
+  -------------------------------------------------------------------
+                         slack                                  2.857    
+
+Slack (MET) :             2.857ns  (required time - arrival time)
+  Source:                 uop_p2_q_reg[valid]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            lane_clip_q_reg[1][4]/CE
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        2.646ns  (logic 0.875ns (33.069%)  route 1.771ns (66.931%))
+  Logic Levels:           3  (LUT2=1 LUT3=1 LUT5=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2885, unset)         0.787     0.787    clk_i
+                         FDCE                                         r  uop_p2_q_reg[valid]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 f  uop_p2_q_reg[valid]/Q
+                         net (fo=9, unplaced)         0.403     1.623    i_vrf/uop_p2_q_reg[valid]__0
+                         LUT2 (Prop_lut2_I0_O)        0.232     1.855 f  i_vrf/lane_result_q[3][63]_i_10/O
+                         net (fo=260, unplaced)       0.471     2.326    i_vrf/lane_result_q[3][63]_i_10_n_0
+                         LUT3 (Prop_lut3_I0_O)        0.105     2.431 f  i_vrf/lane_result_q[3][63]_i_3/O
+                         net (fo=88, unplaced)        0.443     2.874    i_vrf_n_561
+                         LUT5 (Prop_lut5_I4_O)        0.105     2.979 r  lane_clip_q[3][15]_i_1/O
+                         net (fo=64, unplaced)        0.454     3.433    lane_clip_n
+                         FDCE                                         r  lane_clip_q_reg[1][4]/CE
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2885, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  lane_clip_q_reg[1][4]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_CE)      -0.136     6.290    lane_clip_q_reg[1][4]
+  -------------------------------------------------------------------
+                         required time                          6.290    
+                         arrival time                          -3.433    
+  -------------------------------------------------------------------
+                         slack                                  2.857    
+
+Slack (MET) :             2.857ns  (required time - arrival time)
+  Source:                 uop_p2_q_reg[valid]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            lane_clip_q_reg[1][5]/CE
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        2.646ns  (logic 0.875ns (33.069%)  route 1.771ns (66.931%))
+  Logic Levels:           3  (LUT2=1 LUT3=1 LUT5=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2885, unset)         0.787     0.787    clk_i
+                         FDCE                                         r  uop_p2_q_reg[valid]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 f  uop_p2_q_reg[valid]/Q
+                         net (fo=9, unplaced)         0.403     1.623    i_vrf/uop_p2_q_reg[valid]__0
+                         LUT2 (Prop_lut2_I0_O)        0.232     1.855 f  i_vrf/lane_result_q[3][63]_i_10/O
+                         net (fo=260, unplaced)       0.471     2.326    i_vrf/lane_result_q[3][63]_i_10_n_0
+                         LUT3 (Prop_lut3_I0_O)        0.105     2.431 f  i_vrf/lane_result_q[3][63]_i_3/O
+                         net (fo=88, unplaced)        0.443     2.874    i_vrf_n_561
+                         LUT5 (Prop_lut5_I4_O)        0.105     2.979 r  lane_clip_q[3][15]_i_1/O
+                         net (fo=64, unplaced)        0.454     3.433    lane_clip_n
+                         FDCE                                         r  lane_clip_q_reg[1][5]/CE
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2885, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  lane_clip_q_reg[1][5]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_CE)      -0.136     6.290    lane_clip_q_reg[1][5]
+  -------------------------------------------------------------------
+                         required time                          6.290    
+                         arrival time                          -3.433    
+  -------------------------------------------------------------------
+                         slack                                  2.857    
+
+Slack (MET) :             2.857ns  (required time - arrival time)
+  Source:                 uop_p2_q_reg[valid]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            lane_clip_q_reg[1][6]/CE
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        2.646ns  (logic 0.875ns (33.069%)  route 1.771ns (66.931%))
+  Logic Levels:           3  (LUT2=1 LUT3=1 LUT5=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2885, unset)         0.787     0.787    clk_i
+                         FDCE                                         r  uop_p2_q_reg[valid]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 f  uop_p2_q_reg[valid]/Q
+                         net (fo=9, unplaced)         0.403     1.623    i_vrf/uop_p2_q_reg[valid]__0
+                         LUT2 (Prop_lut2_I0_O)        0.232     1.855 f  i_vrf/lane_result_q[3][63]_i_10/O
+                         net (fo=260, unplaced)       0.471     2.326    i_vrf/lane_result_q[3][63]_i_10_n_0
+                         LUT3 (Prop_lut3_I0_O)        0.105     2.431 f  i_vrf/lane_result_q[3][63]_i_3/O
+                         net (fo=88, unplaced)        0.443     2.874    i_vrf_n_561
+                         LUT5 (Prop_lut5_I4_O)        0.105     2.979 r  lane_clip_q[3][15]_i_1/O
+                         net (fo=64, unplaced)        0.454     3.433    lane_clip_n
+                         FDCE                                         r  lane_clip_q_reg[1][6]/CE
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2885, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  lane_clip_q_reg[1][6]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_CE)      -0.136     6.290    lane_clip_q_reg[1][6]
+  -------------------------------------------------------------------
+                         required time                          6.290    
+                         arrival time                          -3.433    
+  -------------------------------------------------------------------
+                         slack                                  2.857    
+
+Slack (MET) :             2.857ns  (required time - arrival time)
+  Source:                 uop_p2_q_reg[valid]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            lane_clip_q_reg[1][7]/CE
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        2.646ns  (logic 0.875ns (33.069%)  route 1.771ns (66.931%))
+  Logic Levels:           3  (LUT2=1 LUT3=1 LUT5=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2885, unset)         0.787     0.787    clk_i
+                         FDCE                                         r  uop_p2_q_reg[valid]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 f  uop_p2_q_reg[valid]/Q
+                         net (fo=9, unplaced)         0.403     1.623    i_vrf/uop_p2_q_reg[valid]__0
+                         LUT2 (Prop_lut2_I0_O)        0.232     1.855 f  i_vrf/lane_result_q[3][63]_i_10/O
+                         net (fo=260, unplaced)       0.471     2.326    i_vrf/lane_result_q[3][63]_i_10_n_0
+                         LUT3 (Prop_lut3_I0_O)        0.105     2.431 f  i_vrf/lane_result_q[3][63]_i_3/O
+                         net (fo=88, unplaced)        0.443     2.874    i_vrf_n_561
+                         LUT5 (Prop_lut5_I4_O)        0.105     2.979 r  lane_clip_q[3][15]_i_1/O
+                         net (fo=64, unplaced)        0.454     3.433    lane_clip_n
+                         FDCE                                         r  lane_clip_q_reg[1][7]/CE
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2885, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  lane_clip_q_reg[1][7]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_CE)      -0.136     6.290    lane_clip_q_reg[1][7]
+  -------------------------------------------------------------------
+                         required time                          6.290    
+                         arrival time                          -3.433    
+  -------------------------------------------------------------------
+                         slack                                  2.857    
+
+Slack (MET) :             2.857ns  (required time - arrival time)
+  Source:                 uop_p2_q_reg[valid]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            lane_clip_q_reg[1][8]/CE
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        2.646ns  (logic 0.875ns (33.069%)  route 1.771ns (66.931%))
+  Logic Levels:           3  (LUT2=1 LUT3=1 LUT5=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2885, unset)         0.787     0.787    clk_i
+                         FDCE                                         r  uop_p2_q_reg[valid]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 f  uop_p2_q_reg[valid]/Q
+                         net (fo=9, unplaced)         0.403     1.623    i_vrf/uop_p2_q_reg[valid]__0
+                         LUT2 (Prop_lut2_I0_O)        0.232     1.855 f  i_vrf/lane_result_q[3][63]_i_10/O
+                         net (fo=260, unplaced)       0.471     2.326    i_vrf/lane_result_q[3][63]_i_10_n_0
+                         LUT3 (Prop_lut3_I0_O)        0.105     2.431 f  i_vrf/lane_result_q[3][63]_i_3/O
+                         net (fo=88, unplaced)        0.443     2.874    i_vrf_n_561
+                         LUT5 (Prop_lut5_I4_O)        0.105     2.979 r  lane_clip_q[3][15]_i_1/O
+                         net (fo=64, unplaced)        0.454     3.433    lane_clip_n
+                         FDCE                                         r  lane_clip_q_reg[1][8]/CE
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2885, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  lane_clip_q_reg[1][8]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_CE)      -0.136     6.290    lane_clip_q_reg[1][8]
+  -------------------------------------------------------------------
+                         required time                          6.290    
+                         arrival time                          -3.433    
+  -------------------------------------------------------------------
+                         slack                                  2.857    
+
+Slack (MET) :             2.857ns  (required time - arrival time)
+  Source:                 uop_p2_q_reg[valid]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            lane_clip_q_reg[1][9]/CE
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        2.646ns  (logic 0.875ns (33.069%)  route 1.771ns (66.931%))
+  Logic Levels:           3  (LUT2=1 LUT3=1 LUT5=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2885, unset)         0.787     0.787    clk_i
+                         FDCE                                         r  uop_p2_q_reg[valid]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 f  uop_p2_q_reg[valid]/Q
+                         net (fo=9, unplaced)         0.403     1.623    i_vrf/uop_p2_q_reg[valid]__0
+                         LUT2 (Prop_lut2_I0_O)        0.232     1.855 f  i_vrf/lane_result_q[3][63]_i_10/O
+                         net (fo=260, unplaced)       0.471     2.326    i_vrf/lane_result_q[3][63]_i_10_n_0
+                         LUT3 (Prop_lut3_I0_O)        0.105     2.431 f  i_vrf/lane_result_q[3][63]_i_3/O
+                         net (fo=88, unplaced)        0.443     2.874    i_vrf_n_561
+                         LUT5 (Prop_lut5_I4_O)        0.105     2.979 r  lane_clip_q[3][15]_i_1/O
+                         net (fo=64, unplaced)        0.454     3.433    lane_clip_n
+                         FDCE                                         r  lane_clip_q_reg[1][9]/CE
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2885, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  lane_clip_q_reg[1][9]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_CE)      -0.136     6.290    lane_clip_q_reg[1][9]
+  -------------------------------------------------------------------
+                         required time                          6.290    
+                         arrival time                          -3.433    
+  -------------------------------------------------------------------
+                         slack                                  2.857    
+
+Slack (MET) :             2.857ns  (required time - arrival time)
+  Source:                 uop_p2_q_reg[valid]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            lane_clip_q_reg[2][0]/CE
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        2.646ns  (logic 0.875ns (33.069%)  route 1.771ns (66.931%))
+  Logic Levels:           3  (LUT2=1 LUT3=1 LUT5=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2885, unset)         0.787     0.787    clk_i
+                         FDCE                                         r  uop_p2_q_reg[valid]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 f  uop_p2_q_reg[valid]/Q
+                         net (fo=9, unplaced)         0.403     1.623    i_vrf/uop_p2_q_reg[valid]__0
+                         LUT2 (Prop_lut2_I0_O)        0.232     1.855 f  i_vrf/lane_result_q[3][63]_i_10/O
+                         net (fo=260, unplaced)       0.471     2.326    i_vrf/lane_result_q[3][63]_i_10_n_0
+                         LUT3 (Prop_lut3_I0_O)        0.105     2.431 f  i_vrf/lane_result_q[3][63]_i_3/O
+                         net (fo=88, unplaced)        0.443     2.874    i_vrf_n_561
+                         LUT5 (Prop_lut5_I4_O)        0.105     2.979 r  lane_clip_q[3][15]_i_1/O
+                         net (fo=64, unplaced)        0.454     3.433    lane_clip_n
+                         FDCE                                         r  lane_clip_q_reg[2][0]/CE
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2885, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  lane_clip_q_reg[2][0]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_CE)      -0.136     6.290    lane_clip_q_reg[2][0]
+  -------------------------------------------------------------------
+                         required time                          6.290    
+                         arrival time                          -3.433    
+  -------------------------------------------------------------------
+                         slack                                  2.857    
+
+Slack (MET) :             2.857ns  (required time - arrival time)
+  Source:                 uop_p2_q_reg[valid]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            lane_clip_q_reg[2][10]/CE
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        2.646ns  (logic 0.875ns (33.069%)  route 1.771ns (66.931%))
+  Logic Levels:           3  (LUT2=1 LUT3=1 LUT5=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2885, unset)         0.787     0.787    clk_i
+                         FDCE                                         r  uop_p2_q_reg[valid]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 f  uop_p2_q_reg[valid]/Q
+                         net (fo=9, unplaced)         0.403     1.623    i_vrf/uop_p2_q_reg[valid]__0
+                         LUT2 (Prop_lut2_I0_O)        0.232     1.855 f  i_vrf/lane_result_q[3][63]_i_10/O
+                         net (fo=260, unplaced)       0.471     2.326    i_vrf/lane_result_q[3][63]_i_10_n_0
+                         LUT3 (Prop_lut3_I0_O)        0.105     2.431 f  i_vrf/lane_result_q[3][63]_i_3/O
+                         net (fo=88, unplaced)        0.443     2.874    i_vrf_n_561
+                         LUT5 (Prop_lut5_I4_O)        0.105     2.979 r  lane_clip_q[3][15]_i_1/O
+                         net (fo=64, unplaced)        0.454     3.433    lane_clip_n
+                         FDCE                                         r  lane_clip_q_reg[2][10]/CE
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2885, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  lane_clip_q_reg[2][10]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_CE)      -0.136     6.290    lane_clip_q_reg[2][10]
+  -------------------------------------------------------------------
+                         required time                          6.290    
+                         arrival time                          -3.433    
+  -------------------------------------------------------------------
+                         slack                                  2.857    
+
+Slack (MET) :             2.857ns  (required time - arrival time)
+  Source:                 uop_p2_q_reg[valid]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            lane_clip_q_reg[2][11]/CE
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        2.646ns  (logic 0.875ns (33.069%)  route 1.771ns (66.931%))
+  Logic Levels:           3  (LUT2=1 LUT3=1 LUT5=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2885, unset)         0.787     0.787    clk_i
+                         FDCE                                         r  uop_p2_q_reg[valid]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 f  uop_p2_q_reg[valid]/Q
+                         net (fo=9, unplaced)         0.403     1.623    i_vrf/uop_p2_q_reg[valid]__0
+                         LUT2 (Prop_lut2_I0_O)        0.232     1.855 f  i_vrf/lane_result_q[3][63]_i_10/O
+                         net (fo=260, unplaced)       0.471     2.326    i_vrf/lane_result_q[3][63]_i_10_n_0
+                         LUT3 (Prop_lut3_I0_O)        0.105     2.431 f  i_vrf/lane_result_q[3][63]_i_3/O
+                         net (fo=88, unplaced)        0.443     2.874    i_vrf_n_561
+                         LUT5 (Prop_lut5_I4_O)        0.105     2.979 r  lane_clip_q[3][15]_i_1/O
+                         net (fo=64, unplaced)        0.454     3.433    lane_clip_n
+                         FDCE                                         r  lane_clip_q_reg[2][11]/CE
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2885, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  lane_clip_q_reg[2][11]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_CE)      -0.136     6.290    lane_clip_q_reg[2][11]
+  -------------------------------------------------------------------
+                         required time                          6.290    
+                         arrival time                          -3.433    
+  -------------------------------------------------------------------
+                         slack                                  2.857    
+
+Slack (MET) :             2.857ns  (required time - arrival time)
+  Source:                 uop_p2_q_reg[valid]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            lane_clip_q_reg[2][12]/CE
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        2.646ns  (logic 0.875ns (33.069%)  route 1.771ns (66.931%))
+  Logic Levels:           3  (LUT2=1 LUT3=1 LUT5=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2885, unset)         0.787     0.787    clk_i
+                         FDCE                                         r  uop_p2_q_reg[valid]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 f  uop_p2_q_reg[valid]/Q
+                         net (fo=9, unplaced)         0.403     1.623    i_vrf/uop_p2_q_reg[valid]__0
+                         LUT2 (Prop_lut2_I0_O)        0.232     1.855 f  i_vrf/lane_result_q[3][63]_i_10/O
+                         net (fo=260, unplaced)       0.471     2.326    i_vrf/lane_result_q[3][63]_i_10_n_0
+                         LUT3 (Prop_lut3_I0_O)        0.105     2.431 f  i_vrf/lane_result_q[3][63]_i_3/O
+                         net (fo=88, unplaced)        0.443     2.874    i_vrf_n_561
+                         LUT5 (Prop_lut5_I4_O)        0.105     2.979 r  lane_clip_q[3][15]_i_1/O
+                         net (fo=64, unplaced)        0.454     3.433    lane_clip_n
+                         FDCE                                         r  lane_clip_q_reg[2][12]/CE
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2885, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  lane_clip_q_reg[2][12]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_CE)      -0.136     6.290    lane_clip_q_reg[2][12]
+  -------------------------------------------------------------------
+                         required time                          6.290    
+                         arrival time                          -3.433    
+  -------------------------------------------------------------------
+                         slack                                  2.857    
+
+Slack (MET) :             2.857ns  (required time - arrival time)
+  Source:                 uop_p2_q_reg[valid]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            lane_clip_q_reg[2][13]/CE
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        2.646ns  (logic 0.875ns (33.069%)  route 1.771ns (66.931%))
+  Logic Levels:           3  (LUT2=1 LUT3=1 LUT5=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2885, unset)         0.787     0.787    clk_i
+                         FDCE                                         r  uop_p2_q_reg[valid]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 f  uop_p2_q_reg[valid]/Q
+                         net (fo=9, unplaced)         0.403     1.623    i_vrf/uop_p2_q_reg[valid]__0
+                         LUT2 (Prop_lut2_I0_O)        0.232     1.855 f  i_vrf/lane_result_q[3][63]_i_10/O
+                         net (fo=260, unplaced)       0.471     2.326    i_vrf/lane_result_q[3][63]_i_10_n_0
+                         LUT3 (Prop_lut3_I0_O)        0.105     2.431 f  i_vrf/lane_result_q[3][63]_i_3/O
+                         net (fo=88, unplaced)        0.443     2.874    i_vrf_n_561
+                         LUT5 (Prop_lut5_I4_O)        0.105     2.979 r  lane_clip_q[3][15]_i_1/O
+                         net (fo=64, unplaced)        0.454     3.433    lane_clip_n
+                         FDCE                                         r  lane_clip_q_reg[2][13]/CE
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2885, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  lane_clip_q_reg[2][13]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_CE)      -0.136     6.290    lane_clip_q_reg[2][13]
+  -------------------------------------------------------------------
+                         required time                          6.290    
+                         arrival time                          -3.433    
+  -------------------------------------------------------------------
+                         slack                                  2.857    
+
+Slack (MET) :             2.857ns  (required time - arrival time)
+  Source:                 uop_p2_q_reg[valid]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            lane_clip_q_reg[2][14]/CE
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        2.646ns  (logic 0.875ns (33.069%)  route 1.771ns (66.931%))
+  Logic Levels:           3  (LUT2=1 LUT3=1 LUT5=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2885, unset)         0.787     0.787    clk_i
+                         FDCE                                         r  uop_p2_q_reg[valid]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 f  uop_p2_q_reg[valid]/Q
+                         net (fo=9, unplaced)         0.403     1.623    i_vrf/uop_p2_q_reg[valid]__0
+                         LUT2 (Prop_lut2_I0_O)        0.232     1.855 f  i_vrf/lane_result_q[3][63]_i_10/O
+                         net (fo=260, unplaced)       0.471     2.326    i_vrf/lane_result_q[3][63]_i_10_n_0
+                         LUT3 (Prop_lut3_I0_O)        0.105     2.431 f  i_vrf/lane_result_q[3][63]_i_3/O
+                         net (fo=88, unplaced)        0.443     2.874    i_vrf_n_561
+                         LUT5 (Prop_lut5_I4_O)        0.105     2.979 r  lane_clip_q[3][15]_i_1/O
+                         net (fo=64, unplaced)        0.454     3.433    lane_clip_n
+                         FDCE                                         r  lane_clip_q_reg[2][14]/CE
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2885, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  lane_clip_q_reg[2][14]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_CE)      -0.136     6.290    lane_clip_q_reg[2][14]
+  -------------------------------------------------------------------
+                         required time                          6.290    
+                         arrival time                          -3.433    
+  -------------------------------------------------------------------
+                         slack                                  2.857    
+
+Slack (MET) :             2.857ns  (required time - arrival time)
+  Source:                 uop_p2_q_reg[valid]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            lane_clip_q_reg[2][15]/CE
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        2.646ns  (logic 0.875ns (33.069%)  route 1.771ns (66.931%))
+  Logic Levels:           3  (LUT2=1 LUT3=1 LUT5=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2885, unset)         0.787     0.787    clk_i
+                         FDCE                                         r  uop_p2_q_reg[valid]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 f  uop_p2_q_reg[valid]/Q
+                         net (fo=9, unplaced)         0.403     1.623    i_vrf/uop_p2_q_reg[valid]__0
+                         LUT2 (Prop_lut2_I0_O)        0.232     1.855 f  i_vrf/lane_result_q[3][63]_i_10/O
+                         net (fo=260, unplaced)       0.471     2.326    i_vrf/lane_result_q[3][63]_i_10_n_0
+                         LUT3 (Prop_lut3_I0_O)        0.105     2.431 f  i_vrf/lane_result_q[3][63]_i_3/O
+                         net (fo=88, unplaced)        0.443     2.874    i_vrf_n_561
+                         LUT5 (Prop_lut5_I4_O)        0.105     2.979 r  lane_clip_q[3][15]_i_1/O
+                         net (fo=64, unplaced)        0.454     3.433    lane_clip_n
+                         FDCE                                         r  lane_clip_q_reg[2][15]/CE
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2885, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  lane_clip_q_reg[2][15]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_CE)      -0.136     6.290    lane_clip_q_reg[2][15]
+  -------------------------------------------------------------------
+                         required time                          6.290    
+                         arrival time                          -3.433    
+  -------------------------------------------------------------------
+                         slack                                  2.857    
+
+Slack (MET) :             2.857ns  (required time - arrival time)
+  Source:                 uop_p2_q_reg[valid]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            lane_clip_q_reg[2][1]/CE
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        2.646ns  (logic 0.875ns (33.069%)  route 1.771ns (66.931%))
+  Logic Levels:           3  (LUT2=1 LUT3=1 LUT5=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2885, unset)         0.787     0.787    clk_i
+                         FDCE                                         r  uop_p2_q_reg[valid]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 f  uop_p2_q_reg[valid]/Q
+                         net (fo=9, unplaced)         0.403     1.623    i_vrf/uop_p2_q_reg[valid]__0
+                         LUT2 (Prop_lut2_I0_O)        0.232     1.855 f  i_vrf/lane_result_q[3][63]_i_10/O
+                         net (fo=260, unplaced)       0.471     2.326    i_vrf/lane_result_q[3][63]_i_10_n_0
+                         LUT3 (Prop_lut3_I0_O)        0.105     2.431 f  i_vrf/lane_result_q[3][63]_i_3/O
+                         net (fo=88, unplaced)        0.443     2.874    i_vrf_n_561
+                         LUT5 (Prop_lut5_I4_O)        0.105     2.979 r  lane_clip_q[3][15]_i_1/O
+                         net (fo=64, unplaced)        0.454     3.433    lane_clip_n
+                         FDCE                                         r  lane_clip_q_reg[2][1]/CE
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2885, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  lane_clip_q_reg[2][1]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_CE)      -0.136     6.290    lane_clip_q_reg[2][1]
+  -------------------------------------------------------------------
+                         required time                          6.290    
+                         arrival time                          -3.433    
+  -------------------------------------------------------------------
+                         slack                                  2.857    
+
+Slack (MET) :             2.857ns  (required time - arrival time)
+  Source:                 uop_p2_q_reg[valid]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            lane_clip_q_reg[2][2]/CE
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        2.646ns  (logic 0.875ns (33.069%)  route 1.771ns (66.931%))
+  Logic Levels:           3  (LUT2=1 LUT3=1 LUT5=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2885, unset)         0.787     0.787    clk_i
+                         FDCE                                         r  uop_p2_q_reg[valid]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 f  uop_p2_q_reg[valid]/Q
+                         net (fo=9, unplaced)         0.403     1.623    i_vrf/uop_p2_q_reg[valid]__0
+                         LUT2 (Prop_lut2_I0_O)        0.232     1.855 f  i_vrf/lane_result_q[3][63]_i_10/O
+                         net (fo=260, unplaced)       0.471     2.326    i_vrf/lane_result_q[3][63]_i_10_n_0
+                         LUT3 (Prop_lut3_I0_O)        0.105     2.431 f  i_vrf/lane_result_q[3][63]_i_3/O
+                         net (fo=88, unplaced)        0.443     2.874    i_vrf_n_561
+                         LUT5 (Prop_lut5_I4_O)        0.105     2.979 r  lane_clip_q[3][15]_i_1/O
+                         net (fo=64, unplaced)        0.454     3.433    lane_clip_n
+                         FDCE                                         r  lane_clip_q_reg[2][2]/CE
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2885, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  lane_clip_q_reg[2][2]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_CE)      -0.136     6.290    lane_clip_q_reg[2][2]
+  -------------------------------------------------------------------
+                         required time                          6.290    
+                         arrival time                          -3.433    
+  -------------------------------------------------------------------
+                         slack                                  2.857    
+
+Slack (MET) :             2.857ns  (required time - arrival time)
+  Source:                 uop_p2_q_reg[valid]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            lane_clip_q_reg[2][3]/CE
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        2.646ns  (logic 0.875ns (33.069%)  route 1.771ns (66.931%))
+  Logic Levels:           3  (LUT2=1 LUT3=1 LUT5=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2885, unset)         0.787     0.787    clk_i
+                         FDCE                                         r  uop_p2_q_reg[valid]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 f  uop_p2_q_reg[valid]/Q
+                         net (fo=9, unplaced)         0.403     1.623    i_vrf/uop_p2_q_reg[valid]__0
+                         LUT2 (Prop_lut2_I0_O)        0.232     1.855 f  i_vrf/lane_result_q[3][63]_i_10/O
+                         net (fo=260, unplaced)       0.471     2.326    i_vrf/lane_result_q[3][63]_i_10_n_0
+                         LUT3 (Prop_lut3_I0_O)        0.105     2.431 f  i_vrf/lane_result_q[3][63]_i_3/O
+                         net (fo=88, unplaced)        0.443     2.874    i_vrf_n_561
+                         LUT5 (Prop_lut5_I4_O)        0.105     2.979 r  lane_clip_q[3][15]_i_1/O
+                         net (fo=64, unplaced)        0.454     3.433    lane_clip_n
+                         FDCE                                         r  lane_clip_q_reg[2][3]/CE
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2885, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  lane_clip_q_reg[2][3]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_CE)      -0.136     6.290    lane_clip_q_reg[2][3]
+  -------------------------------------------------------------------
+                         required time                          6.290    
+                         arrival time                          -3.433    
+  -------------------------------------------------------------------
+                         slack                                  2.857    
+
+Slack (MET) :             2.857ns  (required time - arrival time)
+  Source:                 uop_p2_q_reg[valid]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            lane_clip_q_reg[2][4]/CE
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        2.646ns  (logic 0.875ns (33.069%)  route 1.771ns (66.931%))
+  Logic Levels:           3  (LUT2=1 LUT3=1 LUT5=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2885, unset)         0.787     0.787    clk_i
+                         FDCE                                         r  uop_p2_q_reg[valid]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 f  uop_p2_q_reg[valid]/Q
+                         net (fo=9, unplaced)         0.403     1.623    i_vrf/uop_p2_q_reg[valid]__0
+                         LUT2 (Prop_lut2_I0_O)        0.232     1.855 f  i_vrf/lane_result_q[3][63]_i_10/O
+                         net (fo=260, unplaced)       0.471     2.326    i_vrf/lane_result_q[3][63]_i_10_n_0
+                         LUT3 (Prop_lut3_I0_O)        0.105     2.431 f  i_vrf/lane_result_q[3][63]_i_3/O
+                         net (fo=88, unplaced)        0.443     2.874    i_vrf_n_561
+                         LUT5 (Prop_lut5_I4_O)        0.105     2.979 r  lane_clip_q[3][15]_i_1/O
+                         net (fo=64, unplaced)        0.454     3.433    lane_clip_n
+                         FDCE                                         r  lane_clip_q_reg[2][4]/CE
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2885, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  lane_clip_q_reg[2][4]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_CE)      -0.136     6.290    lane_clip_q_reg[2][4]
+  -------------------------------------------------------------------
+                         required time                          6.290    
+                         arrival time                          -3.433    
+  -------------------------------------------------------------------
+                         slack                                  2.857    
+
+Slack (MET) :             2.857ns  (required time - arrival time)
+  Source:                 uop_p2_q_reg[valid]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            lane_clip_q_reg[2][5]/CE
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        2.646ns  (logic 0.875ns (33.069%)  route 1.771ns (66.931%))
+  Logic Levels:           3  (LUT2=1 LUT3=1 LUT5=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2885, unset)         0.787     0.787    clk_i
+                         FDCE                                         r  uop_p2_q_reg[valid]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 f  uop_p2_q_reg[valid]/Q
+                         net (fo=9, unplaced)         0.403     1.623    i_vrf/uop_p2_q_reg[valid]__0
+                         LUT2 (Prop_lut2_I0_O)        0.232     1.855 f  i_vrf/lane_result_q[3][63]_i_10/O
+                         net (fo=260, unplaced)       0.471     2.326    i_vrf/lane_result_q[3][63]_i_10_n_0
+                         LUT3 (Prop_lut3_I0_O)        0.105     2.431 f  i_vrf/lane_result_q[3][63]_i_3/O
+                         net (fo=88, unplaced)        0.443     2.874    i_vrf_n_561
+                         LUT5 (Prop_lut5_I4_O)        0.105     2.979 r  lane_clip_q[3][15]_i_1/O
+                         net (fo=64, unplaced)        0.454     3.433    lane_clip_n
+                         FDCE                                         r  lane_clip_q_reg[2][5]/CE
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2885, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  lane_clip_q_reg[2][5]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_CE)      -0.136     6.290    lane_clip_q_reg[2][5]
+  -------------------------------------------------------------------
+                         required time                          6.290    
+                         arrival time                          -3.433    
+  -------------------------------------------------------------------
+                         slack                                  2.857    
+
+Slack (MET) :             2.857ns  (required time - arrival time)
+  Source:                 uop_p2_q_reg[valid]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            lane_clip_q_reg[2][6]/CE
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        2.646ns  (logic 0.875ns (33.069%)  route 1.771ns (66.931%))
+  Logic Levels:           3  (LUT2=1 LUT3=1 LUT5=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2885, unset)         0.787     0.787    clk_i
+                         FDCE                                         r  uop_p2_q_reg[valid]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 f  uop_p2_q_reg[valid]/Q
+                         net (fo=9, unplaced)         0.403     1.623    i_vrf/uop_p2_q_reg[valid]__0
+                         LUT2 (Prop_lut2_I0_O)        0.232     1.855 f  i_vrf/lane_result_q[3][63]_i_10/O
+                         net (fo=260, unplaced)       0.471     2.326    i_vrf/lane_result_q[3][63]_i_10_n_0
+                         LUT3 (Prop_lut3_I0_O)        0.105     2.431 f  i_vrf/lane_result_q[3][63]_i_3/O
+                         net (fo=88, unplaced)        0.443     2.874    i_vrf_n_561
+                         LUT5 (Prop_lut5_I4_O)        0.105     2.979 r  lane_clip_q[3][15]_i_1/O
+                         net (fo=64, unplaced)        0.454     3.433    lane_clip_n
+                         FDCE                                         r  lane_clip_q_reg[2][6]/CE
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2885, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  lane_clip_q_reg[2][6]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_CE)      -0.136     6.290    lane_clip_q_reg[2][6]
+  -------------------------------------------------------------------
+                         required time                          6.290    
+                         arrival time                          -3.433    
+  -------------------------------------------------------------------
+                         slack                                  2.857    
+
+Slack (MET) :             2.857ns  (required time - arrival time)
+  Source:                 uop_p2_q_reg[valid]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            lane_clip_q_reg[2][7]/CE
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        2.646ns  (logic 0.875ns (33.069%)  route 1.771ns (66.931%))
+  Logic Levels:           3  (LUT2=1 LUT3=1 LUT5=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2885, unset)         0.787     0.787    clk_i
+                         FDCE                                         r  uop_p2_q_reg[valid]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 f  uop_p2_q_reg[valid]/Q
+                         net (fo=9, unplaced)         0.403     1.623    i_vrf/uop_p2_q_reg[valid]__0
+                         LUT2 (Prop_lut2_I0_O)        0.232     1.855 f  i_vrf/lane_result_q[3][63]_i_10/O
+                         net (fo=260, unplaced)       0.471     2.326    i_vrf/lane_result_q[3][63]_i_10_n_0
+                         LUT3 (Prop_lut3_I0_O)        0.105     2.431 f  i_vrf/lane_result_q[3][63]_i_3/O
+                         net (fo=88, unplaced)        0.443     2.874    i_vrf_n_561
+                         LUT5 (Prop_lut5_I4_O)        0.105     2.979 r  lane_clip_q[3][15]_i_1/O
+                         net (fo=64, unplaced)        0.454     3.433    lane_clip_n
+                         FDCE                                         r  lane_clip_q_reg[2][7]/CE
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2885, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  lane_clip_q_reg[2][7]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_CE)      -0.136     6.290    lane_clip_q_reg[2][7]
+  -------------------------------------------------------------------
+                         required time                          6.290    
+                         arrival time                          -3.433    
+  -------------------------------------------------------------------
+                         slack                                  2.857    
+
+Slack (MET) :             2.857ns  (required time - arrival time)
+  Source:                 uop_p2_q_reg[valid]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            lane_clip_q_reg[2][8]/CE
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        2.646ns  (logic 0.875ns (33.069%)  route 1.771ns (66.931%))
+  Logic Levels:           3  (LUT2=1 LUT3=1 LUT5=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2885, unset)         0.787     0.787    clk_i
+                         FDCE                                         r  uop_p2_q_reg[valid]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 f  uop_p2_q_reg[valid]/Q
+                         net (fo=9, unplaced)         0.403     1.623    i_vrf/uop_p2_q_reg[valid]__0
+                         LUT2 (Prop_lut2_I0_O)        0.232     1.855 f  i_vrf/lane_result_q[3][63]_i_10/O
+                         net (fo=260, unplaced)       0.471     2.326    i_vrf/lane_result_q[3][63]_i_10_n_0
+                         LUT3 (Prop_lut3_I0_O)        0.105     2.431 f  i_vrf/lane_result_q[3][63]_i_3/O
+                         net (fo=88, unplaced)        0.443     2.874    i_vrf_n_561
+                         LUT5 (Prop_lut5_I4_O)        0.105     2.979 r  lane_clip_q[3][15]_i_1/O
+                         net (fo=64, unplaced)        0.454     3.433    lane_clip_n
+                         FDCE                                         r  lane_clip_q_reg[2][8]/CE
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2885, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  lane_clip_q_reg[2][8]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_CE)      -0.136     6.290    lane_clip_q_reg[2][8]
+  -------------------------------------------------------------------
+                         required time                          6.290    
+                         arrival time                          -3.433    
+  -------------------------------------------------------------------
+                         slack                                  2.857    
+
+Slack (MET) :             2.857ns  (required time - arrival time)
+  Source:                 uop_p2_q_reg[valid]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            lane_clip_q_reg[2][9]/CE
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        2.646ns  (logic 0.875ns (33.069%)  route 1.771ns (66.931%))
+  Logic Levels:           3  (LUT2=1 LUT3=1 LUT5=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2885, unset)         0.787     0.787    clk_i
+                         FDCE                                         r  uop_p2_q_reg[valid]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 f  uop_p2_q_reg[valid]/Q
+                         net (fo=9, unplaced)         0.403     1.623    i_vrf/uop_p2_q_reg[valid]__0
+                         LUT2 (Prop_lut2_I0_O)        0.232     1.855 f  i_vrf/lane_result_q[3][63]_i_10/O
+                         net (fo=260, unplaced)       0.471     2.326    i_vrf/lane_result_q[3][63]_i_10_n_0
+                         LUT3 (Prop_lut3_I0_O)        0.105     2.431 f  i_vrf/lane_result_q[3][63]_i_3/O
+                         net (fo=88, unplaced)        0.443     2.874    i_vrf_n_561
+                         LUT5 (Prop_lut5_I4_O)        0.105     2.979 r  lane_clip_q[3][15]_i_1/O
+                         net (fo=64, unplaced)        0.454     3.433    lane_clip_n
+                         FDCE                                         r  lane_clip_q_reg[2][9]/CE
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2885, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  lane_clip_q_reg[2][9]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_CE)      -0.136     6.290    lane_clip_q_reg[2][9]
+  -------------------------------------------------------------------
+                         required time                          6.290    
+                         arrival time                          -3.433    
+  -------------------------------------------------------------------
+                         slack                                  2.857    
+
+Slack (MET) :             2.857ns  (required time - arrival time)
+  Source:                 uop_p2_q_reg[valid]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            lane_clip_q_reg[3][0]/CE
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        2.646ns  (logic 0.875ns (33.069%)  route 1.771ns (66.931%))
+  Logic Levels:           3  (LUT2=1 LUT3=1 LUT5=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2885, unset)         0.787     0.787    clk_i
+                         FDCE                                         r  uop_p2_q_reg[valid]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 f  uop_p2_q_reg[valid]/Q
+                         net (fo=9, unplaced)         0.403     1.623    i_vrf/uop_p2_q_reg[valid]__0
+                         LUT2 (Prop_lut2_I0_O)        0.232     1.855 f  i_vrf/lane_result_q[3][63]_i_10/O
+                         net (fo=260, unplaced)       0.471     2.326    i_vrf/lane_result_q[3][63]_i_10_n_0
+                         LUT3 (Prop_lut3_I0_O)        0.105     2.431 f  i_vrf/lane_result_q[3][63]_i_3/O
+                         net (fo=88, unplaced)        0.443     2.874    i_vrf_n_561
+                         LUT5 (Prop_lut5_I4_O)        0.105     2.979 r  lane_clip_q[3][15]_i_1/O
+                         net (fo=64, unplaced)        0.454     3.433    lane_clip_n
+                         FDCE                                         r  lane_clip_q_reg[3][0]/CE
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2885, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  lane_clip_q_reg[3][0]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_CE)      -0.136     6.290    lane_clip_q_reg[3][0]
+  -------------------------------------------------------------------
+                         required time                          6.290    
+                         arrival time                          -3.433    
+  -------------------------------------------------------------------
+                         slack                                  2.857    
+
+Slack (MET) :             2.857ns  (required time - arrival time)
+  Source:                 uop_p2_q_reg[valid]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            lane_clip_q_reg[3][10]/CE
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        2.646ns  (logic 0.875ns (33.069%)  route 1.771ns (66.931%))
+  Logic Levels:           3  (LUT2=1 LUT3=1 LUT5=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2885, unset)         0.787     0.787    clk_i
+                         FDCE                                         r  uop_p2_q_reg[valid]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 f  uop_p2_q_reg[valid]/Q
+                         net (fo=9, unplaced)         0.403     1.623    i_vrf/uop_p2_q_reg[valid]__0
+                         LUT2 (Prop_lut2_I0_O)        0.232     1.855 f  i_vrf/lane_result_q[3][63]_i_10/O
+                         net (fo=260, unplaced)       0.471     2.326    i_vrf/lane_result_q[3][63]_i_10_n_0
+                         LUT3 (Prop_lut3_I0_O)        0.105     2.431 f  i_vrf/lane_result_q[3][63]_i_3/O
+                         net (fo=88, unplaced)        0.443     2.874    i_vrf_n_561
+                         LUT5 (Prop_lut5_I4_O)        0.105     2.979 r  lane_clip_q[3][15]_i_1/O
+                         net (fo=64, unplaced)        0.454     3.433    lane_clip_n
+                         FDCE                                         r  lane_clip_q_reg[3][10]/CE
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2885, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  lane_clip_q_reg[3][10]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_CE)      -0.136     6.290    lane_clip_q_reg[3][10]
+  -------------------------------------------------------------------
+                         required time                          6.290    
+                         arrival time                          -3.433    
+  -------------------------------------------------------------------
+                         slack                                  2.857    
+
+
+
+

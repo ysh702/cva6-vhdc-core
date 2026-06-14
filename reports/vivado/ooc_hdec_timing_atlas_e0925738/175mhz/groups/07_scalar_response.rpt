@@ -1,0 +1,997 @@
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2024 Advanced Micro Devices, Inc. All Rights Reserved.
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2024.2 (win64) Build 5239630 Fri Nov 08 22:35:27 MST 2024
+| Date         : Sat Jun  6 17:20:54 2026
+| Host         : WIN-20240824NZS running 64-bit major release  (build 9200)
+| Command      : report_timing -delay_type max -sort_by slack -max_paths 20 -nworst 1 -from [get_pins -quiet -of_objects {i_vrf/lane_result_q[3][62]_i_6/I4} -filter {DIRECTION == OUT}] -to {i_vrf/lane_result_q[3][62]_i_6/I4} -file E:/HDEC/cva6-vhdc-core/reports/vivado/ooc_hdec_timing_atlas_e0925738/175mhz/groups/07_scalar_response.rpt
+| Design       : hdec_top
+| Device       : 7z020-clg400
+| Speed File   : -2  PRODUCTION 1.12 2019-11-22
+| Design State : Synthesized
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Timing Report
+
+Slack (MET) :             3.767ns  (required time - arrival time)
+  Source:                 i_vrf/bank_ra_data_o_reg[2][10]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            res_q_reg[10]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        1.944ns  (logic 0.770ns (39.609%)  route 1.174ns (60.391%))
+  Logic Levels:           2  (LUT2=1 LUT6=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2875, unset)         0.787     0.787    i_vrf/clk_i
+                         FDCE                                         r  i_vrf/bank_ra_data_o_reg[2][10]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 r  i_vrf/bank_ra_data_o_reg[2][10]/Q
+                         net (fo=12, unplaced)        0.827     2.047    i_vrf/bank_ra_data_o[2][10]
+                         LUT6 (Prop_lut6_I0_O)        0.232     2.279 f  i_vrf/res_q[10]_i_2/O
+                         net (fo=1, unplaced)         0.347     2.626    i_vrf/res_q[10]_i_2_n_0
+                         LUT2 (Prop_lut2_I1_O)        0.105     2.731 r  i_vrf/res_q[10]_i_1/O
+                         net (fo=1, unplaced)         0.000     2.731    i_vrf_n_635
+                         FDCE                                         r  res_q_reg[10]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2875, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  res_q_reg[10]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_D)        0.072     6.498    res_q_reg[10]
+  -------------------------------------------------------------------
+                         required time                          6.498    
+                         arrival time                          -2.731    
+  -------------------------------------------------------------------
+                         slack                                  3.767    
+
+Slack (MET) :             3.767ns  (required time - arrival time)
+  Source:                 i_vrf/bank_ra_data_o_reg[2][11]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            res_q_reg[11]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        1.944ns  (logic 0.770ns (39.609%)  route 1.174ns (60.391%))
+  Logic Levels:           2  (LUT2=1 LUT6=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2875, unset)         0.787     0.787    i_vrf/clk_i
+                         FDCE                                         r  i_vrf/bank_ra_data_o_reg[2][11]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 r  i_vrf/bank_ra_data_o_reg[2][11]/Q
+                         net (fo=12, unplaced)        0.827     2.047    i_vrf/bank_ra_data_o[2][11]
+                         LUT6 (Prop_lut6_I0_O)        0.232     2.279 f  i_vrf/res_q[11]_i_2/O
+                         net (fo=1, unplaced)         0.347     2.626    i_vrf/res_q[11]_i_2_n_0
+                         LUT2 (Prop_lut2_I1_O)        0.105     2.731 r  i_vrf/res_q[11]_i_1/O
+                         net (fo=1, unplaced)         0.000     2.731    i_vrf_n_634
+                         FDCE                                         r  res_q_reg[11]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2875, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  res_q_reg[11]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_D)        0.072     6.498    res_q_reg[11]
+  -------------------------------------------------------------------
+                         required time                          6.498    
+                         arrival time                          -2.731    
+  -------------------------------------------------------------------
+                         slack                                  3.767    
+
+Slack (MET) :             3.767ns  (required time - arrival time)
+  Source:                 i_vrf/bank_ra_data_o_reg[2][12]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            res_q_reg[12]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        1.944ns  (logic 0.770ns (39.609%)  route 1.174ns (60.391%))
+  Logic Levels:           2  (LUT2=1 LUT6=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2875, unset)         0.787     0.787    i_vrf/clk_i
+                         FDCE                                         r  i_vrf/bank_ra_data_o_reg[2][12]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 r  i_vrf/bank_ra_data_o_reg[2][12]/Q
+                         net (fo=12, unplaced)        0.827     2.047    i_vrf/bank_ra_data_o[2][12]
+                         LUT6 (Prop_lut6_I0_O)        0.232     2.279 f  i_vrf/res_q[12]_i_2/O
+                         net (fo=1, unplaced)         0.347     2.626    i_vrf/res_q[12]_i_2_n_0
+                         LUT2 (Prop_lut2_I1_O)        0.105     2.731 r  i_vrf/res_q[12]_i_1/O
+                         net (fo=1, unplaced)         0.000     2.731    i_vrf_n_633
+                         FDCE                                         r  res_q_reg[12]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2875, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  res_q_reg[12]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_D)        0.072     6.498    res_q_reg[12]
+  -------------------------------------------------------------------
+                         required time                          6.498    
+                         arrival time                          -2.731    
+  -------------------------------------------------------------------
+                         slack                                  3.767    
+
+Slack (MET) :             3.767ns  (required time - arrival time)
+  Source:                 i_vrf/bank_ra_data_o_reg[2][13]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            res_q_reg[13]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        1.944ns  (logic 0.770ns (39.609%)  route 1.174ns (60.391%))
+  Logic Levels:           2  (LUT2=1 LUT6=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2875, unset)         0.787     0.787    i_vrf/clk_i
+                         FDCE                                         r  i_vrf/bank_ra_data_o_reg[2][13]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 r  i_vrf/bank_ra_data_o_reg[2][13]/Q
+                         net (fo=12, unplaced)        0.827     2.047    i_vrf/bank_ra_data_o[2][13]
+                         LUT6 (Prop_lut6_I0_O)        0.232     2.279 f  i_vrf/res_q[13]_i_2/O
+                         net (fo=1, unplaced)         0.347     2.626    i_vrf/res_q[13]_i_2_n_0
+                         LUT2 (Prop_lut2_I1_O)        0.105     2.731 r  i_vrf/res_q[13]_i_1/O
+                         net (fo=1, unplaced)         0.000     2.731    i_vrf_n_632
+                         FDCE                                         r  res_q_reg[13]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2875, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  res_q_reg[13]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_D)        0.072     6.498    res_q_reg[13]
+  -------------------------------------------------------------------
+                         required time                          6.498    
+                         arrival time                          -2.731    
+  -------------------------------------------------------------------
+                         slack                                  3.767    
+
+Slack (MET) :             3.767ns  (required time - arrival time)
+  Source:                 i_vrf/bank_ra_data_o_reg[2][14]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            res_q_reg[14]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        1.944ns  (logic 0.770ns (39.609%)  route 1.174ns (60.391%))
+  Logic Levels:           2  (LUT2=1 LUT6=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2875, unset)         0.787     0.787    i_vrf/clk_i
+                         FDCE                                         r  i_vrf/bank_ra_data_o_reg[2][14]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 r  i_vrf/bank_ra_data_o_reg[2][14]/Q
+                         net (fo=12, unplaced)        0.827     2.047    i_vrf/bank_ra_data_o[2][14]
+                         LUT6 (Prop_lut6_I0_O)        0.232     2.279 f  i_vrf/res_q[14]_i_2/O
+                         net (fo=1, unplaced)         0.347     2.626    i_vrf/res_q[14]_i_2_n_0
+                         LUT2 (Prop_lut2_I1_O)        0.105     2.731 r  i_vrf/res_q[14]_i_1/O
+                         net (fo=1, unplaced)         0.000     2.731    i_vrf_n_631
+                         FDCE                                         r  res_q_reg[14]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2875, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  res_q_reg[14]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_D)        0.072     6.498    res_q_reg[14]
+  -------------------------------------------------------------------
+                         required time                          6.498    
+                         arrival time                          -2.731    
+  -------------------------------------------------------------------
+                         slack                                  3.767    
+
+Slack (MET) :             3.767ns  (required time - arrival time)
+  Source:                 i_vrf/bank_ra_data_o_reg[2][15]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            res_q_reg[15]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        1.944ns  (logic 0.770ns (39.609%)  route 1.174ns (60.391%))
+  Logic Levels:           2  (LUT2=1 LUT6=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2875, unset)         0.787     0.787    i_vrf/clk_i
+                         FDCE                                         r  i_vrf/bank_ra_data_o_reg[2][15]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 r  i_vrf/bank_ra_data_o_reg[2][15]/Q
+                         net (fo=12, unplaced)        0.827     2.047    i_vrf/bank_ra_data_o[2][15]
+                         LUT6 (Prop_lut6_I0_O)        0.232     2.279 f  i_vrf/res_q[15]_i_2/O
+                         net (fo=1, unplaced)         0.347     2.626    i_vrf/res_q[15]_i_2_n_0
+                         LUT2 (Prop_lut2_I1_O)        0.105     2.731 r  i_vrf/res_q[15]_i_1/O
+                         net (fo=1, unplaced)         0.000     2.731    i_vrf_n_630
+                         FDCE                                         r  res_q_reg[15]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2875, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  res_q_reg[15]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_D)        0.072     6.498    res_q_reg[15]
+  -------------------------------------------------------------------
+                         required time                          6.498    
+                         arrival time                          -2.731    
+  -------------------------------------------------------------------
+                         slack                                  3.767    
+
+Slack (MET) :             3.767ns  (required time - arrival time)
+  Source:                 i_vrf/bank_ra_data_o_reg[2][16]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            res_q_reg[16]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        1.944ns  (logic 0.770ns (39.609%)  route 1.174ns (60.391%))
+  Logic Levels:           2  (LUT2=1 LUT6=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2875, unset)         0.787     0.787    i_vrf/clk_i
+                         FDCE                                         r  i_vrf/bank_ra_data_o_reg[2][16]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 r  i_vrf/bank_ra_data_o_reg[2][16]/Q
+                         net (fo=12, unplaced)        0.827     2.047    i_vrf/bank_ra_data_o[2][16]
+                         LUT6 (Prop_lut6_I0_O)        0.232     2.279 f  i_vrf/res_q[16]_i_2/O
+                         net (fo=1, unplaced)         0.347     2.626    i_vrf/res_q[16]_i_2_n_0
+                         LUT2 (Prop_lut2_I1_O)        0.105     2.731 r  i_vrf/res_q[16]_i_1/O
+                         net (fo=1, unplaced)         0.000     2.731    i_vrf_n_629
+                         FDCE                                         r  res_q_reg[16]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2875, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  res_q_reg[16]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_D)        0.072     6.498    res_q_reg[16]
+  -------------------------------------------------------------------
+                         required time                          6.498    
+                         arrival time                          -2.731    
+  -------------------------------------------------------------------
+                         slack                                  3.767    
+
+Slack (MET) :             3.767ns  (required time - arrival time)
+  Source:                 i_vrf/bank_ra_data_o_reg[2][17]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            res_q_reg[17]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        1.944ns  (logic 0.770ns (39.609%)  route 1.174ns (60.391%))
+  Logic Levels:           2  (LUT2=1 LUT6=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2875, unset)         0.787     0.787    i_vrf/clk_i
+                         FDCE                                         r  i_vrf/bank_ra_data_o_reg[2][17]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 r  i_vrf/bank_ra_data_o_reg[2][17]/Q
+                         net (fo=12, unplaced)        0.827     2.047    i_vrf/bank_ra_data_o[2][17]
+                         LUT6 (Prop_lut6_I0_O)        0.232     2.279 f  i_vrf/res_q[17]_i_2/O
+                         net (fo=1, unplaced)         0.347     2.626    i_vrf/res_q[17]_i_2_n_0
+                         LUT2 (Prop_lut2_I1_O)        0.105     2.731 r  i_vrf/res_q[17]_i_1/O
+                         net (fo=1, unplaced)         0.000     2.731    i_vrf_n_628
+                         FDCE                                         r  res_q_reg[17]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2875, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  res_q_reg[17]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_D)        0.072     6.498    res_q_reg[17]
+  -------------------------------------------------------------------
+                         required time                          6.498    
+                         arrival time                          -2.731    
+  -------------------------------------------------------------------
+                         slack                                  3.767    
+
+Slack (MET) :             3.767ns  (required time - arrival time)
+  Source:                 i_vrf/bank_ra_data_o_reg[2][18]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            res_q_reg[18]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        1.944ns  (logic 0.770ns (39.609%)  route 1.174ns (60.391%))
+  Logic Levels:           2  (LUT2=1 LUT6=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2875, unset)         0.787     0.787    i_vrf/clk_i
+                         FDCE                                         r  i_vrf/bank_ra_data_o_reg[2][18]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 r  i_vrf/bank_ra_data_o_reg[2][18]/Q
+                         net (fo=12, unplaced)        0.827     2.047    i_vrf/bank_ra_data_o[2][18]
+                         LUT6 (Prop_lut6_I0_O)        0.232     2.279 f  i_vrf/res_q[18]_i_2/O
+                         net (fo=1, unplaced)         0.347     2.626    i_vrf/res_q[18]_i_2_n_0
+                         LUT2 (Prop_lut2_I1_O)        0.105     2.731 r  i_vrf/res_q[18]_i_1/O
+                         net (fo=1, unplaced)         0.000     2.731    i_vrf_n_627
+                         FDCE                                         r  res_q_reg[18]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2875, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  res_q_reg[18]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_D)        0.072     6.498    res_q_reg[18]
+  -------------------------------------------------------------------
+                         required time                          6.498    
+                         arrival time                          -2.731    
+  -------------------------------------------------------------------
+                         slack                                  3.767    
+
+Slack (MET) :             3.767ns  (required time - arrival time)
+  Source:                 i_vrf/bank_ra_data_o_reg[2][19]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            res_q_reg[19]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        1.944ns  (logic 0.770ns (39.609%)  route 1.174ns (60.391%))
+  Logic Levels:           2  (LUT2=1 LUT6=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2875, unset)         0.787     0.787    i_vrf/clk_i
+                         FDCE                                         r  i_vrf/bank_ra_data_o_reg[2][19]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 r  i_vrf/bank_ra_data_o_reg[2][19]/Q
+                         net (fo=12, unplaced)        0.827     2.047    i_vrf/bank_ra_data_o[2][19]
+                         LUT6 (Prop_lut6_I0_O)        0.232     2.279 f  i_vrf/res_q[19]_i_2/O
+                         net (fo=1, unplaced)         0.347     2.626    i_vrf/res_q[19]_i_2_n_0
+                         LUT2 (Prop_lut2_I1_O)        0.105     2.731 r  i_vrf/res_q[19]_i_1/O
+                         net (fo=1, unplaced)         0.000     2.731    i_vrf_n_626
+                         FDCE                                         r  res_q_reg[19]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2875, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  res_q_reg[19]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_D)        0.072     6.498    res_q_reg[19]
+  -------------------------------------------------------------------
+                         required time                          6.498    
+                         arrival time                          -2.731    
+  -------------------------------------------------------------------
+                         slack                                  3.767    
+
+Slack (MET) :             3.767ns  (required time - arrival time)
+  Source:                 i_vrf/bank_ra_data_o_reg[2][20]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            res_q_reg[20]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        1.944ns  (logic 0.770ns (39.609%)  route 1.174ns (60.391%))
+  Logic Levels:           2  (LUT2=1 LUT6=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2875, unset)         0.787     0.787    i_vrf/clk_i
+                         FDCE                                         r  i_vrf/bank_ra_data_o_reg[2][20]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 r  i_vrf/bank_ra_data_o_reg[2][20]/Q
+                         net (fo=12, unplaced)        0.827     2.047    i_vrf/bank_ra_data_o[2][20]
+                         LUT6 (Prop_lut6_I0_O)        0.232     2.279 f  i_vrf/res_q[20]_i_2/O
+                         net (fo=1, unplaced)         0.347     2.626    i_vrf/res_q[20]_i_2_n_0
+                         LUT2 (Prop_lut2_I1_O)        0.105     2.731 r  i_vrf/res_q[20]_i_1/O
+                         net (fo=1, unplaced)         0.000     2.731    i_vrf_n_625
+                         FDCE                                         r  res_q_reg[20]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2875, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  res_q_reg[20]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_D)        0.072     6.498    res_q_reg[20]
+  -------------------------------------------------------------------
+                         required time                          6.498    
+                         arrival time                          -2.731    
+  -------------------------------------------------------------------
+                         slack                                  3.767    
+
+Slack (MET) :             3.767ns  (required time - arrival time)
+  Source:                 i_vrf/bank_ra_data_o_reg[2][21]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            res_q_reg[21]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        1.944ns  (logic 0.770ns (39.609%)  route 1.174ns (60.391%))
+  Logic Levels:           2  (LUT2=1 LUT6=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2875, unset)         0.787     0.787    i_vrf/clk_i
+                         FDCE                                         r  i_vrf/bank_ra_data_o_reg[2][21]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 r  i_vrf/bank_ra_data_o_reg[2][21]/Q
+                         net (fo=12, unplaced)        0.827     2.047    i_vrf/bank_ra_data_o[2][21]
+                         LUT6 (Prop_lut6_I0_O)        0.232     2.279 f  i_vrf/res_q[21]_i_2/O
+                         net (fo=1, unplaced)         0.347     2.626    i_vrf/res_q[21]_i_2_n_0
+                         LUT2 (Prop_lut2_I1_O)        0.105     2.731 r  i_vrf/res_q[21]_i_1/O
+                         net (fo=1, unplaced)         0.000     2.731    i_vrf_n_624
+                         FDCE                                         r  res_q_reg[21]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2875, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  res_q_reg[21]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_D)        0.072     6.498    res_q_reg[21]
+  -------------------------------------------------------------------
+                         required time                          6.498    
+                         arrival time                          -2.731    
+  -------------------------------------------------------------------
+                         slack                                  3.767    
+
+Slack (MET) :             3.767ns  (required time - arrival time)
+  Source:                 i_vrf/bank_ra_data_o_reg[2][22]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            res_q_reg[22]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        1.944ns  (logic 0.770ns (39.609%)  route 1.174ns (60.391%))
+  Logic Levels:           2  (LUT2=1 LUT6=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2875, unset)         0.787     0.787    i_vrf/clk_i
+                         FDCE                                         r  i_vrf/bank_ra_data_o_reg[2][22]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 r  i_vrf/bank_ra_data_o_reg[2][22]/Q
+                         net (fo=12, unplaced)        0.827     2.047    i_vrf/bank_ra_data_o[2][22]
+                         LUT6 (Prop_lut6_I0_O)        0.232     2.279 f  i_vrf/res_q[22]_i_2/O
+                         net (fo=1, unplaced)         0.347     2.626    i_vrf/res_q[22]_i_2_n_0
+                         LUT2 (Prop_lut2_I1_O)        0.105     2.731 r  i_vrf/res_q[22]_i_1/O
+                         net (fo=1, unplaced)         0.000     2.731    i_vrf_n_623
+                         FDCE                                         r  res_q_reg[22]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2875, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  res_q_reg[22]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_D)        0.072     6.498    res_q_reg[22]
+  -------------------------------------------------------------------
+                         required time                          6.498    
+                         arrival time                          -2.731    
+  -------------------------------------------------------------------
+                         slack                                  3.767    
+
+Slack (MET) :             3.767ns  (required time - arrival time)
+  Source:                 i_vrf/bank_ra_data_o_reg[2][23]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            res_q_reg[23]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        1.944ns  (logic 0.770ns (39.609%)  route 1.174ns (60.391%))
+  Logic Levels:           2  (LUT2=1 LUT6=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2875, unset)         0.787     0.787    i_vrf/clk_i
+                         FDCE                                         r  i_vrf/bank_ra_data_o_reg[2][23]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 r  i_vrf/bank_ra_data_o_reg[2][23]/Q
+                         net (fo=12, unplaced)        0.827     2.047    i_vrf/bank_ra_data_o[2][23]
+                         LUT6 (Prop_lut6_I0_O)        0.232     2.279 f  i_vrf/res_q[23]_i_2/O
+                         net (fo=1, unplaced)         0.347     2.626    i_vrf/res_q[23]_i_2_n_0
+                         LUT2 (Prop_lut2_I1_O)        0.105     2.731 r  i_vrf/res_q[23]_i_1/O
+                         net (fo=1, unplaced)         0.000     2.731    i_vrf_n_622
+                         FDCE                                         r  res_q_reg[23]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2875, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  res_q_reg[23]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_D)        0.072     6.498    res_q_reg[23]
+  -------------------------------------------------------------------
+                         required time                          6.498    
+                         arrival time                          -2.731    
+  -------------------------------------------------------------------
+                         slack                                  3.767    
+
+Slack (MET) :             3.767ns  (required time - arrival time)
+  Source:                 i_vrf/bank_ra_data_o_reg[2][24]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            res_q_reg[24]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        1.944ns  (logic 0.770ns (39.609%)  route 1.174ns (60.391%))
+  Logic Levels:           2  (LUT2=1 LUT6=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2875, unset)         0.787     0.787    i_vrf/clk_i
+                         FDCE                                         r  i_vrf/bank_ra_data_o_reg[2][24]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 r  i_vrf/bank_ra_data_o_reg[2][24]/Q
+                         net (fo=12, unplaced)        0.827     2.047    i_vrf/bank_ra_data_o[2][24]
+                         LUT6 (Prop_lut6_I0_O)        0.232     2.279 f  i_vrf/res_q[24]_i_2/O
+                         net (fo=1, unplaced)         0.347     2.626    i_vrf/res_q[24]_i_2_n_0
+                         LUT2 (Prop_lut2_I1_O)        0.105     2.731 r  i_vrf/res_q[24]_i_1/O
+                         net (fo=1, unplaced)         0.000     2.731    i_vrf_n_621
+                         FDCE                                         r  res_q_reg[24]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2875, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  res_q_reg[24]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_D)        0.072     6.498    res_q_reg[24]
+  -------------------------------------------------------------------
+                         required time                          6.498    
+                         arrival time                          -2.731    
+  -------------------------------------------------------------------
+                         slack                                  3.767    
+
+Slack (MET) :             3.767ns  (required time - arrival time)
+  Source:                 i_vrf/bank_ra_data_o_reg[2][25]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            res_q_reg[25]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        1.944ns  (logic 0.770ns (39.609%)  route 1.174ns (60.391%))
+  Logic Levels:           2  (LUT2=1 LUT6=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2875, unset)         0.787     0.787    i_vrf/clk_i
+                         FDCE                                         r  i_vrf/bank_ra_data_o_reg[2][25]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 r  i_vrf/bank_ra_data_o_reg[2][25]/Q
+                         net (fo=12, unplaced)        0.827     2.047    i_vrf/bank_ra_data_o[2][25]
+                         LUT6 (Prop_lut6_I0_O)        0.232     2.279 f  i_vrf/res_q[25]_i_2/O
+                         net (fo=1, unplaced)         0.347     2.626    i_vrf/res_q[25]_i_2_n_0
+                         LUT2 (Prop_lut2_I1_O)        0.105     2.731 r  i_vrf/res_q[25]_i_1/O
+                         net (fo=1, unplaced)         0.000     2.731    i_vrf_n_620
+                         FDCE                                         r  res_q_reg[25]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2875, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  res_q_reg[25]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_D)        0.072     6.498    res_q_reg[25]
+  -------------------------------------------------------------------
+                         required time                          6.498    
+                         arrival time                          -2.731    
+  -------------------------------------------------------------------
+                         slack                                  3.767    
+
+Slack (MET) :             3.767ns  (required time - arrival time)
+  Source:                 i_vrf/bank_ra_data_o_reg[2][26]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            res_q_reg[26]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        1.944ns  (logic 0.770ns (39.609%)  route 1.174ns (60.391%))
+  Logic Levels:           2  (LUT2=1 LUT6=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2875, unset)         0.787     0.787    i_vrf/clk_i
+                         FDCE                                         r  i_vrf/bank_ra_data_o_reg[2][26]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 r  i_vrf/bank_ra_data_o_reg[2][26]/Q
+                         net (fo=12, unplaced)        0.827     2.047    i_vrf/bank_ra_data_o[2][26]
+                         LUT6 (Prop_lut6_I0_O)        0.232     2.279 f  i_vrf/res_q[26]_i_2/O
+                         net (fo=1, unplaced)         0.347     2.626    i_vrf/res_q[26]_i_2_n_0
+                         LUT2 (Prop_lut2_I1_O)        0.105     2.731 r  i_vrf/res_q[26]_i_1/O
+                         net (fo=1, unplaced)         0.000     2.731    i_vrf_n_619
+                         FDCE                                         r  res_q_reg[26]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2875, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  res_q_reg[26]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_D)        0.072     6.498    res_q_reg[26]
+  -------------------------------------------------------------------
+                         required time                          6.498    
+                         arrival time                          -2.731    
+  -------------------------------------------------------------------
+                         slack                                  3.767    
+
+Slack (MET) :             3.767ns  (required time - arrival time)
+  Source:                 i_vrf/bank_ra_data_o_reg[2][27]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            res_q_reg[27]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        1.944ns  (logic 0.770ns (39.609%)  route 1.174ns (60.391%))
+  Logic Levels:           2  (LUT2=1 LUT6=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2875, unset)         0.787     0.787    i_vrf/clk_i
+                         FDCE                                         r  i_vrf/bank_ra_data_o_reg[2][27]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 r  i_vrf/bank_ra_data_o_reg[2][27]/Q
+                         net (fo=12, unplaced)        0.827     2.047    i_vrf/bank_ra_data_o[2][27]
+                         LUT6 (Prop_lut6_I0_O)        0.232     2.279 f  i_vrf/res_q[27]_i_2/O
+                         net (fo=1, unplaced)         0.347     2.626    i_vrf/res_q[27]_i_2_n_0
+                         LUT2 (Prop_lut2_I1_O)        0.105     2.731 r  i_vrf/res_q[27]_i_1/O
+                         net (fo=1, unplaced)         0.000     2.731    i_vrf_n_618
+                         FDCE                                         r  res_q_reg[27]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2875, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  res_q_reg[27]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_D)        0.072     6.498    res_q_reg[27]
+  -------------------------------------------------------------------
+                         required time                          6.498    
+                         arrival time                          -2.731    
+  -------------------------------------------------------------------
+                         slack                                  3.767    
+
+Slack (MET) :             3.767ns  (required time - arrival time)
+  Source:                 i_vrf/bank_ra_data_o_reg[2][28]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            res_q_reg[28]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        1.944ns  (logic 0.770ns (39.609%)  route 1.174ns (60.391%))
+  Logic Levels:           2  (LUT2=1 LUT6=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2875, unset)         0.787     0.787    i_vrf/clk_i
+                         FDCE                                         r  i_vrf/bank_ra_data_o_reg[2][28]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 r  i_vrf/bank_ra_data_o_reg[2][28]/Q
+                         net (fo=12, unplaced)        0.827     2.047    i_vrf/bank_ra_data_o[2][28]
+                         LUT6 (Prop_lut6_I0_O)        0.232     2.279 f  i_vrf/res_q[28]_i_2/O
+                         net (fo=1, unplaced)         0.347     2.626    i_vrf/res_q[28]_i_2_n_0
+                         LUT2 (Prop_lut2_I1_O)        0.105     2.731 r  i_vrf/res_q[28]_i_1/O
+                         net (fo=1, unplaced)         0.000     2.731    i_vrf_n_617
+                         FDCE                                         r  res_q_reg[28]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2875, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  res_q_reg[28]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_D)        0.072     6.498    res_q_reg[28]
+  -------------------------------------------------------------------
+                         required time                          6.498    
+                         arrival time                          -2.731    
+  -------------------------------------------------------------------
+                         slack                                  3.767    
+
+Slack (MET) :             3.767ns  (required time - arrival time)
+  Source:                 i_vrf/bank_ra_data_o_reg[2][29]/C
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Destination:            res_q_reg[29]/D
+                            (rising edge-triggered cell FDCE clocked by clk_i  {rise@0.000ns fall@2.857ns period=5.714ns})
+  Path Group:             clk_i
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            5.714ns  (clk_i rise@5.714ns - clk_i rise@0.000ns)
+  Data Path Delay:        1.944ns  (logic 0.770ns (39.609%)  route 1.174ns (60.391%))
+  Logic Levels:           2  (LUT2=1 LUT6=1)
+  Clock Path Skew:        -0.039ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.748ns = ( 6.462 - 5.714 ) 
+    Source Clock Delay      (SCD):    0.787ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_i rise edge)      0.000     0.000 r  
+                                                      0.000     0.000 r  clk_i (IN)
+                         net (fo=2875, unset)         0.787     0.787    i_vrf/clk_i
+                         FDCE                                         r  i_vrf/bank_ra_data_o_reg[2][29]/C
+  -------------------------------------------------------------------    -------------------
+                         FDCE (Prop_fdce_C_Q)         0.433     1.220 r  i_vrf/bank_ra_data_o_reg[2][29]/Q
+                         net (fo=12, unplaced)        0.827     2.047    i_vrf/bank_ra_data_o[2][29]
+                         LUT6 (Prop_lut6_I0_O)        0.232     2.279 f  i_vrf/res_q[29]_i_2/O
+                         net (fo=1, unplaced)         0.347     2.626    i_vrf/res_q[29]_i_2_n_0
+                         LUT2 (Prop_lut2_I1_O)        0.105     2.731 r  i_vrf/res_q[29]_i_1/O
+                         net (fo=1, unplaced)         0.000     2.731    i_vrf_n_616
+                         FDCE                                         r  res_q_reg[29]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_i rise edge)      5.714     5.714 r  
+                                                      0.000     5.714 r  clk_i (IN)
+                         net (fo=2875, unset)         0.748     6.462    clk_i
+                         FDCE                                         r  res_q_reg[29]/C
+                         clock pessimism              0.000     6.462    
+                         clock uncertainty           -0.035     6.426    
+                         FDCE (Setup_fdce_C_D)        0.072     6.498    res_q_reg[29]
+  -------------------------------------------------------------------
+                         required time                          6.498    
+                         arrival time                          -2.731    
+  -------------------------------------------------------------------
+                         slack                                  3.767    
+
+
+
+

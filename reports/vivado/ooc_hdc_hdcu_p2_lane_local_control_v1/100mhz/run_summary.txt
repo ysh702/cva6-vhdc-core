@@ -1,0 +1,12 @@
+freq_mhz=100
+period_ns=10.000
+part=xc7z020clg400-2
+top=hdec_top
+vivado_version=2024.2
+wns=2.968
+startpoint=uop_p2_q_reg[lane_ctrl][op][1]/C
+endpoint=lane_popcnt_q_reg[1][4]/D
+data_path_delay=7.029
+logic_delay=1.440
+route_delay=5.589
+logic_levels=8

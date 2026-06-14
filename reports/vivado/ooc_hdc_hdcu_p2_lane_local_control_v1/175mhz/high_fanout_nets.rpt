@@ -1,0 +1,31 @@
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2024 Advanced Micro Devices, Inc. All Rights Reserved.
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2024.2 (win64) Build 5239630 Fri Nov 08 22:35:27 MST 2024
+| Date         : Fri Jun  5 19:26:50 2026
+| Host         : WIN-20240824NZS running 64-bit major release  (build 9200)
+| Command      : report_high_fanout_nets -fanout_greater_than 50 -file E:/HDEC/cva6-vhdc-core/reports/vivado/ooc_hdc_hdcu_p2_lane_local_control_v1/175mhz/high_fanout_nets.rpt
+| Design       : hdec_top
+| Device       : xc7z020
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+High Fan-out Nets Information
+
+1. Summary
+----------
+
++-------------------------------------+--------+-------------+
+| Net Name                            | Fanout | Driver Type |
++-------------------------------------+--------+-------------+
+| i_vrf/rst_ni_0                      |   2203 | LUT1        |
+| i_vrf/lane_result_q[3][63]_i_14_n_0 |    328 | LUT2        |
+| i_vrf/p_0_in__0[0]                  |    287 | FDCE        |
+| i_vrf/init_state_q[0]               |    282 | FDCE        |
+| uop_p3_q_reg[subgroup_idx_n_0_][0]  |    277 | FDCE        |
+| i_vrf/lane_result_q[3][63]_i_7_n_0  |    272 | LUT2        |
+| i_vrf/uop_p1_q_reg[op_type][1]      |    262 | LUT4        |
+| src0_n                              |    256 | LUT4        |
+| hcntadd_hv_n                        |    256 | LUT4        |
+| lane_result_n                       |    256 | LUT4        |
++-------------------------------------+--------+-------------+
+
+

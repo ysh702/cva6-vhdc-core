@@ -1,0 +1,17 @@
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2024 Advanced Micro Devices, Inc. All Rights Reserved.
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2024.2 (win64) Build 5239630 Fri Nov 08 22:35:27 MST 2024
+| Date         : Sun Jun  7 12:02:24 2026
+| Host         : WIN-20240824NZS running 64-bit major release  (build 9200)
+| Command      : report_timing -delay_type max -sort_by slack -max_paths 20 -nworst 1 -from [get_pins -quiet -of_objects {i_vrf/lane_result_q[3][8]_i_7/I2} -filter {DIRECTION == OUT}] -to {i_vrf/lane_result_q[3][8]_i_7/I2} -file E:/HDEC/cva6-vhdc-core/reports/vivado/ooc_hdec_hmatch_countdown_v1_ff838841/175mhz/groups/05b_hmatch_best_dist_CE.rpt
+| Design       : hdec_top
+| Device       : 7z020-clg400
+| Speed File   : -2  PRODUCTION 1.12 2019-11-22
+| Design State : Synthesized
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Timing Report
+
+No timing paths found.
+
+
