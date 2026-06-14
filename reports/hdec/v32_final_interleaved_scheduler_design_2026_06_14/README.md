@@ -285,16 +285,16 @@ V32-B 已经实现了第一阶段 local-only same-cycle sidecar。当前接受�
 | Case | Result |
 | --- | --- |
 | Single blocking PMUL | PASS, `PMUL_BLOCKING_WALL_CYCLES=401971` |
-| Background PMUL + foreground HDC loop | PASS, `PMUL_BG_HDC_LOOP_WALL_CYCLES=721567`, `HDC_ITERS=454` |
+| Background PMUL + foreground HDC loop | PASS, `PMUL_BG_HDC_LOOP_WALL_CYCLES=754622`, `HDC_ITERS=449` |
 | OOC 200 MHz | PASS |
 
 | Version | Logic LUT | Slice LUT | LUTRAM | FF | WNS | Fmax |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | V30 baseline | 5838 | 6310 | 472 | 1800 | 0.247 ns | 210.393 MHz |
 | V31 result-only dispatch | 5847 | 6319 | 472 | 1799 | 0.247 ns | 210.393 MHz |
-| V32-B accepted | 5898 | 6370 | 472 | 1791 | 0.238 ns | 209.996 MHz |
+| V32-B accepted | 5829 | 6301 | 472 | 1795 | 0.243 ns | 210.217 MHz |
 
-和 V31 相比，V32-B 的 Logic LUT 增加 51，FF 减少 8，200 MHz 时序仍通过。这个面积还没有达到“反向减少 LUT”的最终目标，但它是目前唯一同时满足功能正确、时序接近 V31、且没有发生 LUT 爆炸的 same-cycle sidecar 版本。
+和 V31 相比，V32-B 的 Logic LUT 减少 18，FF 减少 4，200 MHz 时序仍通过。和 V30 baseline 相比，Logic LUT 也减少 9，FF 减少 5。这个结果达到了本阶段“先尽量约束面积，最好反向减少 LUT/FF”的目标。
 
 ### 10.2 周期行为解释
 
@@ -303,7 +303,7 @@ V31 的 interleaving 测试结果是：
 | Version | PMUL background wall cycles | HDC full-flow iterations before PMUL done |
 | --- | ---: | ---: |
 | V31 | 424499 | 20 |
-| V32-B | 721567 | 454 |
+| V32-B | 754622 | 449 |
 
 V32-B 的 raw wall time 变长，但这不是单独 ECC 变慢，因为 blocking PMUL 仍然是 401971 cycles。变长的原因是：V32-B 开始真正让 HDC 前台持续运行，ECC local diagonal 在 HDC 运行期间后台推进。因此同一段 PMUL 完成窗口内，HDC 从 20 次 full-flow 提升到 454 次 full-flow。
 
@@ -324,17 +324,18 @@ foreground repeated HDC work + background ECC PMUL
 | duplicate sidecar tail update | PASS | Logic LUT 6656, FF 1800, WNS 0.121 | reject |
 | shared update + flag encoding | PASS | Logic LUT 6754, FF 1821, WNS 0.121 | reject |
 | shared update + PMUL_FIELD-only sidecar | PASS | Logic LUT 6730, FF 1817, WNS 0.117 | reject |
-| shared update + enum state + PMUL_FIELD/INV_MUL | PASS | Logic LUT 5898, FF 1791, WNS 0.238 | accept |
+| shared update + enum state + direct valid_i start | PASS | Logic LUT 5898, FF 1791, WNS 0.238 | superseded |
+| shared update + enum state + dispatch-owned start | PASS | Logic LUT 5829, FF 1795, WNS 0.243 | accept |
 
-这里的经验很明确：RTL 看起来更简单不等于 Vivado OOC 面积更低。`PMUL_FIELD-only` 和 flag encoding 理论上更小，但综合后都把 LUT 拉高。因此当前保留 enum/shared 版本。
+这里的经验很明确：RTL 看起来更简单不等于 Vivado OOC 面积更低。`PMUL_FIELD-only` 和 flag encoding 理论上更小，但综合后都把 LUT 拉高。最终保留的是 enum/shared 版本，并把 sidecar 启动点统一交给 `S_ECC_BG_DISPATCH`，避免在 `S_ECC_LOAD_B` 和 `S_ECC_LEAF_FOLD` 两处直接引入 `valid_i ? S_IDLE : S_ECC_BG_DISPATCH` 的 mux。
 
 ### 10.4 下一步面积回收方向
 
-V32-B 还没完成“反向减少 LUT/FF”。下一步应集中回收这 51 个 Logic LUT，而不是立刻扩展 VRF 级偷周期：
+V32-B 已经把 LUT/FF 拉到低于 V31。下一步应先保持这个面积胜利，再考虑扩展 VRF 级偷周期：
 
-1. 尝试把 `S_ECC_BG_DISPATCH` 和 sidecar done resume 合并，减少一层后台状态译码。
+1. 继续检查 `S_ECC_BG_DISPATCH` 和 sidecar done resume 是否还能合并，减少一层后台状态译码。
 2. 检查 `ecc_diag_issue_fire` 是否可以被局部化到 ECC control cone，避免影响 `st_n` ROM 映射。
 3. 评估是否能删除主 FSM 中独立的 `S_ECC_DIAG_WAIT` 状态，让 blocking 和 sidecar flush 更统一。
 4. 只有当 V32-B 面积回到 V31 附近后，再进入 V32-C 的 VRF bubble stealing。
 
-当前结论：V32-B 已完成 local-only same-cycle interleaving 的第一个可运行闭环，但还不是最终面积最优版本。
+当前结论：V32-B 已完成 local-only same-cycle interleaving 的第一个可运行闭环，并且在 OOC 上实现了低于 V31 的 Logic LUT/FF。它仍然不是完整同周期资源仲裁，但已经给后续 V32-C/D 打下了面积更干净的基础。

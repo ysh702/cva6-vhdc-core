@@ -1141,7 +1141,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             ecc_diag16_pipe_n = '0;
             if (ecc_diag_bg_can_sidecar) begin
                 ecc_diag_bg_state_n=ECC_DIAG_BG_ISSUE;
-                st_n=valid_i ? S_IDLE : S_ECC_BG_DISPATCH;
+                st_n=S_ECC_BG_DISPATCH;
             end else begin
                 st_n=S_ECC_DIAG_ISSUE;
             end
@@ -1187,7 +1187,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                     ecc_diag_slot_n = 3'd0;
                     if (ecc_diag_bg_can_sidecar) begin
                         ecc_diag_bg_state_n=ECC_DIAG_BG_ISSUE;
-                        st_n=valid_i ? S_IDLE : S_ECC_BG_DISPATCH;
+                        st_n=S_ECC_BG_DISPATCH;
                     end else begin
                         st_n=S_ECC_DIAG_ISSUE;
                     end
