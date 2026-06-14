@@ -41,7 +41,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         S_ECC_INV_AFTER_SQR, S_ECC_INV_AFTER_MUL,
         S_ECC_PMUL_INIT, S_ECC_PMUL_CONST_WRITE, S_ECC_PMUL_READ_SCALAR_WAIT, S_ECC_PMUL_READ_SCALAR,
         S_ECC_PMUL_START_ADD, S_ECC_PMUL_START_DBL, S_ECC_PMUL_STEP, S_ECC_PMUL_STEP_NEXT,
-        S_ECC_JOB_DONE,
+        S_ECC_BG_DISPATCH, S_ECC_JOB_DONE,
         S_HSPREAD_LO_WRITE, S_HSPREAD_HI_WRITE
     } st_t;
     st_t st_q, st_n;
@@ -71,6 +71,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
 
     // ── HCNTCLIP registers ──────────────────────────────────────────────────
     logic [VRF_IDX_W-1:0] hcntclip_dst_base_q,hcntclip_dst_base_n,hcntclip_acc_base;
+    logic [VRF_IDX_W-1:0] hdc_cnt_base0, hdc_cnt_base1;
+    logic interleave_active;
     logic hcntclip_acc_sel_q,hcntclip_acc_sel_n;
     logic [3:0] hcntclip_threshold_q,hcntclip_threshold_n;
     logic [1:0] hcntclip_chunk_q,hcntclip_chunk_n;
@@ -234,7 +236,10 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     logic [VRF_IDX_W-1:0] ecc_pmul_dbl_z;
 
     // ── Combinational helpers ───────────────────────────────────────────────
-    assign hcntclip_acc_base = hcntclip_acc_sel_q ? 6'd48 : 6'd32;
+    assign interleave_active = ecc_job_bg_q;
+    assign hdc_cnt_base0 = interleave_active ? 6'd16 : 6'd32;
+    assign hdc_cnt_base1 = interleave_active ? 6'd24 : 6'd48;
+    assign hcntclip_acc_base = hcntclip_acc_sel_q ? hdc_cnt_base1 : hdc_cnt_base0;
     assign hmatch_req_base = a_q[7:4];
     assign hmatch_req_count_lo = a_q[11:8];
     assign hmatch_req_max_count = 4'd8 - hmatch_req_base;
@@ -789,12 +794,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         S_IDLE: begin
             if(valid_i&&ready_o)begin
                 op_n=operator_i;a_n=operand_a_i;st_n=S_EXEC;
-            end else if (ecc_job_bg_q && ecc_job_active_q) begin
-                unique case (ecc_job_kind_q)
-                ECC_JOB_PMUL: st_n=S_ECC_PMUL_STEP;
-                ECC_JOB_INV:  st_n=S_ECC_INV_INIT;
-                default:      st_n=S_IDLE;
-                endcase
             end
         end
 
@@ -956,7 +955,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             end
 
             HDEC_HCNTCLR: begin
-                clr_base_n=a_q[0]?6'd48:6'd32;clr_cnt_n=4'd0;st_n=S_CLR;
+                clr_base_n=a_q[0]?hdc_cnt_base1:hdc_cnt_base0;clr_cnt_n=4'd0;st_n=S_CLR;
             end
 
             HDEC_HCNTADD: begin
@@ -967,8 +966,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                     uop_p0_n.chunk_idx   = 2'd0;
                     uop_p0_n.subgroup_idx= 2'd0;
                     uop_p0_n.src0_addr   = {1'b0, a_q[2:0], 2'b00};
-                    uop_p0_n.src1_addr   = a_q[4] ? 6'd48 : 6'd32;
-                    uop_p0_n.dst_addr    = a_q[4] ? 6'd48 : 6'd32;
+                    uop_p0_n.src1_addr   = a_q[4] ? hdc_cnt_base1 : hdc_cnt_base0;
+                    uop_p0_n.dst_addr    = a_q[4] ? hdc_cnt_base1 : hdc_cnt_base0;
                     st_n=S_UOP_P1_RD0;
                 end
             end
@@ -1011,8 +1010,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                 uop_p0_n.op_type     = UOP_HCNTCLIP_READ;
                 uop_p0_n.chunk_idx   = 2'd0;
                 uop_p0_n.subgroup_idx= 2'd0;
-                uop_p0_n.src0_addr   = (a_q[3] ? 6'd48 : 6'd32);
-                uop_p0_n.src1_addr   = (a_q[3] ? 6'd48 : 6'd32);
+                uop_p0_n.src0_addr   = (a_q[3] ? hdc_cnt_base1 : hdc_cnt_base0);
+                uop_p0_n.src1_addr   = (a_q[3] ? hdc_cnt_base1 : hdc_cnt_base0);
                 st_n=S_UOP_P1_RD0;
             end
 
@@ -1970,7 +1969,13 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             end else st_n = S_RESULT;
         end
 
-        S_RESULT: begin st_n=S_IDLE;end
+        S_RESULT: begin
+            st_n=(ecc_job_bg_q && ecc_job_active_q) ? S_ECC_BG_DISPATCH : S_IDLE;
+        end
+
+        S_ECC_BG_DISPATCH: begin
+            st_n=(ecc_job_kind_q == ECC_JOB_INV) ? S_ECC_INV_INIT : S_ECC_PMUL_STEP;
+        end
         default: st_n=S_IDLE;
         endcase
 
