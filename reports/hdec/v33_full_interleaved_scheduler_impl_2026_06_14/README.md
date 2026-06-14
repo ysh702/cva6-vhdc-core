@@ -195,16 +195,133 @@ scheduling policy around the existing HDC/ECC execution controller.
 | Background PMUL + foreground HDC loop | PASS, `PMUL_BG_HDC_LOOP_WALL_CYCLES=739940`, `HDC_ITERS=436` |
 | OOC 200 MHz | PASS, WNS `0.247 ns` |
 
+### 6.4 Rejected V33-C extensions after the accepted quantum
+
+After V33-B, two more aggressive same-cycle sidecar directions were tested.
+Both are rejected.
+
+#### Leaf-fold sidecar
+
+Goal: move the local `S_ECC_LEAF_FOLD` product accumulation into foreground HDC
+uop gaps while keeping HDC as the foreground owner.
+
+| Variant | Functional result | Decision |
+| --- | --- | --- |
+| Direct leaf-fold sidecar | timeout after 2000 HDC full-flow iterations, PMUL remained active |
+| Guarded sidecar with fallback to coarse ECC | interleaved PMUL completed, but Y result mismatched |
+| Simple-uop-only / HBIND-only windows | interleaved PMUL completed, but the same Y mismatch remained |
+
+Reason for rejection: the leaf-fold datapath is not just local arithmetic.  Its
+state is coupled to product-pair order, next-leaf VRF capture, and final write
+sequencing.  Splitting only the visible local fold creates a fragile partial
+state that can pass blocking PMUL but fail under real HDC foreground pressure.
+
+#### Write-pair sidecar
+
+Goal: hide `S_ECC_WRITE_PAIR` during the read half of foreground HDC uop states
+by using the apparently-free VRF write port.
+
+| Metric | V33-B kept version | Write-pair sidecar trial |
+| --- | ---: | ---: |
+| HDC full-flow cycles | 959 | 959 |
+| Blocking PMUL wall cycles | 401971 | 401971 |
+| Interleaved PMUL+HDC wall cycles | 739940 | 741603 |
+| HDC iterations before PMUL done | 436 | 438 |
+| Equivalent standalone total | 820095 | 822013 |
+| Interleaving saved cycles | 80155 | 80410 |
+| OOC Logic LUT | 5843 | 6116 |
+| OOC FF | 1803 | 1807 |
+| OOC WNS | 0.247 ns | 0.247 ns |
+
+The sidecar was functionally correct, but it cost `+273` Logic LUT over V33-B
+for only `+255` more saved cycles in the serialized-vs-interleaved comparison.
+The reason is structural: stealing the VRF write slot wires ECC product-pair
+data and write enables into the main VRF write mux, so Vivado expands a wide
+control/data cone rather than only adding a tiny FSM.
+
+Decision: do not keep leaf-fold or write-pair sidecars in this area-constrained
+version.  The wider rule is that V33 should avoid stealing the VRF write port
+unless the VRF write mux itself is redesigned.
+
+### 6.5 Accepted V33-C RTL: ECC load-read sidecar
+
+V33-C adds a smaller and more structured sidecar before the diagonal multiply.
+When background ECC has already issued the A operand VRF read and foreground
+HDC is waiting, `S_ECC_LOAD_A_WAIT` yields to `S_IDLE`.  The shared scheduler
+then captures A, issues the B read through the existing 6-bit VRF read address,
+captures B, and starts the already-accepted diagonal sidecar.
+
+This keeps the wide VRF write path owned by the main FSM.  The only borrowed
+resource is the narrow read address path, and the local state is a 4-state
+load-read micro-FSM.
+
+#### Cycle comparison
+
+| Metric | V33-B sub-operation quantum | V33-C load-read sidecar |
+| --- | ---: | ---: |
+| Standalone HDC full-flow cycles | 959 | 959 |
+| Blocking PMUL wall cycles | 401971 | 401971 |
+| Interleaved PMUL+HDC wall cycles | 739940 | 734243 |
+| HDC full-flow iterations before PMUL done | 436 | 436 |
+| Equivalent standalone HDC cycles | 418124 | 418124 |
+| Equivalent standalone total | 820095 | 820095 |
+| Interleaving saved cycles | 80155 | 85852 |
+
+Formula for V33-C:
+
+```text
+equivalent_hdc_cycles = 436 * 959 = 418124
+standalone_total      = 401971 + 418124 = 820095
+saved_cycles          = 820095 - 734243 = 85852
+```
+
+Compared with V33-B, V33-C reduces interleaved wall time by `5697` cycles with
+the same number of foreground HDC full-flow iterations.
+
+#### Area/timing comparison
+
+| Version | Logic LUT | Slice LUT | LUTRAM | FF | WNS | Fmax |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| V33-B sub-operation quantum | 5843 | 6315 | 472 | 1803 | 0.247 ns | 210.393 MHz |
+| V33-C load-read sidecar | 5887 | 6359 | 472 | 1801 | 0.243 ns | 210.217 MHz |
+| Delta | +44 | +44 | 0 | -2 | -0.004 ns | -0.176 MHz |
+
+The `+44` Logic LUT is a total/shared scheduler cost, not an ECC-only operator
+cost.  It implements the foreground/background read-sidecar control around the
+existing VRF and diagonal pipeline.  FF decreases by 2 after Vivado
+optimization.
+
+#### Validation
+
+| Check | Result |
+| --- | --- |
+| HDC full flow | PASS |
+| Blocking PMUL | PASS, `PMUL_BLOCKING_WALL_CYCLES=401971` |
+| Background PMUL + foreground HDC loop | PASS, `PMUL_BG_HDC_LOOP_WALL_CYCLES=734243`, `HDC_ITERS=436` |
+| OOC 200 MHz | PASS, WNS `0.243 ns` |
+
+#### Rejected follow-up tweaks
+
+| Trial | Result | Decision |
+| --- | --- | --- |
+| Unguarded `S_RESULT` dispatch bypass | HDC and blocking PMUL passed, but background PMUL timed out after 2000 HDC iterations with status `0x44` | reject |
+| Phase-safe `S_RESULT` dispatch bypass | Functional, but interleaved wall stayed `739940` cycles | reject |
+| Forced sequential encoding for load-read sidecar FSM | OOC worsened to `6107` Logic LUT and `1810` FF | reject |
+
 ## 7. V33 direction after the accepted quantum
 
 The next RTL direction must satisfy all of these constraints:
 
 1. Keep V32-B local diagonal sidecar.
-2. Do not slice ECC into single-cycle quanta without a progress budget.
-3. Do not yield inside a VRF read-latency pair.
-4. Keep `ready_o = (st_q == S_IDLE)`.
-5. Keep all foreground-HDC entry decisions out of the decode hot path.
-6. Avoid wide duplicate VRF request or data buffers.
+2. Keep V33-C load-read sidecar as the safe narrow-port interleaving layer.
+3. Do not slice ECC into single-cycle quanta without a progress budget.
+4. Do not yield inside a VRF read-latency pair unless the capture side is
+   explicitly owned by a sidecar state.
+5. Keep `ready_o = (st_q == S_IDLE)`.
+6. Keep all foreground-HDC entry decisions out of the decode hot path.
+7. Avoid wide duplicate VRF request or data buffers.
+8. Avoid stealing the VRF write port unless the VRF write mux itself is
+   redesigned; a sidecar bolted onto the existing write mux is too expensive.
 
 The better next structure is an atomic leaf-window scheduler:
 
@@ -239,8 +356,15 @@ Rejected and reverted:
 - write-pair quantum
 - detached leaf-fold sidecar
 - credit/cadence scheduler windows that widened `S_ECC_PMUL_STEP_NEXT`
+- result-dispatch bypasses that either timed out or gave no cycle gain
+- forced sequential encoding for the load-read sidecar FSM
 
-The retained V33-B state has one synthesizable RTL change from V32-B: the
-non-last PMUL step transition no longer yields immediately to `S_IDLE` when
-foreground valid is waiting.  This keeps standalone PMUL unchanged and improves
-the interleaved total-cycle comparison with a small total-area cost.
+The retained V33-C state has two synthesizable scheduling changes above V32-B:
+
+- V33-B: the non-last PMUL step transition no longer yields immediately to
+  `S_IDLE` when foreground valid is waiting.
+- V33-C: the first ECC operand-load pair can be hidden under the foreground HDC
+  instruction prologue using the narrow VRF read address path.
+
+Both keep standalone PMUL unchanged and improve the interleaved total-cycle
+comparison with a small total/shared scheduler area cost.

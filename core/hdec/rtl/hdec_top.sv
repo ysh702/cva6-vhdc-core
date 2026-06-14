@@ -201,6 +201,12 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         ECC_DIAG_BG_FLUSH = 2'd2,
         ECC_DIAG_BG_DONE  = 2'd3
     } ecc_diag_bg_state_e;
+    typedef enum logic [1:0] {
+        ECC_LOAD_BG_IDLE   = 2'd0,
+        ECC_LOAD_BG_CAP_A  = 2'd1,
+        ECC_LOAD_BG_WAIT_B = 2'd2,
+        ECC_LOAD_BG_CAP_B  = 2'd3
+    } ecc_load_bg_state_e;
     typedef enum logic [2:0] {
         ECC_PMUL_CTRL_INIT   = 3'd0,
         ECC_PMUL_CTRL_ADD    = 3'd1,
@@ -222,6 +228,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     logic               ecc_job_done_q, ecc_job_done_n;
     logic               ecc_job_bg_q, ecc_job_bg_n;
     ecc_diag_bg_state_e ecc_diag_bg_state_q, ecc_diag_bg_state_n;
+    ecc_load_bg_state_e ecc_load_bg_state_q, ecc_load_bg_state_n;
     logic [15:0]        ecc_job_cycle_q, ecc_job_cycle_n;
     logic [15:0]        ecc_job_cycle_status;
     logic               ecc_diag_bg_can_sidecar;
@@ -759,6 +766,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         ecc_job_active_n=ecc_job_active_q; ecc_job_done_n=ecc_job_done_q;
         ecc_job_bg_n=ecc_job_bg_q;
         ecc_diag_bg_state_n=ecc_diag_bg_state_q;
+        ecc_load_bg_state_n=ecc_load_bg_state_q;
         if (ECC_STATUS_CYCLE_COUNT)
             ecc_job_cycle_n=ecc_job_cycle_q + (ecc_job_active_q ? 16'd1 : 16'd0);
         else
@@ -1118,7 +1126,12 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
 
         // ── ECC V1 raw GF(2) diagonal multiply ─────────────────────────────
         S_ECC_LOAD_A_WAIT: begin
-            st_n=S_ECC_LOAD_A;
+            if (ecc_diag_bg_can_sidecar && valid_i) begin
+                ecc_load_bg_state_n=ECC_LOAD_BG_CAP_A;
+                st_n=S_IDLE;
+            end else begin
+                st_n=S_ECC_LOAD_A;
+            end
         end
 
         S_ECC_LOAD_A: begin
@@ -1999,11 +2012,40 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                 st_n=S_ECC_LEAF_FOLD;
             end else if (ecc_diag_bg_state_q != ECC_DIAG_BG_IDLE) begin
                 st_n=valid_i ? S_IDLE : S_ECC_BG_DISPATCH;
+            end else if (ecc_load_bg_state_q != ECC_LOAD_BG_IDLE) begin
+                st_n=valid_i ? S_IDLE : S_ECC_BG_DISPATCH;
             end else begin
                 st_n=(ecc_job_kind_q == ECC_JOB_INV) ? S_ECC_INV_INIT : S_ECC_PMUL_STEP;
             end
         end
         default: st_n=S_IDLE;
+        endcase
+
+        // V33-C: hide the first ECC operand-load pair under the foreground HDC
+        // instruction prologue.  Only the 6-bit VRF read address is borrowed;
+        // the wide VRF write path stays owned by the main HDC/ECC FSM.
+        unique case (ecc_load_bg_state_q)
+        ECC_LOAD_BG_CAP_A: begin
+            ecc_leaf_a_n = ecc_kpd32_leaf_word({vrf_rd[3], vrf_rd[2], vrf_rd[1], vrf_rd[0]}, ecc_leaf_path_q);
+            vrf_req.ra = ecc_src_b_q;
+            ecc_load_bg_state_n = ECC_LOAD_BG_WAIT_B;
+        end
+        ECC_LOAD_BG_WAIT_B: begin
+            ecc_load_bg_state_n = ECC_LOAD_BG_CAP_B;
+        end
+        ECC_LOAD_BG_CAP_B: begin
+            ecc_leaf_b_n = ecc_kpd32_leaf_word({vrf_rd[3], vrf_rd[2], vrf_rd[1], vrf_rd[0]}, ecc_leaf_path_q);
+            ecc_leaf_prod_n = '0;
+            ecc_leaf_path_n = '0;
+            ecc_diag_slot_n = 3'd0;
+            ecc_fold_word_n = 2'd0;
+            ecc_pipe0_valid_n = 1'b0;
+            ecc_diag16_pipe_n = '0;
+            ecc_diag_bg_state_n = ECC_DIAG_BG_ISSUE;
+            ecc_load_bg_state_n = ECC_LOAD_BG_IDLE;
+        end
+        default: begin
+        end
         endcase
 
         // V32-B: one shared local diagonal update path for blocking ECC and
@@ -2062,7 +2104,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             ecc_src_a_q<='0;ecc_src_b_q<='0;ecc_dst_q<='0;ecc_acc_dst_q<='0;
             ecc_leaf_a_q<='0;ecc_leaf_b_q<='0;ecc_leaf_prod_q<='0;ecc_leaf_path_q<='0;ecc_diag_slot_q<='0;ecc_fold_word_q<='0;
             ecc_autoreduce_q<=1'b0;ecc_mac_q<=1'b0;ecc_sqr_repeat_q<='0;
-            ecc_job_kind_q<=ECC_JOB_NONE;ecc_job_phase_q<=ECC_PHASE_NONE;ecc_job_active_q<=1'b0;ecc_job_done_q<=1'b0;ecc_job_bg_q<=1'b0;ecc_diag_bg_state_q<=ECC_DIAG_BG_IDLE;ecc_job_cycle_q<='0;ecc_inv_step_q<='0;ecc_job_src_q<='0;ecc_job_dst_q<='0;ecc_job_copy_dst_q<='0;
+            ecc_job_kind_q<=ECC_JOB_NONE;ecc_job_phase_q<=ECC_PHASE_NONE;ecc_job_active_q<=1'b0;ecc_job_done_q<=1'b0;ecc_job_bg_q<=1'b0;ecc_diag_bg_state_q<=ECC_DIAG_BG_IDLE;ecc_load_bg_state_q<=ECC_LOAD_BG_IDLE;ecc_job_cycle_q<='0;ecc_inv_step_q<='0;ecc_job_src_q<='0;ecc_job_dst_q<='0;ecc_job_copy_dst_q<='0;
             ecc_pmul_ctrl_q<=ECC_PMUL_CTRL_INIT;ecc_pmul_subop_q<=ECC_PMUL_SUB_NONE;ecc_pmul_step_q<='0;ecc_pmul_bit_q<='0;ecc_pmul_scalar_bit_q<=1'b0;
             ecc_pmul_r0_inf_q<=1'b1;ecc_pmul_const_one_q<=1'b0;ecc_pmul_result_q<='0;ecc_pmul_point_q<='0;
             ecc_pipe0_valid_q<=1'b0;ecc_pipe0_diag_slot_q<='0;ecc_diag16_pipe_q<='0;
@@ -2083,7 +2125,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             ecc_src_a_q<=ecc_src_a_n;ecc_src_b_q<=ecc_src_b_n;ecc_dst_q<=ecc_dst_n;ecc_acc_dst_q<=ecc_acc_dst_n;
             ecc_leaf_a_q<=ecc_leaf_a_n;ecc_leaf_b_q<=ecc_leaf_b_n;ecc_leaf_prod_q<=ecc_leaf_prod_n;ecc_leaf_path_q<=ecc_leaf_path_n;ecc_diag_slot_q<=ecc_diag_slot_n;ecc_fold_word_q<=ecc_fold_word_n;
             ecc_autoreduce_q<=ecc_autoreduce_n;ecc_mac_q<=ecc_mac_n;ecc_sqr_repeat_q<=ecc_sqr_repeat_n;
-            ecc_job_kind_q<=ecc_job_kind_n;ecc_job_phase_q<=ecc_job_phase_n;ecc_job_active_q<=ecc_job_active_n;ecc_job_done_q<=ecc_job_done_n;ecc_job_bg_q<=ecc_job_bg_n;ecc_diag_bg_state_q<=ecc_diag_bg_state_n;ecc_job_cycle_q<=ecc_job_cycle_n;ecc_inv_step_q<=ecc_inv_step_n;ecc_job_src_q<=ecc_job_src_n;ecc_job_dst_q<=ecc_job_dst_n;ecc_job_copy_dst_q<=ecc_job_copy_dst_n;
+            ecc_job_kind_q<=ecc_job_kind_n;ecc_job_phase_q<=ecc_job_phase_n;ecc_job_active_q<=ecc_job_active_n;ecc_job_done_q<=ecc_job_done_n;ecc_job_bg_q<=ecc_job_bg_n;ecc_diag_bg_state_q<=ecc_diag_bg_state_n;ecc_load_bg_state_q<=ecc_load_bg_state_n;ecc_job_cycle_q<=ecc_job_cycle_n;ecc_inv_step_q<=ecc_inv_step_n;ecc_job_src_q<=ecc_job_src_n;ecc_job_dst_q<=ecc_job_dst_n;ecc_job_copy_dst_q<=ecc_job_copy_dst_n;
             ecc_pmul_ctrl_q<=ecc_pmul_ctrl_n;ecc_pmul_subop_q<=ecc_pmul_subop_n;ecc_pmul_step_q<=ecc_pmul_step_n;ecc_pmul_bit_q<=ecc_pmul_bit_n;ecc_pmul_scalar_bit_q<=ecc_pmul_scalar_bit_n;
             ecc_pmul_r0_inf_q<=ecc_pmul_r0_inf_n;ecc_pmul_const_one_q<=ecc_pmul_const_one_n;ecc_pmul_result_q<=ecc_pmul_result_n;ecc_pmul_point_q<=ecc_pmul_point_n;
             ecc_pipe0_valid_q<=ecc_pipe0_valid_n;ecc_pipe0_diag_slot_q<=ecc_pipe0_diag_slot_n;ecc_diag16_pipe_q<=ecc_diag16_pipe_n;
