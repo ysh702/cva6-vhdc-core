@@ -1694,7 +1694,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                 endcase
             end else begin
                 ecc_pmul_step_n=ecc_pmul_step_q + 6'd1;
-                st_n=(ecc_job_bg_q && valid_i) ? S_IDLE : S_ECC_PMUL_STEP;
+                st_n=S_ECC_PMUL_STEP;
             end
         end
 

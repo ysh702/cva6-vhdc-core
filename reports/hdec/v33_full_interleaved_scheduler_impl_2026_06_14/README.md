@@ -4,7 +4,7 @@ Date: 2026-06-14
 
 Branch: `hdec-ecc-pointmul-v33`
 
-Base RTL kept after this round: V32-B RTL, commit `a1addc1c`
+Base RTL before V33-B: V32-B RTL, commit `a1addc1c`
 
 ## 1. Accepted measurement update
 
@@ -112,7 +112,90 @@ splitting them without a progress guarantee makes ECC too dependent on sparse
 resume opportunities.  The design remained functionally safe for standalone
 PMUL but failed the interleaved throughput goal.
 
-## 5. V33-D direction after the rejected trials
+## 5. Rejected scheduler-window trials after V33-A
+
+After the first rejected write-pair and leaf-fold attempts, two PMUL scheduler
+window variants were tested.
+
+| Trial | Functional result | OOC result | Decision |
+| --- | --- | --- | --- |
+| 2-bit `credit=3` PMUL step window | PASS, interleaved wall `743342`, HDC iters `439` | Logic LUT `6635`, FF `1812`, Fmax `204.960 MHz` | reject |
+| no-new-FF cadence using `ecc_pmul_step_q[1:0]` | PASS, interleaved wall `743351`, HDC iters `439` | Logic LUT `6712`, FF `1807`, Fmax `202.429 MHz` | reject |
+
+Both variants improved the interleaved wall time but made `S_ECC_PMUL_STEP_NEXT`
+decode much larger.  The lesson is that adding a new predicate into the PMUL
+step scheduler can be worse than adding explicit storage: Vivado expands the
+wide PMUL case/decode cone.
+
+## 6. Accepted V33-B RTL: PMUL sub-operation quantum
+
+V33-B keeps a much smaller version of the same idea.  It removes the background
+yield check from the non-last branch of `S_ECC_PMUL_STEP_NEXT`:
+
+```systemverilog
+ecc_pmul_step_n = ecc_pmul_step_q + 6'd1;
+st_n = S_ECC_PMUL_STEP;
+```
+
+The design still yields at existing safe boundaries, and V32-B's local
+diagonal sidecar still allows true same-cycle progress during foreground HDC.
+The accepted change does not add a new FF, a second ECC FSM, a VRF data buffer,
+or a resource-mask bus.  It is best described as a shared scheduling quantum:
+background ECC is allowed to finish the current PMUL sub-operation instead of
+returning to `S_IDLE` after every internal step.
+
+This is intentionally weaker than a full dual-issue arbiter, but it is much
+more FPGA-friendly than the rejected credit/cadence trials.
+
+### 6.1 Cycle comparison
+
+| Metric | V33-A / V32-B | V33-B sub-operation quantum |
+| --- | ---: | ---: |
+| Standalone HDC full-flow cycles | 959 | 959 |
+| Blocking PMUL wall cycles | 401971 | 401971 |
+| Interleaved PMUL+HDC wall cycles | 754622 | 739940 |
+| HDC full-flow iterations before PMUL done | 449 | 436 |
+| Equivalent standalone HDC cycles | 430591 | 418124 |
+| Equivalent standalone total | 832562 | 820095 |
+| Interleaving saved cycles | 77940 | 80155 |
+
+Formula for V33-B:
+
+```text
+equivalent_hdc_cycles = 436 * 959 = 418124
+standalone_total      = 401971 + 418124 = 820095
+saved_cycles          = 820095 - 739940 = 80155
+```
+
+Compared with V33-A, V33-B reduces the interleaved wall time by `14682` cycles
+and improves the serialized-vs-interleaved saving by `2215` cycles.  The HDC
+iteration count is lower because the background PMUL claims a slightly larger
+atomic window; the comparison must therefore use the equivalent standalone
+total above, not only raw HDC iteration count.
+
+### 6.2 Area/timing comparison
+
+| Version | Logic LUT | Slice LUT | LUTRAM | FF | WNS | Fmax |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| V33-A / V32-B | 5829 | 6301 | 472 | 1795 | 0.243 ns | 210.217 MHz |
+| V33-B sub-operation quantum | 5843 | 6315 | 472 | 1803 | 0.247 ns | 210.393 MHz |
+| Delta | +14 | +14 | 0 | +8 | +0.004 ns | +0.176 MHz |
+
+The `+14` Logic LUT and `+8` FF are counted in total HDEC area, not in the
+strict ECC-only bucket.  Reason: the change does not instantiate an ECC-only
+operator or ECC-only storage structure; it changes the shared background-job
+scheduling policy around the existing HDC/ECC execution controller.
+
+### 6.3 Validation
+
+| Check | Result |
+| --- | --- |
+| HDC full flow | PASS |
+| Blocking PMUL | PASS, `PMUL_BLOCKING_WALL_CYCLES=401971` |
+| Background PMUL + foreground HDC loop | PASS, `PMUL_BG_HDC_LOOP_WALL_CYCLES=739940`, `HDC_ITERS=436` |
+| OOC 200 MHz | PASS, WNS `0.247 ns` |
+
+## 7. V33 direction after the accepted quantum
 
 The next RTL direction must satisfy all of these constraints:
 
@@ -142,18 +225,22 @@ failure modes seen in this round:
 - too fine a quantum starves ECC;
 - detached local fold starves the next VRF load.
 
-## 6. Current kept files
+## 8. Current kept files
 
 Kept changes:
 
+- `core/hdec/rtl/hdec_top.sv`
 - `verif/hdec/tb_hdec_ecc_pmul_bg_hdc_loop_v31.sv`
 - `verif/hdec/tb_hdec_ecc_pmul_profile_v27.sv`
 - this report
 
 Rejected and reverted:
 
-- all V33-B/V33-C synthesizable changes in `core/hdec/rtl/hdec_top.sv`
+- write-pair quantum
+- detached leaf-fold sidecar
+- credit/cadence scheduler windows that widened `S_ECC_PMUL_STEP_NEXT`
 
-The retained V33-A state has no synthesizable RTL delta from V32-B, and the
-OOC result confirms the same area/timing point: Logic LUT 5829, FF 1795,
-Fmax 210.217 MHz.
+The retained V33-B state has one synthesizable RTL change from V32-B: the
+non-last PMUL step transition no longer yields immediately to `S_IDLE` when
+foreground valid is waiting.  This keeps standalone PMUL unchanged and improves
+the interleaved total-cycle comparison with a small total-area cost.
