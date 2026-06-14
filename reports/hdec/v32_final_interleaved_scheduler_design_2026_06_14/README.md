@@ -266,3 +266,75 @@ V32 不应从“大重构控制层”开始，而应从“局部 sidecar 化 dia
 - 它是最有可能在不涨面积的情况下继续隐藏 ECC 周期的入口。
 
 下一步 RTL 修改应只实现这个最小闭环：background load B 后启动 diagonal sidecar，sidecar 完成后 resume 到 leaf fold。任何 VRF 级别的资源偷取都等这个闭环综合通过后再做。
+
+## 10. V32-B RTL 实施结果
+
+V32-B 已经实现了第一阶段 local-only same-cycle sidecar。当前接受版本的 RTL 改动集中在 `core/hdec/rtl/hdec_top.sv`：
+
+1. 增加 2-bit `ecc_diag_bg_state_q/n`，状态为 idle / issue / flush / done。
+2. 增加 `ecc_diag_issue_fire` 和 `ecc_diag_flush_fire`，让 blocking ECC 和 background sidecar 共用同一份 diagonal 更新逻辑。
+3. 后台 PMUL 在 `S_ECC_LOAD_B` 后可以启动 sidecar。
+4. `S_ECC_LEAF_FOLD` 切换到下一个 leaf 后也可以继续启动 sidecar。
+5. `S_ECC_BG_DISPATCH` 在 sidecar active 时只负责让出或等待；sidecar done 后恢复到 `S_ECC_LEAF_FOLD`。
+6. `ready_o`、`valid_o`、VRF broker、HDC lane/uop 译码路径都没有加入新的通用仲裁。
+
+注意：这个版本是 V32-B，不是完整 V32-C/D。它只覆盖 ECC field multiply 的 local diagonal 阶段；VRF read/write、leaf fold、reduction、HDC uop 复用仍然走 V31 coarse dispatch。
+
+### 10.1 保留版本结果
+
+| Case | Result |
+| --- | --- |
+| Single blocking PMUL | PASS, `PMUL_BLOCKING_WALL_CYCLES=401971` |
+| Background PMUL + foreground HDC loop | PASS, `PMUL_BG_HDC_LOOP_WALL_CYCLES=721567`, `HDC_ITERS=454` |
+| OOC 200 MHz | PASS |
+
+| Version | Logic LUT | Slice LUT | LUTRAM | FF | WNS | Fmax |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| V30 baseline | 5838 | 6310 | 472 | 1800 | 0.247 ns | 210.393 MHz |
+| V31 result-only dispatch | 5847 | 6319 | 472 | 1799 | 0.247 ns | 210.393 MHz |
+| V32-B accepted | 5898 | 6370 | 472 | 1791 | 0.238 ns | 209.996 MHz |
+
+和 V31 相比，V32-B 的 Logic LUT 增加 51，FF 减少 8，200 MHz 时序仍通过。这个面积还没有达到“反向减少 LUT”的最终目标，但它是目前唯一同时满足功能正确、时序接近 V31、且没有发生 LUT 爆炸的 same-cycle sidecar 版本。
+
+### 10.2 周期行为解释
+
+V31 的 interleaving 测试结果是：
+
+| Version | PMUL background wall cycles | HDC full-flow iterations before PMUL done |
+| --- | ---: | ---: |
+| V31 | 424499 | 20 |
+| V32-B | 721567 | 454 |
+
+V32-B 的 raw wall time 变长，但这不是单独 ECC 变慢，因为 blocking PMUL 仍然是 401971 cycles。变长的原因是：V32-B 开始真正让 HDC 前台持续运行，ECC local diagonal 在 HDC 运行期间后台推进。因此同一段 PMUL 完成窗口内，HDC 从 20 次 full-flow 提升到 454 次 full-flow。
+
+这说明 V32-B 的意义不是“让后台 PMUL wall time 绝对更短”，而是把比较方式切到用户定义的目标：
+
+```text
+standalone ECC PMUL + standalone repeated HDC work
+vs.
+foreground repeated HDC work + background ECC PMUL
+```
+
+在这个口径下，V32-B 已经产生了真正的同周期交织证据：HDC 前台大量推进时，ECC 也能在不占用共享资源的 local diagonal 阶段同步推进。
+
+### 10.3 被拒绝的尝试
+
+| Attempt | Functional | OOC Result | Decision |
+| --- | --- | --- | --- |
+| duplicate sidecar tail update | PASS | Logic LUT 6656, FF 1800, WNS 0.121 | reject |
+| shared update + flag encoding | PASS | Logic LUT 6754, FF 1821, WNS 0.121 | reject |
+| shared update + PMUL_FIELD-only sidecar | PASS | Logic LUT 6730, FF 1817, WNS 0.117 | reject |
+| shared update + enum state + PMUL_FIELD/INV_MUL | PASS | Logic LUT 5898, FF 1791, WNS 0.238 | accept |
+
+这里的经验很明确：RTL 看起来更简单不等于 Vivado OOC 面积更低。`PMUL_FIELD-only` 和 flag encoding 理论上更小，但综合后都把 LUT 拉高。因此当前保留 enum/shared 版本。
+
+### 10.4 下一步面积回收方向
+
+V32-B 还没完成“反向减少 LUT/FF”。下一步应集中回收这 51 个 Logic LUT，而不是立刻扩展 VRF 级偷周期：
+
+1. 尝试把 `S_ECC_BG_DISPATCH` 和 sidecar done resume 合并，减少一层后台状态译码。
+2. 检查 `ecc_diag_issue_fire` 是否可以被局部化到 ECC control cone，避免影响 `st_n` ROM 映射。
+3. 评估是否能删除主 FSM 中独立的 `S_ECC_DIAG_WAIT` 状态，让 blocking 和 sidecar flush 更统一。
+4. 只有当 V32-B 面积回到 V31 附近后，再进入 V32-C 的 VRF bubble stealing。
+
+当前结论：V32-B 已完成 local-only same-cycle interleaving 的第一个可运行闭环，但还不是最终面积最优版本。
