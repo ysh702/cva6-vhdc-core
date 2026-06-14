@@ -339,6 +339,7 @@ module tb_hdec_ecc_pmul_bg_hdc_loop_v31;
         logic [255:0] expected_x_3g;
         logic [255:0] expected_y_3g;
         int unsigned start_cycle;
+        int unsigned standalone_hdc_cycles;
         int unsigned hdc_iters;
         bit done;
 
@@ -362,6 +363,11 @@ module tb_hdec_ecc_pmul_bg_hdc_loop_v31;
         write_row(6'd0, gx);
         write_row(6'd1, gy);
         write_row(6'd2, scalar);
+
+        start_cycle = cycle_count;
+        run_hdc_foreground_flow(result);
+        standalone_hdc_cycles = cycle_count - start_cycle;
+        $display("HDC_FULL_FLOW_STANDALONE_CYCLES=%0d", standalone_hdc_cycles);
 
         issue(HDEC_ECC_STATUS, ecc_pmul_operand(1'b1, 6'd4, 6'd0, 6'd2), status);
         if ((status[1:0] !== STATUS_OK) || (status[2] !== 1'b1) || (status[3] !== 1'b0)) begin
@@ -387,6 +393,7 @@ module tb_hdec_ecc_pmul_bg_hdc_loop_v31;
 
         $display("PMUL_BG_HDC_LOOP_WALL_CYCLES=%0d", cycle_count - start_cycle);
         $display("PMUL_BG_HDC_LOOP_HDC_ITERS=%0d", hdc_iters);
+        $display("PMUL_BG_HDC_LOOP_EQUIV_HDC_CYCLES=%0d", hdc_iters * standalone_hdc_cycles);
         $display("PMUL_BG_HDC_LOOP_STATUS_LOW16=%0d", status[31:16]);
 
         check_row("PMUL_BG_HDC_LOOP_3G_X", 6'd4, expected_x_3g);

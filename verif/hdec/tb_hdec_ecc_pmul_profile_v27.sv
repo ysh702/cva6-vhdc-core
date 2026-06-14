@@ -4,7 +4,19 @@ module tb_hdec_ecc_pmul_profile_v27;
     localparam int ST_RD_WAIT                 = 3;
     localparam int ST_UOP_P1_RD0              = 10;
     localparam int ST_ECC_LOAD_A_WAIT         = 21;
-    localparam int ST_ECC_INV_INIT            = 35;
+    localparam int ST_ECC_LOAD_A              = 22;
+    localparam int ST_ECC_LOAD_B_WAIT         = 23;
+    localparam int ST_ECC_LOAD_B              = 24;
+    localparam int ST_ECC_DIAG_ISSUE          = 25;
+    localparam int ST_ECC_DIAG_WAIT           = 26;
+    localparam int ST_ECC_LEAF_FOLD           = 27;
+    localparam int ST_ECC_WRITE_PAIR          = 28;
+    localparam int ST_ECC_WRITE_DRAIN         = 29;
+    localparam int ST_ECC_REDUCE_LOAD_LO_WAIT = 30;
+    localparam int ST_ECC_REDUCE_LOAD_LO      = 31;
+    localparam int ST_ECC_REDUCE_LOAD_HI_WAIT = 32;
+    localparam int ST_ECC_REDUCE_WRITE        = 33;
+    localparam int ST_ECC_INV_INIT            = 34;
 
     localparam int PH_INV_SQR                 = 1;
     localparam int PH_INV_MUL                 = 2;
@@ -53,6 +65,14 @@ module tb_hdec_ecc_pmul_profile_v27;
     int unsigned hbind_start_in_dbl;
     int unsigned hbind_start_in_affine;
     int unsigned inv_start_count;
+    int unsigned st_ecc_load_cycles;
+    int unsigned st_ecc_diag_cycles;
+    int unsigned st_ecc_leaf_fold_cycles;
+    int unsigned st_ecc_write_pair_cycles;
+    int unsigned st_ecc_write_drain_cycles;
+    int unsigned st_ecc_reduce_cycles;
+    int unsigned st_hspread_cycles;
+    int unsigned st_ecc_uop_cycles;
 
     hdec_top dut (
         .clk_i,
@@ -106,6 +126,14 @@ module tb_hdec_ecc_pmul_profile_v27;
             hbind_start_in_dbl = 0;
             hbind_start_in_affine = 0;
             inv_start_count = 0;
+            st_ecc_load_cycles = 0;
+            st_ecc_diag_cycles = 0;
+            st_ecc_leaf_fold_cycles = 0;
+            st_ecc_write_pair_cycles = 0;
+            st_ecc_write_drain_cycles = 0;
+            st_ecc_reduce_cycles = 0;
+            st_hspread_cycles = 0;
+            st_ecc_uop_cycles = 0;
         end
     endtask
 
@@ -171,6 +199,34 @@ module tb_hdec_ecc_pmul_profile_v27;
 
             if (st == ST_ECC_INV_INIT)
                 inv_start_count++;
+
+            unique case (st)
+                ST_ECC_LOAD_A_WAIT,
+                ST_ECC_LOAD_A,
+                ST_ECC_LOAD_B_WAIT,
+                ST_ECC_LOAD_B:
+                    st_ecc_load_cycles++;
+                ST_ECC_DIAG_ISSUE,
+                ST_ECC_DIAG_WAIT:
+                    st_ecc_diag_cycles++;
+                ST_ECC_LEAF_FOLD:
+                    st_ecc_leaf_fold_cycles++;
+                ST_ECC_WRITE_PAIR:
+                    st_ecc_write_pair_cycles++;
+                ST_ECC_WRITE_DRAIN:
+                    st_ecc_write_drain_cycles++;
+                ST_ECC_REDUCE_LOAD_LO_WAIT,
+                ST_ECC_REDUCE_LOAD_LO,
+                ST_ECC_REDUCE_LOAD_HI_WAIT,
+                ST_ECC_REDUCE_WRITE:
+                    st_ecc_reduce_cycles++;
+                51, 52:
+                    st_hspread_cycles++;
+                ST_UOP_P1_RD0, 11, 12, 13, 14, 15, 16, 17, 18, 19:
+                    if (dut.ecc_job_active_q)
+                        st_ecc_uop_cycles++;
+                default: begin end
+            endcase
         end
     endtask
 
@@ -340,6 +396,14 @@ module tb_hdec_ecc_pmul_profile_v27;
         $display("PMUL_PROFILE_HBIND_STARTS_DBL=%0d", hbind_start_in_dbl);
         $display("PMUL_PROFILE_HBIND_STARTS_AFFINE=%0d", hbind_start_in_affine);
         $display("PMUL_PROFILE_INV_STARTS=%0d", inv_start_count);
+        $display("PMUL_PROFILE_ST_ECC_LOAD_CYCLES=%0d", st_ecc_load_cycles);
+        $display("PMUL_PROFILE_ST_ECC_DIAG_CYCLES=%0d", st_ecc_diag_cycles);
+        $display("PMUL_PROFILE_ST_ECC_LEAF_FOLD_CYCLES=%0d", st_ecc_leaf_fold_cycles);
+        $display("PMUL_PROFILE_ST_ECC_WRITE_PAIR_CYCLES=%0d", st_ecc_write_pair_cycles);
+        $display("PMUL_PROFILE_ST_ECC_WRITE_DRAIN_CYCLES=%0d", st_ecc_write_drain_cycles);
+        $display("PMUL_PROFILE_ST_ECC_REDUCE_CYCLES=%0d", st_ecc_reduce_cycles);
+        $display("PMUL_PROFILE_ST_HSPREAD_CYCLES=%0d", st_hspread_cycles);
+        $display("PMUL_PROFILE_ST_ECC_UOP_CYCLES=%0d", st_ecc_uop_cycles);
 
         check_row("PMUL_PROFILE_3G_X", 6'd4, expected_x_3g);
         check_row("PMUL_PROFILE_3G_Y", 6'd5, expected_y_3g);
