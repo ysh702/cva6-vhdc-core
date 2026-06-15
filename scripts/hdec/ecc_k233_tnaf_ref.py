@@ -155,6 +155,10 @@ def tau_pow_pair(power: int) -> tuple[int, int]:
     return u, v
 
 
+def tau_pair_add(left: tuple[int, int], right: tuple[int, int]) -> tuple[int, int]:
+    return left[0] + right[0], left[1] + right[1]
+
+
 TAU_M_PAIR = tau_pow_pair(M)
 REL_ALPHA = (TAU_M_PAIR[0] - 1, TAU_M_PAIR[1])
 REL_BETA = tau_mul_pair(*REL_ALPHA)
@@ -212,6 +216,15 @@ def tau_divisible_by_pow(u: int, v: int, width: int) -> bool:
     return True
 
 
+def tau_div_by_pow(u: int, v: int, width: int) -> tuple[int, int]:
+    for _ in range(width):
+        divided = tau_div_once(u, v)
+        if divided is None:
+            raise AssertionError("value is not divisible by requested tau power")
+        u, v = divided
+    return u, v
+
+
 def choose_window_digit(u: int, v: int, width: int) -> int:
     if not (u & 1):
         return 0
@@ -225,6 +238,21 @@ def choose_window_digit(u: int, v: int, width: int) -> int:
     if not candidates:
         raise ValueError(f"no tau-NAF digit for u={u}, v={v}, width={width}")
     return min(candidates, key=lambda digit: (abs(digit), digit < 0))
+
+
+def choose_fixed_window_digit(u: int, v: int, width: int) -> int:
+    """Choose a centered integer digit so u+v*tau-digit is divisible by tau^w."""
+
+    bound = 1 << width
+    candidates: list[tuple[int, int]] = []
+    for digit in range(-bound, bound):
+        if not tau_divisible_by_pow(u - digit, v, width):
+            continue
+        next_u, next_v = tau_div_by_pow(u - digit, v, width)
+        candidates.append((tau_pair_norm(next_u, next_v), digit))
+    if not candidates:
+        raise ValueError(f"no fixed-window digit for u={u}, v={v}, width={width}")
+    return min(candidates, key=lambda item: (item[0], abs(item[1]), item[1] < 0))[1]
 
 
 def window_tnaf_digits(k: int, width: int) -> list[int]:
@@ -245,11 +273,76 @@ def window_tnaf_digits(k: int, width: int) -> list[int]:
     return digits
 
 
+def fixed_window_tau_pair_digits(u: int, v: int, width: int) -> list[int]:
+    if width < 2:
+        raise ValueError("window width must be at least 2")
+
+    digits: list[int] = []
+    while u or v:
+        digit = choose_fixed_window_digit(u, v, width)
+        digits.append(digit)
+        u, v = tau_div_by_pow(u - digit, v, width)
+    return digits
+
+
+def residue_window_table(width: int) -> list[tuple[int, int]]:
+    powers = [tau_pow_pair(i) for i in range(width)]
+    table: list[tuple[int, int]] = []
+    for mask in range(1 << width):
+        residue = (0, 0)
+        for bit in range(width):
+            if (mask >> bit) & 1:
+                residue = tau_pair_add(residue, powers[bit])
+        table.append(residue)
+    return table
+
+
+def residue_window_tau_pair_digits(u: int, v: int, width: int) -> list[int]:
+    if width < 1:
+        raise ValueError("window width must be at least 1")
+
+    table = residue_window_table(width)
+    digits: list[int] = []
+    while u or v:
+        selected = None
+        for mask, residue in enumerate(table):
+            if tau_divisible_by_pow(u - residue[0], v - residue[1], width):
+                selected = (mask, residue)
+                break
+        if selected is None:
+            raise ValueError(f"no residue digit for u={u}, v={v}, width={width}")
+        mask, residue = selected
+        digits.append(mask)
+        u, v = tau_div_by_pow(u - residue[0], v - residue[1], width)
+    return digits
+
+
 def eval_tau_digits(digits: list[int]) -> tuple[int, int]:
     u = 0
     v = 0
     for digit in reversed(digits):
         u, v = tau_mul_pair(u, v)
+        u += digit
+    return u, v
+
+
+def eval_residue_window_tau_digits(digits: list[int], width: int) -> tuple[int, int]:
+    table = residue_window_table(width)
+    u = 0
+    v = 0
+    for mask in reversed(digits):
+        for _ in range(width):
+            u, v = tau_mul_pair(u, v)
+        u, v = tau_pair_add((u, v), table[mask])
+    return u, v
+
+
+def eval_fixed_window_tau_digits(digits: list[int], width: int) -> tuple[int, int]:
+    u = 0
+    v = 0
+    for digit in reversed(digits):
+        for _ in range(width):
+            u, v = tau_mul_pair(u, v)
         u += digit
     return u, v
 
@@ -262,6 +355,30 @@ def precompute_odd_points(point: Point, max_digit: int) -> dict[int, Point]:
     two_point = point_double(point)
     for digit in range(3, max_digit + 1, 2):
         table[digit] = point_add(table[digit - 2], two_point)
+    return table
+
+
+def precompute_signed_digit_points(point: Point, max_digit: int) -> dict[int, Point]:
+    table: dict[int, Point] = {0: None}
+    for digit in range(1, max_digit + 1):
+        table[digit] = point_mul_binary(digit, point)
+    return table
+
+
+def precompute_residue_points(point: Point, width: int) -> dict[int, Point]:
+    tau_points: list[Point] = []
+    tau_point = point
+    for _ in range(width):
+        tau_points.append(tau_point)
+        tau_point = point_tau(tau_point)
+
+    table: dict[int, Point] = {0: None}
+    for mask in range(1, 1 << width):
+        accum: Point = None
+        for bit in range(width):
+            if (mask >> bit) & 1:
+                accum = point_add(accum, tau_points[bit])
+        table[mask] = accum
     return table
 
 
@@ -284,10 +401,48 @@ def point_mul_tau_digits(digits: list[int], point: Point) -> Point:
     return result
 
 
+def point_mul_tau_residue_window_digits(digits: list[int], point: Point, width: int) -> Point:
+    table = precompute_residue_points(point, width)
+
+    result: Point = None
+    for mask in reversed(digits):
+        for _ in range(width):
+            result = point_tau(result)
+        result = point_add(result, table[mask])
+    return result
+
+
+def point_mul_tau_fixed_window_digits(digits: list[int], point: Point, width: int) -> Point:
+    max_digit = max([abs(digit) for digit in digits] + [0])
+    table = precompute_signed_digit_points(point, max_digit)
+
+    result: Point = None
+    for digit in reversed(digits):
+        for _ in range(width):
+            result = point_tau(result)
+        if digit > 0:
+            result = point_add(result, table[digit])
+        elif digit < 0:
+            result = point_add(result, point_neg(table[-digit]))
+    return result
+
+
 def point_mul_tau_window_reduced(k: int, point: Point, width: int) -> tuple[Point, list[int], tuple[int, int]]:
     reduced = reduce_scalar_mod_tau_m_minus_one(k)
     digits = window_tnaf_pair_digits(reduced[0], reduced[1], width)
     return point_mul_tau_digits(digits, point), digits, reduced
+
+
+def point_mul_tau_residue_window_reduced(k: int, point: Point, width: int) -> tuple[Point, list[int], tuple[int, int]]:
+    reduced = reduce_scalar_mod_tau_m_minus_one(k)
+    digits = residue_window_tau_pair_digits(reduced[0], reduced[1], width)
+    return point_mul_tau_residue_window_digits(digits, point, width), digits, reduced
+
+
+def point_mul_tau_fixed_window_reduced(k: int, point: Point, width: int) -> tuple[Point, list[int], tuple[int, int]]:
+    reduced = reduce_scalar_mod_tau_m_minus_one(k)
+    digits = fixed_window_tau_pair_digits(reduced[0], reduced[1], width)
+    return point_mul_tau_fixed_window_digits(digits, point, width), digits, reduced
 
 
 def window_tnaf_pair_digits(u: int, v: int, width: int) -> list[int]:
@@ -326,6 +481,27 @@ class DigitStats:
     avg_mul8: float
 
 
+@dataclass(frozen=True)
+class FixedWindowStats:
+    width: int
+    avg_windows: float
+    max_windows: int
+    avg_zero_windows: float
+    max_digit: int
+    table_entries: int
+    constant_time_adds: int
+
+
+@dataclass(frozen=True)
+class ResidueWindowStats:
+    width: int
+    avg_windows: float
+    max_windows: int
+    avg_zero_masks: float
+    table_entries: int
+    constant_time_adds: int
+
+
 def digit_weight(digits: list[int]) -> int:
     return sum(1 for digit in digits if digit)
 
@@ -361,6 +537,61 @@ def collect_stats(samples: int, seed: int, reduced: bool) -> list[DigitStats]:
     return stats
 
 
+def collect_residue_window_stats(samples: int, seed: int) -> list[ResidueWindowStats]:
+    rng = random.Random(seed)
+    stats: list[ResidueWindowStats] = []
+    for width in range(2, 7):
+        lengths: list[int] = []
+        zero_counts: list[int] = []
+        for _ in range(samples):
+            scalar = rng.getrandbits(M)
+            u, v = reduce_scalar_mod_tau_m_minus_one(scalar)
+            digits = residue_window_tau_pair_digits(u, v, width)
+            lengths.append(len(digits))
+            zero_counts.append(sum(1 for digit in digits if digit == 0))
+        constant_time_adds = max(lengths)
+        stats.append(
+            ResidueWindowStats(
+                width=width,
+                avg_windows=sum(lengths) / samples,
+                max_windows=constant_time_adds,
+                avg_zero_masks=sum(zero_counts) / samples,
+                table_entries=1 << width,
+                constant_time_adds=constant_time_adds,
+            )
+        )
+    return stats
+
+
+def collect_fixed_window_stats(samples: int, seed: int) -> list[FixedWindowStats]:
+    rng = random.Random(seed)
+    stats: list[FixedWindowStats] = []
+    for width in range(2, 7):
+        lengths: list[int] = []
+        zero_counts: list[int] = []
+        max_digits: list[int] = []
+        for _ in range(samples):
+            scalar = rng.getrandbits(M)
+            u, v = reduce_scalar_mod_tau_m_minus_one(scalar)
+            digits = fixed_window_tau_pair_digits(u, v, width)
+            lengths.append(len(digits))
+            zero_counts.append(sum(1 for digit in digits if digit == 0))
+            max_digits.append(max([abs(digit) for digit in digits] + [0]))
+        constant_time_adds = max(lengths)
+        stats.append(
+            FixedWindowStats(
+                width=width,
+                avg_windows=sum(lengths) / samples,
+                max_windows=constant_time_adds,
+                avg_zero_windows=sum(zero_counts) / samples,
+                max_digit=max(max_digits),
+                table_entries=1 << (width + 1),
+                constant_time_adds=constant_time_adds,
+            )
+        )
+    return stats
+
+
 def run_self_test() -> None:
     base = (GX, GY)
     assert on_curve(base)
@@ -380,6 +611,9 @@ def run_self_test() -> None:
             reduced_result, reduced_digits, reduced_pair = point_mul_tau_window_reduced(scalar, base, width)
             assert reduced_result == binary
             assert eval_tau_digits(reduced_digits) == reduced_pair
+            residue_result, residue_digits, residue_pair = point_mul_tau_residue_window_reduced(scalar, base, width)
+            assert residue_result == binary
+            assert eval_residue_window_tau_digits(residue_digits, width) == residue_pair
 
 
 def print_scalar_examples() -> None:
@@ -390,13 +624,16 @@ def print_scalar_examples() -> None:
             digits = window_tnaf_digits(scalar, width)
             reduced_u, reduced_v = reduce_scalar_mod_tau_m_minus_one(scalar)
             reduced_digits = window_tnaf_pair_digits(reduced_u, reduced_v, width)
+            residue_digits = residue_window_tau_pair_digits(reduced_u, reduced_v, width)
             print(
                 f"  w={width}: len={len(digits):3d} "
                 f"weight={digit_weight(digits):3d} "
                 f"red_len={len(reduced_digits):3d} "
                 f"red_weight={digit_weight(reduced_digits):3d} "
                 f"max_digit={max([abs(digit) for digit in reduced_digits] + [0]):2d} "
-                f"red_est_5M={digit_weight(reduced_digits) * 5:4d}"
+                f"red_est_5M={digit_weight(reduced_digits) * 5:4d} "
+                f"residue_windows={len(residue_digits):3d} "
+                f"residue_table={1 << width:3d}"
             )
 
 
@@ -436,6 +673,18 @@ def main() -> None:
             f"{stat.max_weight:10d} "
             f"{stat.avg_mul5:7.2f} "
             f"{stat.avg_mul8:7.2f}"
+        )
+    print()
+    print("Constant-time reduced residue-window tau statistics")
+    print("width avg_windows max_windows avg_zero_masks table_entries ct_adds")
+    for stat in collect_residue_window_stats(args.samples, args.seed):
+        print(
+            f"{stat.width:5d} "
+            f"{stat.avg_windows:11.2f} "
+            f"{stat.max_windows:11d} "
+            f"{stat.avg_zero_masks:14.2f} "
+            f"{stat.table_entries:13d} "
+            f"{stat.constant_time_adds:7d}"
         )
     print()
     print("Note: reduced mode is an exact tau^m-1 lattice reduction model for K-233 points.")

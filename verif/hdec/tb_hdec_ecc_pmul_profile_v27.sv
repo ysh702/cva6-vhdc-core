@@ -337,8 +337,8 @@ module tb_hdec_ecc_pmul_profile_v27;
         logic [255:0] gx;
         logic [255:0] gy;
         logic [255:0] scalar;
-        logic [255:0] expected_x_3g;
-        logic [255:0] expected_y_3g;
+        logic [255:0] expected_x_rand;
+        logic [255:0] expected_y_rand;
         int unsigned pmul_wall_cycles;
 
         error_count = 0;
@@ -355,9 +355,9 @@ module tb_hdec_ecc_pmul_profile_v27;
 
         gx = 256'h0000017232ba853a7e731af129f22ff4149563a419c26bf50a4c9d6eefad6126;
         gy = 256'h000001db537dece819b7f70f555a67c427a8cd9bf18aeb9b56e0c11056fae6a3;
-        scalar = 256'd3;
-        expected_x_3g = 256'h0000004656e0aabbe341407715ca4a7fac287b41baa1f789c29bfa27e53a7a46;
-        expected_y_3g = 256'h000000f79a7245fba513df787a64c618e97ebcc078638ebaaa562e9862bc00ce;
+        scalar = 256'h000001807641b930b5b5658e21062f9465931d9dfc2010db64170d358aa115a0;
+        expected_x_rand = 256'h000000f43234b60b69a741092b0bae60cb7bdd1f4f41678ce500a24138589932;
+        expected_y_rand = 256'h000000cd8f8a1c7e66f52b0e7dd4f01c9c9d9c9c74e42ec48eaebd9ffa719484;
 
         write_row(6'd0, gx);
         write_row(6'd1, gy);
@@ -405,8 +405,8 @@ module tb_hdec_ecc_pmul_profile_v27;
         $display("PMUL_PROFILE_ST_HSPREAD_CYCLES=%0d", st_hspread_cycles);
         $display("PMUL_PROFILE_ST_ECC_UOP_CYCLES=%0d", st_ecc_uop_cycles);
 
-        check_row("PMUL_PROFILE_3G_X", 6'd4, expected_x_3g);
-        check_row("PMUL_PROFILE_3G_Y", 6'd5, expected_y_3g);
+        check_row("PMUL_PROFILE_RAND_X", 6'd4, expected_x_rand);
+        check_row("PMUL_PROFILE_RAND_Y", 6'd5, expected_y_rand);
 
         if (error_count == 0)
             $display("[HDEC_ECC_PMUL_PROFILE_V27] PASS");
