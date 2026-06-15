@@ -1411,8 +1411,44 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         end
 
         S_ECC_PMUL_READ_SCALAR: begin
-            ecc_pmul_scalar_bit_n=ecc_scalar_bit_from_row(vrf_rd, ecc_pmul_bit_q);
-            st_n=S_ECC_PMUL_START_ADD;
+            if (ecc_pmul_ctrl_q == ECC_PMUL_CTRL_INIT) begin
+                if (ecc_scalar_bit_from_row(vrf_rd, ecc_pmul_bit_q)) begin
+                    ecc_pmul_scalar_bit_n=1'b1;
+                    st_n=S_ECC_PMUL_START_ADD;
+                end else if ((ecc_pmul_bit_q == 8'd232) && (vrf_rd[3][40:0] == 41'd0)) begin
+                    ecc_pmul_bit_n=8'd191;
+                    vrf_req.ra=ecc_job_src_q;
+                    st_n=S_ECC_PMUL_READ_SCALAR_WAIT;
+                end else if ((ecc_pmul_bit_q == 8'd191) && (vrf_rd[2] == 64'd0)) begin
+                    ecc_pmul_bit_n=8'd127;
+                    vrf_req.ra=ecc_job_src_q;
+                    st_n=S_ECC_PMUL_READ_SCALAR_WAIT;
+                end else if ((ecc_pmul_bit_q == 8'd127) && (vrf_rd[1] == 64'd0)) begin
+                    ecc_pmul_bit_n=8'd63;
+                    vrf_req.ra=ecc_job_src_q;
+                    st_n=S_ECC_PMUL_READ_SCALAR_WAIT;
+                end else if ((ecc_pmul_bit_q == 8'd63) && (vrf_rd[0][63:32] == 32'd0)) begin
+                    ecc_pmul_bit_n=8'd31;
+                    vrf_req.ra=ecc_job_src_q;
+                    st_n=S_ECC_PMUL_READ_SCALAR_WAIT;
+                end else if ((ecc_pmul_bit_q == 8'd31) && (vrf_rd[0][31:16] == 16'd0)) begin
+                    ecc_pmul_bit_n=8'd15;
+                    vrf_req.ra=ecc_job_src_q;
+                    st_n=S_ECC_PMUL_READ_SCALAR_WAIT;
+                end else if (ecc_pmul_bit_q != 8'd0) begin
+                    ecc_pmul_bit_n=ecc_pmul_bit_q - 8'd1;
+                    vrf_req.ra=ecc_job_src_q;
+                    st_n=S_ECC_PMUL_READ_SCALAR_WAIT;
+                end else begin
+                    ecc_pmul_ctrl_n=ECC_PMUL_CTRL_FINAL;
+                    ecc_pmul_subop_n=ECC_PMUL_SUB_ZERO_OUT;
+                    ecc_pmul_step_n='0;
+                    st_n=S_ECC_PMUL_STEP;
+                end
+            end else begin
+                ecc_pmul_scalar_bit_n=ecc_scalar_bit_from_row(vrf_rd, ecc_pmul_bit_q);
+                st_n=S_ECC_PMUL_START_ADD;
+            end
         end
 
         S_ECC_PMUL_START_ADD: begin
