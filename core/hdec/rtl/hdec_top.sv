@@ -142,14 +142,13 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     logic [1:0]           ecc_fold_word_q, ecc_fold_word_n;
     logic                 ecc_pipe0_valid_q, ecc_pipe0_valid_n;
     logic [2:0]           ecc_pipe0_diag_slot_q, ecc_pipe0_diag_slot_n;
-    logic [LANE_NUM-1:0][LANE_WIDTH-1:0] ecc_partial_vec;
-    logic [LANE_NUM-1:0][LANE_WIDTH-1:0] ecc_partial_pair_vec;
+    logic [LANE_NUM-1:0][1:0]           lane_ecc_diag_parity;
+    logic [LANE_NUM-1:0][1:0]           lane_ecc_diag_pair_parity;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] pop_src_a;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] pop_src_b;
     logic [7:0]           ecc_diag8_parity;
     logic [7:0]           ecc_diag8_pair_parity;
     logic [15:0]          ecc_diag16_pipe_q, ecc_diag16_pipe_n;
-    logic [2:0]           ecc_diag_pair_slot;
     logic [2:0]           ecc_diag_next_even_slot;
     logic                 ecc_diag_pair_last;
     logic [5:0]           ecc_leaf_path_q, ecc_leaf_path_n;
@@ -314,33 +313,16 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     assign ecc_pmul_dbl_z = ecc_pmul_scalar_bit_q ? ECC_PMUL_R1Z : ECC_PMUL_R0Z;
     assign ecc_reduce_result = ecc_reduce233({vrf_rd[3], vrf_rd[2], vrf_rd[1], vrf_rd[0],
                                               hdc_src0_q[3], hdc_src0_q[2], hdc_src0_q[1], hdc_src0_q[0]});
-    assign ecc_diag_pair_slot = {ecc_diag_slot_q[2:1], 1'b1};
     assign ecc_diag_next_even_slot = {ecc_diag_slot_q[2:1] + 2'd1, 1'b0};
     assign ecc_diag_pair_last = ecc_diag_slot_q[2] & ecc_diag_slot_q[1];
-    assign ecc_diag8_parity = {^ecc_partial_vec[3][63:32], ^ecc_partial_vec[3][31:0],
-                               ^ecc_partial_vec[2][63:32], ^ecc_partial_vec[2][31:0],
-                               ^ecc_partial_vec[1][63:32], ^ecc_partial_vec[1][31:0],
-                               ^ecc_partial_vec[0][63:32], ^ecc_partial_vec[0][31:0]};
-    assign ecc_diag8_pair_parity = {^ecc_partial_pair_vec[3][63:32], ^ecc_partial_pair_vec[3][31:0],
-                                    ^ecc_partial_pair_vec[2][63:32], ^ecc_partial_pair_vec[2][31:0],
-                                    ^ecc_partial_pair_vec[1][63:32], ^ecc_partial_pair_vec[1][31:0],
-                                    ^ecc_partial_pair_vec[0][63:32], ^ecc_partial_pair_vec[0][31:0]};
-    assign ecc_partial_vec[0] = {ecc_diag32_partial(ecc_leaf_a_q, ecc_leaf_b_q, {1'b0, ecc_diag_slot_q, 3'b000} + 7'd1),
-                                 ecc_diag32_partial(ecc_leaf_a_q, ecc_leaf_b_q, {1'b0, ecc_diag_slot_q, 3'b000} + 7'd0)};
-    assign ecc_partial_vec[1] = {ecc_diag32_partial(ecc_leaf_a_q, ecc_leaf_b_q, {1'b0, ecc_diag_slot_q, 3'b000} + 7'd3),
-                                 ecc_diag32_partial(ecc_leaf_a_q, ecc_leaf_b_q, {1'b0, ecc_diag_slot_q, 3'b000} + 7'd2)};
-    assign ecc_partial_vec[2] = {ecc_diag32_partial(ecc_leaf_a_q, ecc_leaf_b_q, {1'b0, ecc_diag_slot_q, 3'b000} + 7'd5),
-                                 ecc_diag32_partial(ecc_leaf_a_q, ecc_leaf_b_q, {1'b0, ecc_diag_slot_q, 3'b000} + 7'd4)};
-    assign ecc_partial_vec[3] = {ecc_diag32_partial(ecc_leaf_a_q, ecc_leaf_b_q, {1'b0, ecc_diag_slot_q, 3'b000} + 7'd7),
-                                 ecc_diag32_partial(ecc_leaf_a_q, ecc_leaf_b_q, {1'b0, ecc_diag_slot_q, 3'b000} + 7'd6)};
-    assign ecc_partial_pair_vec[0] = {ecc_diag32_partial(ecc_leaf_a_q, ecc_leaf_b_q, {1'b0, ecc_diag_pair_slot, 3'b000} + 7'd1),
-                                      ecc_diag32_partial(ecc_leaf_a_q, ecc_leaf_b_q, {1'b0, ecc_diag_pair_slot, 3'b000} + 7'd0)};
-    assign ecc_partial_pair_vec[1] = {ecc_diag32_partial(ecc_leaf_a_q, ecc_leaf_b_q, {1'b0, ecc_diag_pair_slot, 3'b000} + 7'd3),
-                                      ecc_diag32_partial(ecc_leaf_a_q, ecc_leaf_b_q, {1'b0, ecc_diag_pair_slot, 3'b000} + 7'd2)};
-    assign ecc_partial_pair_vec[2] = {ecc_diag32_partial(ecc_leaf_a_q, ecc_leaf_b_q, {1'b0, ecc_diag_pair_slot, 3'b000} + 7'd5),
-                                      ecc_diag32_partial(ecc_leaf_a_q, ecc_leaf_b_q, {1'b0, ecc_diag_pair_slot, 3'b000} + 7'd4)};
-    assign ecc_partial_pair_vec[3] = {ecc_diag32_partial(ecc_leaf_a_q, ecc_leaf_b_q, {1'b0, ecc_diag_pair_slot, 3'b000} + 7'd7),
-                                      ecc_diag32_partial(ecc_leaf_a_q, ecc_leaf_b_q, {1'b0, ecc_diag_pair_slot, 3'b000} + 7'd6)};
+    assign ecc_diag8_parity = {lane_ecc_diag_parity[3][1], lane_ecc_diag_parity[3][0],
+                               lane_ecc_diag_parity[2][1], lane_ecc_diag_parity[2][0],
+                               lane_ecc_diag_parity[1][1], lane_ecc_diag_parity[1][0],
+                               lane_ecc_diag_parity[0][1], lane_ecc_diag_parity[0][0]};
+    assign ecc_diag8_pair_parity = {lane_ecc_diag_pair_parity[3][1], lane_ecc_diag_pair_parity[3][0],
+                                    lane_ecc_diag_pair_parity[2][1], lane_ecc_diag_pair_parity[2][0],
+                                    lane_ecc_diag_pair_parity[1][1], lane_ecc_diag_pair_parity[1][0],
+                                    lane_ecc_diag_pair_parity[0][1], lane_ecc_diag_pair_parity[0][0]};
 
     function automatic hdec_op_t p4_arch_from_uop(input hdec_uop_type_e op_type);
         unique case (op_type)
@@ -614,24 +596,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         end
     endfunction
 
-    function automatic logic [31:0] ecc_diag32_partial(
-        input logic [31:0] a_word,
-        input logic [31:0] b_word,
-        input logic [6:0]  diag_idx
-    );
-        logic [31:0] partial;
-        int signed b_idx;
-        begin
-            partial = '0;
-            for (int signed i = 0; i < 32; i++) begin
-                b_idx = int'(diag_idx) - i;
-                if ((b_idx >= 0) && (b_idx < 32))
-                    partial[i] = a_word[i] & b_word[b_idx];
-            end
-            ecc_diag32_partial = partial;
-        end
-    endfunction
-
     function automatic logic [63:0] ecc_product_word(
         input logic [511:0] product,
         input logic [2:0]   word_idx
@@ -829,18 +793,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         assign pop_src_a[lid] = hdc_xor_issue ? hdc_src0_q[lid] : vrf_rd[lid];
         assign pop_src_b[lid] = vrf_rd[lid];
 
-        hdec_p2_pop_slice i_p2_pop_slice (
-            .clk_i,
-            .rst_ni,
-            .pop_d_i          (hdc_pop_issue),
-            .xor_d_i          (hdc_xor_issue),
-            .src_a_i          (pop_src_a[lid]),
-            .src_b_i          (pop_src_b[lid]),
-            .xor_result_o     (lane_bool_result[lid]),
-            .popcount_part_q_o(lane_popcnt_part_q[lid])
-        );
-
         hdec_lane_4x64 #(.LANE_ID(lid)) i_lane (
+            .clk_i(clk_i), .rst_ni(rst_ni),
             .vrf_ra_addr_o(), .vrf_ra_data_i('0),
             .vrf_we_o(), .vrf_wa_addr_o(), .vrf_wdata_o(),
             .ctrl_valid_i('0), .ctrl_ready_o(), .ctrl_owner_i('0), .ctrl_op_i(HDEC_VWR64),
@@ -850,11 +804,11 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             .neighbor_in_i('0), .neighbor_out_o(), .carry_in_i('0), .carry_out_o(),
             .borrow_in_i('0), .borrow_out_o(), .count_in_i('0), .count_out_o(),
             .flag_in_i('0), .flag_out_o(), .local_wb_data_o(), .local_wb_addr_o(), .local_wb_we_o(),
-            .bool_valid_i(1'b0),
-            .bool_src_a_i('0),
-            .bool_src_b_i('0),
-            .bool_result_o(),
-            .popcount_count_o(),
+            .bool_tag_i({hdc_pop_issue, hdc_xor_issue}),
+            .bool_src_a_i(pop_src_a[lid]),
+            .bool_src_b_i(pop_src_b[lid]),
+            .bool_result_q_o(lane_bool_result[lid]),
+            .popcount_part_q_o(lane_popcnt_part_q[lid]),
             .cnt_valid_i(lane_cnt_valid[lid]),
             .cnt_hv_word_i(hdc_src0_q[lid]),
             .cnt_old_counter_i(vrf_rd[lid]),
@@ -868,7 +822,12 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             .clip_valid_i(lane_clip_valid[lid]),
             .clip_counter_i(vrf_rd[lid]),
             .clip_threshold_i(hcntclip_threshold_q),
-            .clip_bits_o(lane_clip_bits[lid])
+            .clip_bits_o(lane_clip_bits[lid]),
+            .ecc_diag_a_i(ecc_leaf_a_q),
+            .ecc_diag_b_i(ecc_leaf_b_q),
+            .ecc_diag_slot_i(ecc_diag_slot_q),
+            .ecc_diag_parity_o(lane_ecc_diag_parity[lid]),
+            .ecc_diag_pair_parity_o(lane_ecc_diag_pair_parity[lid])
         );
     end
 
