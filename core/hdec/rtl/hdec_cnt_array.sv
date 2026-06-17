@@ -18,20 +18,32 @@ module hdec_cnt_array (
     logic [5:0] bit_base;
     assign bit_base = {subgroup_i, 4'b0000};
 
-    for (genvar ni = 0; ni < 16; ni++) begin : gen_cnt_nibble
-        logic [3:0] old_cnt;
-        logic       hv_bit;
-        logic       inc_en;
-        logic [4:0] inc_sum;
+    logic [15:0] p0;
+    logic [15:0] p1;
+    logic [15:0] p2;
+    logic [15:0] p3;
+    logic [15:0] hv_slice;
+    logic [15:0] max_mask;
+    logic [15:0] carry0;
+    logic [15:0] carry1;
+    logic [15:0] carry2;
+    logic [15:0] carry3;
 
-        assign old_cnt = old_counter_i[4*ni +: 4];
-        assign hv_bit  = hv_word_i[bit_base + ni];
-        assign inc_en  = hv_bit & ~&old_cnt;
-        assign inc_sum = {1'b0, old_cnt} + {4'b0, inc_en};
+    assign p0       = old_counter_i[15:0];
+    assign p1       = old_counter_i[31:16];
+    assign p2       = old_counter_i[47:32];
+    assign p3       = old_counter_i[63:48];
+    assign hv_slice = hv_word_i[bit_base +: 16];
+    assign max_mask = p0 & p1 & p2 & p3;
 
-        always_comb begin
-            new_counter_o[4*ni +: 4] = inc_sum[3:0];
-        end
-    end
+    assign carry0 = hv_slice & ~max_mask;
+    assign carry1 = p0 & carry0;
+    assign carry2 = p1 & carry1;
+    assign carry3 = p2 & carry2;
+
+    assign new_counter_o[15:0]   = p0 ^ carry0;
+    assign new_counter_o[31:16]  = p1 ^ carry1;
+    assign new_counter_o[47:32]  = p2 ^ carry2;
+    assign new_counter_o[63:48]  = p3 ^ carry3;
 
 endmodule
