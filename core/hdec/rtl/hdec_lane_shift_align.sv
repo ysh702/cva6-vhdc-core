@@ -15,11 +15,14 @@ module hdec_lane_shift_align (
     output logic [63:0] result_o
 );
 
-    logic [127:0] cat_word;
-    logic [127:0] shifted_word;
+    logic [63:0] lo_shift;
+    logic [63:0] hi_shift;
+    logic [5:0]  hi_shift_amt;
 
-    assign cat_word = {src_b_i, src_a_i};
-    assign shifted_word = cat_word >> bit_shift_i;
-    assign result_o = shifted_word[63:0];
+    assign lo_shift = src_a_i >> bit_shift_i;
+    assign hi_shift_amt = 6'd0 - bit_shift_i;
+    assign hi_shift = (bit_shift_i == 6'd0) ? 64'b0
+                                            : (src_b_i << hi_shift_amt);
+    assign result_o = lo_shift | hi_shift;
 
 endmodule

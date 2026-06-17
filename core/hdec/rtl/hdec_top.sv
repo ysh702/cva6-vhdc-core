@@ -96,6 +96,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] lane_bool_result;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] lane_cnt_new_counter;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] lane_shift_a,lane_shift_b,lane_shift_result;
+    logic [4:0][LANE_WIDTH-1:0]          lane_shift_window;
     logic [5:0]                          lane_shift_bit;
     logic [LANE_NUM-1:0][15:0]           lane_clip_bits;
 
@@ -896,20 +897,38 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         ecc_pmul_r0_inf_n=ecc_pmul_r0_inf_q;
         ecc_pmul_const_one_n=ecc_pmul_const_one_q; ecc_pmul_result_n=ecc_pmul_result_q; ecc_pmul_point_n=ecc_pmul_point_q;
         ecc_pipe0_valid_n=1'b0; ecc_pipe0_diag_slot_n=ecc_pipe0_diag_slot_q;
-        lane_shift_a='0; lane_shift_b='0; lane_shift_bit='0;
+        lane_shift_a='0; lane_shift_b='0; lane_shift_window='0; lane_shift_bit='0;
         vrf_req.ra='0; vrf_req.we='0; vrf_req.wa='x; vrf_req.wd='x;
 
         if (p2_lane_compute_q && uop_p2_q.valid) begin
             if (uop_p2_use_shift) begin
                 lane_shift_bit = {uop_p2_q.perm_nibble, hperm_bit_low_q};
-                lane_shift_a[0]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd0,hdc_src0_q,vrf_rd);
-                lane_shift_a[1]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd1,hdc_src0_q,vrf_rd);
-                lane_shift_a[2]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd2,hdc_src0_q,vrf_rd);
-                lane_shift_a[3]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd3,hdc_src0_q,vrf_rd);
-                lane_shift_b[0]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd1,hdc_src0_q,vrf_rd);
-                lane_shift_b[1]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd2,hdc_src0_q,vrf_rd);
-                lane_shift_b[2]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd3,hdc_src0_q,vrf_rd);
-                lane_shift_b[3]=hperm_pick_word({1'b0,hperm_lane_base_q}+3'd4,hdc_src0_q,vrf_rd);
+                unique case (hperm_lane_base_q)
+                2'd0: begin
+                    lane_shift_window[0]=hdc_src0_q[0]; lane_shift_window[1]=hdc_src0_q[1];
+                    lane_shift_window[2]=hdc_src0_q[2]; lane_shift_window[3]=hdc_src0_q[3];
+                    lane_shift_window[4]=vrf_rd[0];
+                end
+                2'd1: begin
+                    lane_shift_window[0]=hdc_src0_q[1]; lane_shift_window[1]=hdc_src0_q[2];
+                    lane_shift_window[2]=hdc_src0_q[3]; lane_shift_window[3]=vrf_rd[0];
+                    lane_shift_window[4]=vrf_rd[1];
+                end
+                2'd2: begin
+                    lane_shift_window[0]=hdc_src0_q[2]; lane_shift_window[1]=hdc_src0_q[3];
+                    lane_shift_window[2]=vrf_rd[0];     lane_shift_window[3]=vrf_rd[1];
+                    lane_shift_window[4]=vrf_rd[2];
+                end
+                default: begin
+                    lane_shift_window[0]=hdc_src0_q[3]; lane_shift_window[1]=vrf_rd[0];
+                    lane_shift_window[2]=vrf_rd[1];     lane_shift_window[3]=vrf_rd[2];
+                    lane_shift_window[4]=vrf_rd[3];
+                end
+                endcase
+                lane_shift_a[0]=lane_shift_window[0]; lane_shift_a[1]=lane_shift_window[1];
+                lane_shift_a[2]=lane_shift_window[2]; lane_shift_a[3]=lane_shift_window[3];
+                lane_shift_b[0]=lane_shift_window[1]; lane_shift_b[1]=lane_shift_window[2];
+                lane_shift_b[2]=lane_shift_window[3]; lane_shift_b[3]=lane_shift_window[4];
             end
             if (uop_p2_use_counter)
                 lane_result_n = lane_cnt_new_counter;
@@ -2012,11 +2031,18 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         S_UOP_P3_GLOBAL: begin
             uop_p3_n.valid  = 1'b0;
             p4_arch_op_n    = ecc_mac_q ? HDEC_ECC_MUL : p4_arch_from_uop(uop_p3_q.op_type);
-            unique case (uop_p3_q.op_type)
-            UOP_HBIND_CHUNK: begin
+            if (uop_p3_q.op_type == UOP_HBIND_CHUNK) begin
                 vrf_req.we = '1;
-                vrf_req.wa=uop_p3_q.dst_addr;
+                vrf_req.wa = uop_p3_q.dst_addr;
                 vrf_req.wd = lane_bool_result;
+            end else if ((uop_p3_q.op_type == UOP_HCNTADD_SUBGROUP)
+                      || (uop_p3_q.op_type == UOP_HPERM_CHUNK)) begin
+                vrf_req.we = '1;
+                vrf_req.wa = uop_p3_q.dst_addr;
+                vrf_req.wd = lane_result_q;
+            end
+            unique case (uop_p3_q.op_type)
+            UOP_HBIND_CHUNK, UOP_HPERM_CHUNK: begin
                 if (uop_p3_q.chunk_idx == 2'd3) st_n = S_UOP_P4_RESP;
                 else begin
                     uop_p0_n = uop_p3_q; uop_p0_n.valid = 1'b1;
@@ -2031,9 +2057,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                 st_n = S_UOP_P3_POP_CAPTURE;
             end
             UOP_HCNTADD_SUBGROUP: begin
-                vrf_req.we = '1;
-                vrf_req.wa=uop_p3_q.dst_addr;
-                vrf_req.wd = lane_result_q;
                 if (uop_p3_q.subgroup_idx < 2'd3) begin
                     vrf_req.ra=uop_p3_q.dst_addr + 6'd1;
                     // Advance uop to P2 directly (skip P1_RD0/P1_RD1)
@@ -2069,20 +2092,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                 end else begin
                     // word complete; go to dedicated write state
                     st_n = S_UOP_CLIP_WRITE;
-                end
-            end
-            UOP_HPERM_CHUNK: begin
-                vrf_req.we = '1;
-                vrf_req.wa=uop_p3_q.dst_addr;
-                vrf_req.wd = lane_result_q;
-                if (uop_p3_q.chunk_idx == 2'd3) st_n = S_UOP_P4_RESP;
-                else begin
-                    uop_p0_n = uop_p3_q; uop_p0_n.valid = 1'b1;
-                    uop_p0_n.chunk_idx = uop_p3_q.chunk_idx + 2'd1;
-                    uop_p0_n.src0_addr = uop_p3_q.src0_addr + 6'd1;
-                    uop_p0_n.src1_addr = uop_p3_q.src1_addr + 6'd1;
-                    uop_p0_n.dst_addr  = uop_p3_q.dst_addr  + 6'd1;
-                    st_n = S_UOP_P1_RD0;
                 end
             end
             default: st_n = S_UOP_P4_RESP;
