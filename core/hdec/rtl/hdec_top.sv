@@ -146,6 +146,12 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     logic [LANE_NUM-1:0][1:0]           lane_ecc_diag_pair_parity;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] pop_src_a;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] pop_src_b;
+    logic [LANE_NUM-1:0][LANE_WIDTH-1:0] ecc_reduce_src0;
+    logic [LANE_NUM-1:0][LANE_WIDTH-1:0] ecc_reduce_src1;
+    logic [LANE_NUM-1:0][LANE_WIDTH-1:0] ecc_reduce_src2;
+    logic [LANE_NUM-1:0][LANE_WIDTH-1:0] ecc_reduce_src3;
+    logic [LANE_NUM-1:0][LANE_WIDTH-1:0] ecc_reduce_src4;
+    logic [LANE_NUM-1:0][LANE_WIDTH-1:0] lane_ecc_reduce_word;
     logic [7:0]           ecc_diag8_parity;
     logic [7:0]           ecc_diag8_pair_parity;
     logic [15:0]          ecc_diag16_pipe_q, ecc_diag16_pipe_n;
@@ -160,7 +166,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     logic [63:0]          ecc_product_even_contrib;
     logic [63:0]          ecc_product_odd_contrib;
     logic [VRF_IDX_W-1:0] ecc_product_wb_addr;
-    logic [255:0]         ecc_reduce_result;
     logic                 ecc_autoreduce_q, ecc_autoreduce_n;
     logic                 ecc_mac_q, ecc_mac_n;
     logic [6:0]           ecc_sqr_repeat_q, ecc_sqr_repeat_n;
@@ -311,8 +316,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     assign ecc_pmul_add_out_z = ecc_pmul_scalar_bit_q ? ECC_PMUL_R0Z : ECC_PMUL_R1Z;
     assign ecc_pmul_dbl_x = ecc_pmul_scalar_bit_q ? ECC_PMUL_R1X : ECC_PMUL_R0X;
     assign ecc_pmul_dbl_z = ecc_pmul_scalar_bit_q ? ECC_PMUL_R1Z : ECC_PMUL_R0Z;
-    assign ecc_reduce_result = ecc_reduce233({vrf_rd[3], vrf_rd[2], vrf_rd[1], vrf_rd[0],
-                                              hdc_src0_q[3], hdc_src0_q[2], hdc_src0_q[1], hdc_src0_q[0]});
     assign ecc_diag_next_even_slot = {ecc_diag_slot_q[2:1] + 2'd1, 1'b0};
     assign ecc_diag_pair_last = ecc_diag_slot_q[2] & ecc_diag_slot_q[1];
     assign ecc_diag8_parity = {lane_ecc_diag_parity[3][1], lane_ecc_diag_parity[3][0],
@@ -419,27 +422,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             hspread_half64 = '0;
             for (int bit_idx = 0; bit_idx < 32; bit_idx++)
                 hspread_half64[bit_idx << 1] = half_word[bit_idx];
-        end
-    endfunction
-
-    function automatic logic [255:0] ecc_reduce233(
-        input logic [511:0] product
-    );
-        logic [352:0] stage1;
-        logic [119:0] stage2_hi;
-        begin
-            stage1 = '0;
-            // GF(2^233), f(x)=x^233+x^74+1:
-            // every coefficient at x^(233+j) folds to x^j and x^(74+j).
-            stage1[232:0] = product[232:0];
-            stage1[278:0] = stage1[278:0] ^ product[511:233];
-            stage1[352:74] = stage1[352:74] ^ product[511:233];
-
-            stage2_hi = stage1[352:233];
-            ecc_reduce233 = '0;
-            ecc_reduce233[232:0] = stage1[232:0];
-            ecc_reduce233[119:0] = ecc_reduce233[119:0] ^ stage2_hi;
-            ecc_reduce233[193:74] = ecc_reduce233[193:74] ^ stage2_hi;
         end
     endfunction
 
@@ -788,6 +770,30 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         end
     endfunction
 
+    assign ecc_reduce_src0[0] = hdc_src0_q[0];
+    assign ecc_reduce_src1[0] = {vrf_rd[0][40:0], hdc_src0_q[3][63:41]};
+    assign ecc_reduce_src2[0] = {vrf_rd[3][7:0], vrf_rd[2][63:8]};
+    assign ecc_reduce_src3[0] = {18'b0, vrf_rd[3][63:18]};
+    assign ecc_reduce_src4[0] = '0;
+
+    assign ecc_reduce_src0[1] = hdc_src0_q[1];
+    assign ecc_reduce_src1[1] = {vrf_rd[1][40:0], vrf_rd[0][63:41]};
+    assign ecc_reduce_src2[1] = {vrf_rd[0][30:0], hdc_src0_q[3][63:41], 10'b0};
+    assign ecc_reduce_src3[1] = {vrf_rd[2][61:8], 10'b0};
+    assign ecc_reduce_src4[1] = {54'b0, vrf_rd[3][17:8]};
+
+    assign ecc_reduce_src0[2] = hdc_src0_q[2];
+    assign ecc_reduce_src1[2] = {vrf_rd[2][40:0], vrf_rd[1][63:41]};
+    assign ecc_reduce_src2[2] = {vrf_rd[1][30:0], vrf_rd[0][63:31]};
+    assign ecc_reduce_src3[2] = {vrf_rd[3][61:0], vrf_rd[2][63:62]};
+    assign ecc_reduce_src4[2] = '0;
+
+    assign ecc_reduce_src0[3] = {23'b0, hdc_src0_q[3][40:0]};
+    assign ecc_reduce_src1[3] = {23'b0, vrf_rd[3][17:0], vrf_rd[2][63:41]};
+    assign ecc_reduce_src2[3] = {23'b0, vrf_rd[2][7:0], vrf_rd[1][63:31]};
+    assign ecc_reduce_src3[3] = {62'b0, vrf_rd[3][63:62]};
+    assign ecc_reduce_src4[3] = '0;
+
     // ── 4× Lane instances ───────────────────────────────────────────────────
     for (genvar lid = 0; lid < LANE_NUM; lid++) begin : gen_lane
         assign pop_src_a[lid] = hdc_xor_issue ? hdc_src0_q[lid] : vrf_rd[lid];
@@ -807,7 +813,13 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             .bool_tag_i({hdc_pop_issue, hdc_xor_issue}),
             .bool_src_a_i(pop_src_a[lid]),
             .bool_src_b_i(pop_src_b[lid]),
+            .bool_src_c_i(ecc_reduce_src2[lid]),
+            .bool_src_d_i(ecc_reduce_src3[lid]),
+            .bool_src_e_i(ecc_reduce_src4[lid]),
+            .ecc_reduce_src_a_i(ecc_reduce_src0[lid]),
+            .ecc_reduce_src_b_i(ecc_reduce_src1[lid]),
             .bool_result_q_o(lane_bool_result[lid]),
+            .ecc_reduce_word_o(lane_ecc_reduce_word[lid]),
             .popcount_part_q_o(lane_popcnt_part_q[lid]),
             .cnt_valid_i(lane_cnt_valid[lid]),
             .cnt_hv_word_i(hdc_src0_q[lid]),
@@ -884,7 +896,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         lane_shift_valid='0;
         lane_shift_a='0; lane_shift_b='0; lane_shift_bit='0;
         lane_clip_valid='0;
-        vrf_req.ra='0; vrf_req.we='0; vrf_req.wa='0; vrf_req.wd='0;
+        vrf_req.ra='0; vrf_req.we='0; vrf_req.wa='x; vrf_req.wd='x;
 
         if (p2_lane_compute_q && uop_p2_q.valid) begin
             if (uop_p2_use_counter)
@@ -1425,10 +1437,10 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         S_ECC_REDUCE_WRITE: begin
             vrf_req.we = '1;
             vrf_req.wa=ecc_dst_q;
-            vrf_req.wd[0]=ecc_reduce_result[63:0];
-            vrf_req.wd[1]=ecc_reduce_result[127:64];
-            vrf_req.wd[2]=ecc_reduce_result[191:128];
-            vrf_req.wd[3]=ecc_reduce_result[255:192];
+            vrf_req.wd[0]=lane_ecc_reduce_word[0];
+            vrf_req.wd[1]=lane_ecc_reduce_word[1];
+            vrf_req.wd[2]=lane_ecc_reduce_word[2];
+            vrf_req.wd[3]=lane_ecc_reduce_word[3];
             ecc_autoreduce_n=1'b0;
             if (ecc_mac_q && (ecc_sqr_repeat_q == 7'd0)) begin
                 uop_p0_n='0;

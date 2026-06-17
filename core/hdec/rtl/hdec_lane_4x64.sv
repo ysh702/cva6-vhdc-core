@@ -61,7 +61,13 @@ module hdec_lane_4x64
     input  logic [1:0]                        bool_tag_i,
     input  logic [LANE_WIDTH-1:0]             bool_src_a_i,
     input  logic [LANE_WIDTH-1:0]             bool_src_b_i,
+    input  logic [LANE_WIDTH-1:0]             bool_src_c_i,
+    input  logic [LANE_WIDTH-1:0]             bool_src_d_i,
+    input  logic [LANE_WIDTH-1:0]             bool_src_e_i,
+    input  logic [LANE_WIDTH-1:0]             ecc_reduce_src_a_i,
+    input  logic [LANE_WIDTH-1:0]             ecc_reduce_src_b_i,
     output logic [LANE_WIDTH-1:0]             bool_result_q_o,
+    output logic [LANE_WIDTH-1:0]             ecc_reduce_word_o,
 
     // ── HDC-only popcount path ──────────────────────────────────────────────
     output logic [1:0][5:0]                   popcount_part_q_o,
@@ -95,6 +101,7 @@ module hdec_lane_4x64
 
     // ── XOR Front-End Core ──────────────────────────────────────────────────
     logic        pop_q;
+    logic [LANE_WIDTH-1:0] bool_xor_word;
     logic [63:0] bool_result_q;
     logic [1:0][5:0] popcount_part_count;
 
@@ -166,14 +173,55 @@ module hdec_lane_4x64
         end
     endfunction
 
+    function automatic logic [3:0] ecc_diag32_quad_parity(
+        input logic [31:0] a_word,
+        input logic [31:0] b_word,
+        input logic [1:0]  slot_group
+    );
+        logic [31:0] b_rev;
+        begin
+            b_rev = {b_word[0],  b_word[1],  b_word[2],  b_word[3],
+                     b_word[4],  b_word[5],  b_word[6],  b_word[7],
+                     b_word[8],  b_word[9],  b_word[10], b_word[11],
+                     b_word[12], b_word[13], b_word[14], b_word[15],
+                     b_word[16], b_word[17], b_word[18], b_word[19],
+                     b_word[20], b_word[21], b_word[22], b_word[23],
+                     b_word[24], b_word[25], b_word[26], b_word[27],
+                     b_word[28], b_word[29], b_word[30], b_word[31]};
+            unique case (slot_group)
+            2'd0: ecc_diag32_quad_parity = {
+                ^(a_word & ecc_diag32_align_b(b_rev, 8 + LANE_ID * 2 + 1)),
+                ^(a_word & ecc_diag32_align_b(b_rev, 8 + LANE_ID * 2)),
+                ^(a_word & ecc_diag32_align_b(b_rev, LANE_ID * 2 + 1)),
+                ^(a_word & ecc_diag32_align_b(b_rev, LANE_ID * 2))};
+            2'd1: ecc_diag32_quad_parity = {
+                ^(a_word & ecc_diag32_align_b(b_rev, 24 + LANE_ID * 2 + 1)),
+                ^(a_word & ecc_diag32_align_b(b_rev, 24 + LANE_ID * 2)),
+                ^(a_word & ecc_diag32_align_b(b_rev, 16 + LANE_ID * 2 + 1)),
+                ^(a_word & ecc_diag32_align_b(b_rev, 16 + LANE_ID * 2))};
+            2'd2: ecc_diag32_quad_parity = {
+                ^(a_word & ecc_diag32_align_b(b_rev, 40 + LANE_ID * 2 + 1)),
+                ^(a_word & ecc_diag32_align_b(b_rev, 40 + LANE_ID * 2)),
+                ^(a_word & ecc_diag32_align_b(b_rev, 32 + LANE_ID * 2 + 1)),
+                ^(a_word & ecc_diag32_align_b(b_rev, 32 + LANE_ID * 2))};
+            default: ecc_diag32_quad_parity = {
+                ^(a_word & ecc_diag32_align_b(b_rev, 56 + LANE_ID * 2 + 1)),
+                ^(a_word & ecc_diag32_align_b(b_rev, 56 + LANE_ID * 2)),
+                ^(a_word & ecc_diag32_align_b(b_rev, 48 + LANE_ID * 2 + 1)),
+                ^(a_word & ecc_diag32_align_b(b_rev, 48 + LANE_ID * 2))};
+            endcase
+        end
+    endfunction
+
     assign bool_result_q_o = bool_result_q;
+    assign bool_xor_word = bool_src_a_i ^ bool_src_b_i;
+    assign ecc_reduce_word_o = ecc_reduce_src_a_i ^ ecc_reduce_src_b_i
+                             ^ bool_src_c_i ^ bool_src_d_i ^ bool_src_e_i;
     assign popcount_part_count[0] = 6'($countones(bool_result_q[31:0]));
     assign popcount_part_count[1] = 6'($countones(bool_result_q[63:32]));
 
-    assign ecc_diag_parity_o = ecc_diag32_even_parity(ecc_diag_a_i, ecc_diag_b_i,
-                                                      ecc_diag_slot_i[2:1]);
-    assign ecc_diag_pair_parity_o = ecc_diag32_pair_parity(ecc_diag_a_i, ecc_diag_b_i,
-                                                           ecc_diag_slot_i[2:1]);
+    assign {ecc_diag_pair_parity_o, ecc_diag_parity_o} =
+        ecc_diag32_quad_parity(ecc_diag_a_i, ecc_diag_b_i, ecc_diag_slot_i[2:1]);
 
     always_ff @(posedge clk_i or negedge rst_ni) begin
         if (!rst_ni) begin
@@ -183,7 +231,7 @@ module hdec_lane_4x64
         end else begin
             pop_q <= bool_tag_i[1];
             if (bool_tag_i[0])
-                bool_result_q <= bool_src_a_i ^ bool_src_b_i;
+                bool_result_q <= bool_xor_word;
             if (pop_q)
                 popcount_part_q_o <= popcount_part_count;
         end
