@@ -83,10 +83,10 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
 
     // ── UOP Pipeline Registers ──────────────────────────────────────────────
     // P0: decode + uop issue
-    // P1: VRF read address / read wait / uop alignment (VRF output latched in vrf_rd)
+    // P1: VRF read address / read wait (uop stays in P0 until the second read)
     // P2: VRF read data (vrf_rd) directly feeds Lane local compute
     // P2/P3 boundary: lane_*_q registers cut the critical combinational path
-    hdec_uop_t uop_p0_q, uop_p0_n, uop_p1_q, uop_p1_n, uop_p2_q, uop_p2_n, uop_p3_q, uop_p3_n;
+    hdec_uop_t uop_p0_q, uop_p0_n, uop_p2_q, uop_p2_n, uop_p3_q, uop_p3_n;
 
     // ── Lane compute wires ──────────────────────────────────────────────────
     logic                                hdc_pop_issue, hdc_xor_issue;
@@ -865,7 +865,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         hperm_dst_base_n=hperm_dst_base_q;
         hperm_bit_low_n=hperm_bit_low_q; hperm_spread_n=hperm_spread_q; hperm_lane_base_n=hperm_lane_base_q;
         hcntclip_dst_base_n=hcntclip_dst_base_q; hcntclip_acc_sel_n=hcntclip_acc_sel_q; hcntclip_threshold_n=hcntclip_threshold_q; hcntclip_chunk_n=hcntclip_chunk_q; hcntclip_word_with_result=hdc_src0_q;
-        uop_p0_n=uop_p0_q; uop_p1_n=uop_p1_q; uop_p2_n=uop_p2_q; uop_p3_n=uop_p3_q;
+        uop_p0_n=uop_p0_q; uop_p2_n=uop_p2_q; uop_p3_n=uop_p3_q;
         hdc_src0_n=hdc_src0_q;
         lane_result_n=lane_result_q; lane_clip_n=lane_clip_q;
         p2_lane_compute_n=1'b0;
@@ -1982,8 +1982,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                 hmatch_budget_n = (hmatch_update_q ? $signed({1'b0, hsim_total_q})
                                                     : $signed({1'b0, hmatch_best_dist_q})) - 12'sd1;
             end
-            uop_p1_n       = uop_p0_q;
-            uop_p0_n.valid = 1'b0;
             vrf_req.ra=uop_p0_q.src0_addr;
             st_n=S_UOP_P1_RD0_WAIT;
         end
@@ -1993,15 +1991,15 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         end
 
         S_UOP_P1_RD1: begin
-            uop_p2_n       = uop_p1_q;
-            uop_p1_n.valid = 1'b0;
-            if ((uop_p1_q.op_type == UOP_HPERM_CHUNK)
-             || (uop_p1_q.op_type == UOP_HCNTADD_SUBGROUP)
-             || (uop_p1_q.op_type == UOP_HBIND_CHUNK)
-             || (uop_p1_q.op_type == UOP_HSIM_CHUNK)
-             || (uop_p1_q.op_type == UOP_HMATCH_CHUNK))
+            uop_p2_n       = uop_p0_q;
+            uop_p0_n.valid = 1'b0;
+            if ((uop_p0_q.op_type == UOP_HPERM_CHUNK)
+             || (uop_p0_q.op_type == UOP_HCNTADD_SUBGROUP)
+             || (uop_p0_q.op_type == UOP_HBIND_CHUNK)
+             || (uop_p0_q.op_type == UOP_HSIM_CHUNK)
+             || (uop_p0_q.op_type == UOP_HMATCH_CHUNK))
                 hdc_src0_n = vrf_rd;
-            vrf_req.ra=uop_p1_q.src1_addr;
+            vrf_req.ra=uop_p0_q.src1_addr;
             st_n=S_UOP_P1_RD1_WAIT;
         end
 
@@ -2064,7 +2062,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                     uop_p2_n.subgroup_idx = uop_p3_q.subgroup_idx + 2'd1;
                     uop_p2_n.src1_addr = uop_p3_q.dst_addr + 6'd1;
                     uop_p2_n.dst_addr = uop_p3_q.dst_addr + 6'd1;
-                    uop_p1_n.valid = 1'b0; uop_p0_n.valid = 1'b0;
+                    uop_p0_n.valid = 1'b0;
                     st_n = S_UOP_P3_VRF_WAIT;
                 end else if (uop_p3_q.chunk_idx < 2'd3) begin
                     uop_p0_n = uop_p3_q; uop_p0_n.valid = 1'b1;
@@ -2087,7 +2085,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                     vrf_req.ra=hcntclip_acc_base+{2'b00,uop_p3_q.chunk_idx,2'b00}+{4'b0,(uop_p3_q.subgroup_idx + 2'd1)};
                     uop_p2_n = uop_p3_q; uop_p2_n.valid = 1'b1;
                     uop_p2_n.subgroup_idx = uop_p3_q.subgroup_idx + 2'd1;
-                    uop_p1_n.valid = 1'b0; uop_p0_n.valid = 1'b0;
+                    uop_p0_n.valid = 1'b0;
                     st_n = S_UOP_P3_VRF_WAIT;
                 end else begin
                     // word complete; go to dedicated write state
@@ -2289,7 +2287,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             hperm_dst_base_q<='0;hperm_bit_low_q<='0;hperm_spread_q<=1'b0;hperm_lane_base_q<='0;
             hcntclip_dst_base_q<='0;hcntclip_acc_sel_q<='0;hcntclip_threshold_q<='0;hcntclip_chunk_q<='0;
             vrf_ra_q<='0;
-            uop_p0_q<='0;uop_p1_q<='0;uop_p2_q<='0;uop_p3_q<='0;
+            uop_p0_q<='0;uop_p2_q<='0;uop_p3_q<='0;
             hdc_src0_q<='0;
             lane_result_q<='0;lane_clip_q<='0;
             p2_lane_compute_q<=1'b0;
@@ -2311,7 +2309,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             hperm_dst_base_q<=hperm_dst_base_n;hperm_bit_low_q<=hperm_bit_low_n;hperm_spread_q<=hperm_spread_n;hperm_lane_base_q<=hperm_lane_base_n;
             hcntclip_dst_base_q<=hcntclip_dst_base_n;hcntclip_acc_sel_q<=hcntclip_acc_sel_n;hcntclip_threshold_q<=hcntclip_threshold_n;hcntclip_chunk_q<=hcntclip_chunk_n;
             vrf_ra_q<=vrf_ra;
-            uop_p0_q<=uop_p0_n;uop_p1_q<=uop_p1_n;uop_p2_q<=uop_p2_n;uop_p3_q<=uop_p3_n;
+            uop_p0_q<=uop_p0_n;uop_p2_q<=uop_p2_n;uop_p3_q<=uop_p3_n;
             hdc_src0_q<=hdc_src0_n;
             lane_result_q<=lane_result_n;lane_clip_q<=lane_clip_n;
             p2_lane_compute_q<=p2_lane_compute_n;
