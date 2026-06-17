@@ -154,9 +154,11 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] ecc_reduce_src1;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] ecc_reduce_src2;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] ecc_reduce_src3;
-    logic [LANE_NUM-1:0][LANE_WIDTH-1:0] ecc_reduce_src4;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] lane_ecc_reduce_word;
     logic [31:0]          ecc_diag32_parity;
+    logic [31:0]          ecc_diag32_low_parity;
+    logic [31:0]          ecc_diag_lane_a;
+    logic [31:0]          ecc_diag_lane_b;
     logic [31:0]          ecc_diag32_pipe_q, ecc_diag32_pipe_n;
     logic [5:0]           ecc_leaf_path_q, ecc_leaf_path_n;
     logic [5:0]           ecc_next_leaf_path;
@@ -320,10 +322,49 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     assign ecc_pmul_add_out_z = ecc_pmul_scalar_bit_q ? ECC_PMUL_R0Z : ECC_PMUL_R1Z;
     assign ecc_pmul_dbl_x = ecc_pmul_scalar_bit_q ? ECC_PMUL_R1X : ECC_PMUL_R0X;
     assign ecc_pmul_dbl_z = ecc_pmul_scalar_bit_q ? ECC_PMUL_R1Z : ECC_PMUL_R0Z;
-    assign ecc_diag32_parity = {lane_ecc_diag_parity[3][7:4], lane_ecc_diag_parity[2][7:4],
-                                lane_ecc_diag_parity[1][7:4], lane_ecc_diag_parity[0][7:4],
-                                lane_ecc_diag_parity[3][3:0], lane_ecc_diag_parity[2][3:0],
-                                lane_ecc_diag_parity[1][3:0], lane_ecc_diag_parity[0][3:0]};
+    assign ecc_diag_lane_a = ecc_diag_slot_q
+                           ? {ecc_leaf_a_q[0],  ecc_leaf_a_q[1],  ecc_leaf_a_q[2],  ecc_leaf_a_q[3],
+                              ecc_leaf_a_q[4],  ecc_leaf_a_q[5],  ecc_leaf_a_q[6],  ecc_leaf_a_q[7],
+                              ecc_leaf_a_q[8],  ecc_leaf_a_q[9],  ecc_leaf_a_q[10], ecc_leaf_a_q[11],
+                              ecc_leaf_a_q[12], ecc_leaf_a_q[13], ecc_leaf_a_q[14], ecc_leaf_a_q[15],
+                              ecc_leaf_a_q[16], ecc_leaf_a_q[17], ecc_leaf_a_q[18], ecc_leaf_a_q[19],
+                              ecc_leaf_a_q[20], ecc_leaf_a_q[21], ecc_leaf_a_q[22], ecc_leaf_a_q[23],
+                              ecc_leaf_a_q[24], ecc_leaf_a_q[25], ecc_leaf_a_q[26], ecc_leaf_a_q[27],
+                              ecc_leaf_a_q[28], ecc_leaf_a_q[29], ecc_leaf_a_q[30], ecc_leaf_a_q[31]}
+                           : ecc_leaf_a_q;
+    assign ecc_diag_lane_b = ecc_diag_slot_q
+                           ? {ecc_leaf_b_q[0],  ecc_leaf_b_q[1],  ecc_leaf_b_q[2],  ecc_leaf_b_q[3],
+                              ecc_leaf_b_q[4],  ecc_leaf_b_q[5],  ecc_leaf_b_q[6],  ecc_leaf_b_q[7],
+                              ecc_leaf_b_q[8],  ecc_leaf_b_q[9],  ecc_leaf_b_q[10], ecc_leaf_b_q[11],
+                              ecc_leaf_b_q[12], ecc_leaf_b_q[13], ecc_leaf_b_q[14], ecc_leaf_b_q[15],
+                              ecc_leaf_b_q[16], ecc_leaf_b_q[17], ecc_leaf_b_q[18], ecc_leaf_b_q[19],
+                              ecc_leaf_b_q[20], ecc_leaf_b_q[21], ecc_leaf_b_q[22], ecc_leaf_b_q[23],
+                              ecc_leaf_b_q[24], ecc_leaf_b_q[25], ecc_leaf_b_q[26], ecc_leaf_b_q[27],
+                              ecc_leaf_b_q[28], ecc_leaf_b_q[29], ecc_leaf_b_q[30], ecc_leaf_b_q[31]}
+                           : ecc_leaf_b_q;
+    assign ecc_diag32_low_parity = {lane_ecc_diag_parity[3][7:4], lane_ecc_diag_parity[2][7:4],
+                                    lane_ecc_diag_parity[1][7:4], lane_ecc_diag_parity[0][7:4],
+                                    lane_ecc_diag_parity[3][3:0], lane_ecc_diag_parity[2][3:0],
+                                    lane_ecc_diag_parity[1][3:0], lane_ecc_diag_parity[0][3:0]};
+    assign ecc_diag32_parity = ecc_diag_slot_q
+                             ? {1'b0,
+                                ecc_diag32_low_parity[0],  ecc_diag32_low_parity[1],
+                                ecc_diag32_low_parity[2],  ecc_diag32_low_parity[3],
+                                ecc_diag32_low_parity[4],  ecc_diag32_low_parity[5],
+                                ecc_diag32_low_parity[6],  ecc_diag32_low_parity[7],
+                                ecc_diag32_low_parity[8],  ecc_diag32_low_parity[9],
+                                ecc_diag32_low_parity[10], ecc_diag32_low_parity[11],
+                                ecc_diag32_low_parity[12], ecc_diag32_low_parity[13],
+                                ecc_diag32_low_parity[14], ecc_diag32_low_parity[15],
+                                ecc_diag32_low_parity[16], ecc_diag32_low_parity[17],
+                                ecc_diag32_low_parity[18], ecc_diag32_low_parity[19],
+                                ecc_diag32_low_parity[20], ecc_diag32_low_parity[21],
+                                ecc_diag32_low_parity[22], ecc_diag32_low_parity[23],
+                                ecc_diag32_low_parity[24], ecc_diag32_low_parity[25],
+                                ecc_diag32_low_parity[26], ecc_diag32_low_parity[27],
+                                ecc_diag32_low_parity[28], ecc_diag32_low_parity[29],
+                                ecc_diag32_low_parity[30]}
+                             : ecc_diag32_low_parity;
 
     function automatic hdec_op_t p4_arch_from_uop(input hdec_uop_type_e op_type);
         unique case (op_type)
@@ -790,25 +831,21 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     assign ecc_reduce_src1[0] = {vrf_rd[0][40:0], hdc_src0_q[3][63:41]};
     assign ecc_reduce_src2[0] = {vrf_rd[3][7:0], vrf_rd[2][63:8]};
     assign ecc_reduce_src3[0] = {18'b0, vrf_rd[3][63:18]};
-    assign ecc_reduce_src4[0] = '0;
 
     assign ecc_reduce_src0[1] = hdc_src0_q[1];
     assign ecc_reduce_src1[1] = {vrf_rd[1][40:0], vrf_rd[0][63:41]};
     assign ecc_reduce_src2[1] = {vrf_rd[0][30:0], hdc_src0_q[3][63:41], 10'b0};
-    assign ecc_reduce_src3[1] = {vrf_rd[2][61:8], 10'b0};
-    assign ecc_reduce_src4[1] = {54'b0, vrf_rd[3][17:8]};
+    assign ecc_reduce_src3[1] = {vrf_rd[2][61:8], vrf_rd[3][17:8]};
 
     assign ecc_reduce_src0[2] = hdc_src0_q[2];
     assign ecc_reduce_src1[2] = {vrf_rd[2][40:0], vrf_rd[1][63:41]};
     assign ecc_reduce_src2[2] = {vrf_rd[1][30:0], vrf_rd[0][63:31]};
     assign ecc_reduce_src3[2] = {vrf_rd[3][61:0], vrf_rd[2][63:62]};
-    assign ecc_reduce_src4[2] = '0;
 
     assign ecc_reduce_src0[3] = {23'b0, hdc_src0_q[3][40:0]};
     assign ecc_reduce_src1[3] = {23'b0, vrf_rd[3][17:0], vrf_rd[2][63:41]};
     assign ecc_reduce_src2[3] = {23'b0, vrf_rd[2][7:0], vrf_rd[1][63:31]};
     assign ecc_reduce_src3[3] = {62'b0, vrf_rd[3][63:62]};
-    assign ecc_reduce_src4[3] = '0;
 
     // ── 4× Lane instances ───────────────────────────────────────────────────
     for (genvar lid = 0; lid < LANE_NUM; lid++) begin : gen_lane
@@ -831,7 +868,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             .bool_src_b_i(pop_src_b[lid]),
             .bool_src_c_i(ecc_reduce_src2[lid]),
             .bool_src_d_i(ecc_reduce_src3[lid]),
-            .bool_src_e_i(ecc_reduce_src4[lid]),
             .ecc_reduce_src_a_i(ecc_reduce_src0[lid]),
             .ecc_reduce_src_b_i(ecc_reduce_src1[lid]),
             .bool_result_q_o(lane_bool_result[lid]),
@@ -848,9 +884,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             .clip_counter_i(vrf_rd[lid]),
             .clip_threshold_i(hcntclip_threshold_q),
             .clip_bits_o(lane_clip_bits[lid]),
-            .ecc_diag_a_i(ecc_leaf_a_q),
-            .ecc_diag_b_i(ecc_leaf_b_q),
-            .ecc_diag_half_i(ecc_diag_slot_q),
+            .ecc_diag_a_i(ecc_diag_lane_a),
+            .ecc_diag_b_i(ecc_diag_lane_b),
             .ecc_diag_parity_o(lane_ecc_diag_parity[lid])
         );
     end
