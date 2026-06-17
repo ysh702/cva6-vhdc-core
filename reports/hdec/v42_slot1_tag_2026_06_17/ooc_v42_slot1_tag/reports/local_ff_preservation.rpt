@@ -1,0 +1,35 @@
+=== PATTERN pop_q ===
+Cells (2):
+  gen_lane[0].i_lane/pop_q_i_1 ref=LUT4
+  gen_lane[0].i_lane/pop_q_reg ref=FDCE
+Nets (4):
+  gen_lane[0].i_lane/pop_q_reg_0[0] fanout=9 driver=uop_p2_q_reg[op_type][0]/Q load_cells=9 lanes=0,3 cross_multiple_lanes=1
+  gen_lane[0].i_lane/pop_q_reg_0[1] fanout=7 driver=uop_p2_q_reg[op_type][1]/Q load_cells=7 lanes=0,3 cross_multiple_lanes=1
+  gen_lane[0].i_lane/pop_q_reg_0[2] fanout=8 driver=uop_p2_q_reg[op_type][2]/Q load_cells=8 lanes=0,3 cross_multiple_lanes=1
+  pop_q fanout=48 driver=gen_lane[0].i_lane/pop_q_reg/Q load_cells=48 lanes=0,1,2,3 cross_multiple_lanes=1
+
+=== PATTERN xor_q ===
+Cells (0):
+Nets (0):
+  pattern not found: xor_q
+
+=== PATTERN p1_pop_d ===
+Cells (0):
+Nets (0):
+  pattern not found: p1_pop_d
+
+=== PATTERN p1_xor_d ===
+Cells (0):
+Nets (0):
+  pattern not found: p1_xor_d
+
+=== PATTERN hdec_p2_pop_slice ===
+Cells (0):
+Nets (0):
+  pattern not found: hdec_p2_pop_slice
+
+=== PATTERN i_p2_pop_slice ===
+Cells (0):
+Nets (0):
+  pattern not found: i_p2_pop_slice
+

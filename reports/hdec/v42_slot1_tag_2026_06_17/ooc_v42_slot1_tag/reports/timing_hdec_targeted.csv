@@ -1,0 +1,6 @@
+rank,slack_ns,required_time_ns,arrival_time_ns,data_path_delay_ns,logic_delay_ns,route_delay_ns,logic_levels,startpoint,endpoint,startpoint_clock,endpoint_clock,path_group,major_hdec_stage_guess,key_path_tokens,main_cells
+1,0.250,5.000,4.747,4.747,1.085,3.662,5,"p2_lane_compute_q_reg/C","lane_result_q_reg[0][14]/D","clk_i","clk_i","","P2 lane-local compute","none","FDCE=2;LUT5=1;LUT6=4"
+2,0.250,5.000,4.747,4.747,1.085,3.662,5,"p2_lane_compute_q_reg/C","lane_result_q_reg[0][15]/D","clk_i","clk_i","","P2 lane-local compute","none","FDCE=2;LUT5=2;LUT6=3"
+3,0.250,5.000,4.747,4.747,1.085,3.662,5,"p2_lane_compute_q_reg/C","lane_result_q_reg[0][16]/D","clk_i","clk_i","","P2 lane-local compute","none","FDCE=2;LUT5=1;LUT6=4"
+4,0.250,5.000,4.747,4.747,1.085,3.662,5,"p2_lane_compute_q_reg/C","lane_result_q_reg[0][17]/D","clk_i","clk_i","","P2 lane-local compute","none","FDCE=2;LUT5=1;LUT6=4"
+5,0.250,5.000,4.747,4.747,1.085,3.662,5,"p2_lane_compute_q_reg/C","lane_result_q_reg[0][18]/D","clk_i","clk_i","","P2 lane-local compute","none","FDCE=2;LUT5=1;LUT6=4"

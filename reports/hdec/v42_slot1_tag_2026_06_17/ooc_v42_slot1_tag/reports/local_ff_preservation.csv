@@ -1,0 +1,7 @@
+pattern,object_name,object_type,ref_name,hierarchy,fanout,driver,load_cells,load_lanes,cross_multiple_lanes
+"pop_q","gen_lane[0].i_lane/pop_q_i_1",cell,"LUT4","gen_lane[0].i_lane",0,,0,,0
+"pop_q","gen_lane[0].i_lane/pop_q_reg",cell,"FDCE","gen_lane[0].i_lane",0,,0,,0
+"pop_q","gen_lane[0].i_lane/pop_q_reg_0[0]",net,,"gen_lane[0].i_lane",9,"uop_p2_q_reg[op_type][0]/Q",9,"0;3",1
+"pop_q","gen_lane[0].i_lane/pop_q_reg_0[1]",net,,"gen_lane[0].i_lane",7,"uop_p2_q_reg[op_type][1]/Q",7,"0;3",1
+"pop_q","gen_lane[0].i_lane/pop_q_reg_0[2]",net,,"gen_lane[0].i_lane",8,"uop_p2_q_reg[op_type][2]/Q",8,"0;3",1
+"pop_q","pop_q",net,,".",48,"gen_lane[0].i_lane/pop_q_reg/Q",48,"0;1;2;3",1
