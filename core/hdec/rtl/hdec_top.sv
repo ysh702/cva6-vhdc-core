@@ -13,6 +13,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     logic [VRF_IDX_W-1:0] vrf_ra, vrf_ra_q;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] vrf_rd;
     logic [LANE_NUM-1:0] vrf_we;
+    logic [LANE_NUM-1:0] vrf_we_direct;
     logic [VRF_IDX_W-1:0] vrf_wa;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] vrf_wd;
     typedef struct packed {
@@ -42,7 +43,12 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         S_ECC_PMUL_INIT, S_ECC_PMUL_CONST_WRITE, S_ECC_PMUL_READ_SCALAR_WAIT, S_ECC_PMUL_READ_SCALAR,
         S_ECC_PMUL_START_ADD, S_ECC_PMUL_START_DBL, S_ECC_PMUL_STEP, S_ECC_PMUL_STEP_NEXT,
         S_ECC_BG_DISPATCH, S_ECC_JOB_DONE,
-        S_HSPREAD_LO_WRITE, S_HSPREAD_HI_WRITE
+        S_HSPREAD_LO_WRITE, S_HSPREAD_HI_WRITE,
+        S_RD_WAIT2,
+        S_ECC_LOAD_A_WAIT2,
+        S_ECC_REDUCE_LOAD_LO_WAIT2,
+        S_ECC_INV_COPY_WAIT2, S_ECC_PMUL_READ_SCALAR_WAIT2,
+        S_UOP_P1_RD0_WAIT2, S_UOP_P3_VRF_WAIT2
     } st_t;
     st_t st_q, st_n;
 
@@ -206,11 +212,12 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         ECC_DIAG_BG_FLUSH = 2'd2,
         ECC_DIAG_BG_DONE  = 2'd3
     } ecc_diag_bg_state_e;
-    typedef enum logic [1:0] {
-        ECC_LOAD_BG_IDLE   = 2'd0,
-        ECC_LOAD_BG_CAP_A  = 2'd1,
-        ECC_LOAD_BG_WAIT_B = 2'd2,
-        ECC_LOAD_BG_CAP_B  = 2'd3
+    typedef enum logic [2:0] {
+        ECC_LOAD_BG_IDLE    = 3'd0,
+        ECC_LOAD_BG_WAIT_A2 = 3'd1,
+        ECC_LOAD_BG_CAP_A   = 3'd2,
+        ECC_LOAD_BG_WAIT_B  = 3'd3,
+        ECC_LOAD_BG_CAP_B   = 3'd4
     } ecc_load_bg_state_e;
     typedef enum logic [2:0] {
         ECC_PMUL_CTRL_INIT   = 3'd0,
@@ -899,6 +906,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         ecc_pipe0_valid_n=1'b0; ecc_pipe0_diag_slot_n=ecc_pipe0_diag_slot_q;
         lane_shift_a='0; lane_shift_b='0; lane_shift_window='0; lane_shift_bit='0;
         vrf_req.ra='0; vrf_req.we='0; vrf_req.wa='x; vrf_req.wd='x;
+        vrf_we_direct='0;
 
         if (p2_lane_compute_q && uop_p2_q.valid) begin
             if (uop_p2_use_shift) begin
@@ -1216,6 +1224,10 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         S_VWR_WAIT: begin res_n='0;st_n=S_RESULT;end
 
         S_RD_WAIT: begin
+            st_n=S_RD_WAIT2;
+        end
+
+        S_RD_WAIT2: begin
             if (((op_q == HDEC_HPERM) && hperm_spread_q)
              || (ecc_job_active_q && (ecc_job_phase_q == ECC_PHASE_INV_SQR))
              || (ecc_job_active_q && hperm_spread_q && (ecc_job_phase_q == ECC_PHASE_PMUL_FIELD)))
@@ -1257,6 +1269,16 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
 
         // ── ECC V1 raw GF(2) diagonal multiply ─────────────────────────────
         S_ECC_LOAD_A_WAIT: begin
+            if (ecc_diag_bg_can_sidecar && valid_i) begin
+                ecc_load_bg_state_n=ECC_LOAD_BG_WAIT_A2;
+                st_n=S_IDLE;
+            end else begin
+                st_n=S_ECC_LOAD_A_WAIT2;
+            end
+        end
+
+        S_ECC_LOAD_A_WAIT2: begin
+            vrf_req.ra=ecc_src_b_q;
             if (ecc_diag_bg_can_sidecar && valid_i) begin
                 ecc_load_bg_state_n=ECC_LOAD_BG_CAP_A;
                 st_n=S_IDLE;
@@ -1325,6 +1347,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                     st_n=S_ECC_DIAG_ISSUE;
                 end
             end else begin
+                if (!ecc_leaf_last)
+                    vrf_req.ra=ecc_src_a_q;
                 st_n=S_ECC_LEAF_FOLD;
             end
         end
@@ -1339,10 +1363,9 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             if (!ecc_leaf_last) begin
                 unique case (ecc_fold_word_q)
                     2'd0: begin
-                        vrf_req.ra=ecc_src_a_q;
+                        vrf_req.ra=ecc_src_b_q;
                     end
                     2'd1: begin
-                        vrf_req.ra=ecc_src_b_q;
                     end
                     2'd2: begin
                         ecc_leaf_a_n = ecc_leaf_lowxor_rd[31:0];
@@ -1435,6 +1458,11 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         end
 
         S_ECC_REDUCE_LOAD_LO_WAIT: begin
+            st_n=S_ECC_REDUCE_LOAD_LO_WAIT2;
+        end
+
+        S_ECC_REDUCE_LOAD_LO_WAIT2: begin
+            vrf_req.ra=ecc_src_a_q + 6'd1;
             st_n=S_ECC_REDUCE_LOAD_LO;
         end
 
@@ -1483,6 +1511,10 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         end
 
         S_ECC_INV_COPY_WAIT: begin
+            st_n=S_ECC_INV_COPY_WAIT2;
+        end
+
+        S_ECC_INV_COPY_WAIT2: begin
             st_n=S_ECC_INV_COPY_WRITE;
         end
 
@@ -1574,6 +1606,10 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         end
 
         S_ECC_PMUL_READ_SCALAR_WAIT: begin
+            st_n=S_ECC_PMUL_READ_SCALAR_WAIT2;
+        end
+
+        S_ECC_PMUL_READ_SCALAR_WAIT2: begin
             st_n=S_ECC_PMUL_READ_SCALAR;
         end
 
@@ -1987,6 +2023,11 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         end
 
         S_UOP_P1_RD0_WAIT: begin
+            st_n=S_UOP_P1_RD0_WAIT2;
+        end
+
+        S_UOP_P1_RD0_WAIT2: begin
+            vrf_req.ra=uop_p0_q.src1_addr;
             st_n=S_UOP_P1_RD1;
         end
 
@@ -2098,6 +2139,10 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
 
         // ── HCNTCLIP writeback (dedicated state, avoids pipeline timing issues) ─
         S_UOP_P3_VRF_WAIT: begin
+            st_n=S_UOP_P3_VRF_WAIT2;
+        end
+
+        S_UOP_P3_VRF_WAIT2: begin
             p2_lane_compute_n = uop_p2_q.valid;
             st_n=S_UOP_P2_LANE;
         end
@@ -2196,6 +2241,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         S_ECC_BG_DISPATCH: begin
             if (ecc_diag_bg_state_q == ECC_DIAG_BG_DONE) begin
                 ecc_diag_bg_state_n=ECC_DIAG_BG_IDLE;
+                if ((ecc_kpd64_sub_q >= 2'd2) && !ecc_leaf_last)
+                    vrf_req.ra=ecc_src_a_q;
                 st_n=(ecc_kpd64_sub_q < 2'd2) ? S_ECC_DIAG_WAIT : S_ECC_LEAF_FOLD;
             end else if (ecc_diag_bg_state_q != ECC_DIAG_BG_IDLE) begin
                 st_n=valid_i ? S_IDLE : S_ECC_BG_DISPATCH;
@@ -2212,6 +2259,10 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         // instruction prologue.  Only the 6-bit VRF read address is borrowed;
         // the wide VRF write path stays owned by the main HDC/ECC FSM.
         unique case (ecc_load_bg_state_q)
+        ECC_LOAD_BG_WAIT_A2: begin
+            vrf_req.ra = ecc_src_b_q;
+            ecc_load_bg_state_n = ECC_LOAD_BG_CAP_A;
+        end
         ECC_LOAD_BG_CAP_A: begin
             ecc_leaf_a_n = ecc_leaf_lowxor_rd[31:0];
             ecc_leaf_xor_a_n = ecc_leaf_lowxor_rd[63:32];
@@ -2262,11 +2313,34 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                 ecc_diag_bg_state_n=ECC_DIAG_BG_DONE;
         end
 
+        unique case (st_q)
+        S_EXEC: begin
+            if (op_q == HDEC_VWR64)
+                vrf_we_direct = (4'b0001 << vaddr_bank_q);
+        end
+        S_HSPREAD_LO_WRITE, S_HSPREAD_HI_WRITE,
+        S_ECC_REDUCE_WRITE, S_ECC_INV_COPY_WRITE, S_ECC_PMUL_CONST_WRITE,
+        S_CLR, S_UOP_CLIP_WRITE: begin
+            vrf_we_direct = '1;
+        end
+        S_ECC_WRITE_PAIR: begin
+            vrf_we_direct = ecc_fold_word_q[0] ? 4'b1100 : 4'b0011;
+        end
+        S_UOP_P3_GLOBAL: begin
+            if ((uop_p3_q.op_type == UOP_HBIND_CHUNK)
+             || (uop_p3_q.op_type == UOP_HCNTADD_SUBGROUP)
+             || (uop_p3_q.op_type == UOP_HPERM_CHUNK))
+                vrf_we_direct = '1;
+        end
+        default: begin
+        end
+        endcase
+
         // V27: one normalized VRF request bundle. This keeps today's behavior
         // equivalent while giving the interleaving scheduler a single broker
         // point for future HDC foreground / ECC background arbitration.
         vrf_ra = vrf_req.ra;
-        vrf_we = vrf_req.we;
+        vrf_we = vrf_we_direct;
         vrf_wa = vrf_req.wa;
         vrf_wd = vrf_req.wd;
     end

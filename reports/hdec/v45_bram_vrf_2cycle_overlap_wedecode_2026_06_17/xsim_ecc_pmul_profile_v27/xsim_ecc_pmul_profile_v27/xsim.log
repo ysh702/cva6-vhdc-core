@@ -1,0 +1,66 @@
+#-----------------------------------------------------------
+# xsim v2024.2 (64-bit)
+# SW Build 5239630 on Fri Nov 08 22:35:27 MST 2024
+# IP Build 5239520 on Sun Nov 10 16:12:51 MST 2024
+# SharedData Build 5239561 on Fri Nov 08 14:39:27 MST 2024
+# Start of session at: Wed Jun 17 22:56:48 2026
+# Process ID         : 62764
+# Current directory  : E:/HDEC/cva6-vhdc-core/tmp/hdec_v15_pointmul_worktree/reports/hdec/v45_bram_vrf_2cycle_overlap_wedecode_2026_06_17/xsim_ecc_pmul_profile_v27/xsim_ecc_pmul_profile_v27
+# Command line       : xsim.exe -mode tcl -source {xsim.dir/tb_hdec_ecc_pmul_profile_v27/xsim_script.tcl}
+# Log file           : E:/HDEC/cva6-vhdc-core/tmp/hdec_v15_pointmul_worktree/reports/hdec/v45_bram_vrf_2cycle_overlap_wedecode_2026_06_17/xsim_ecc_pmul_profile_v27/xsim_ecc_pmul_profile_v27/xsim.log
+# Journal file       : E:/HDEC/cva6-vhdc-core/tmp/hdec_v15_pointmul_worktree/reports/hdec/v45_bram_vrf_2cycle_overlap_wedecode_2026_06_17/xsim_ecc_pmul_profile_v27/xsim_ecc_pmul_profile_v27\xsim.jou
+# Running On         : WIN-20240824NZS
+# Platform           : Windows Server 2016 or Windows 10
+# Operating System   : 26100
+# Processor Detail   : 12th Gen Intel(R) Core(TM) i5-12600KF
+# CPU Frequency      : 3686 MHz
+# CPU Physical cores : 10
+# CPU Logical cores  : 16
+# Host memory        : 34125 MB
+# Swap memory        : 11092 MB
+# Total Virtual      : 45218 MB
+# Available Virtual  : 26698 MB
+#-----------------------------------------------------------
+source xsim.dir/tb_hdec_ecc_pmul_profile_v27/xsim_script.tcl
+# xsim {tb_hdec_ecc_pmul_profile_v27} -autoloadwcfg -tclbatch {E:/HDEC/cva6-vhdc-core/tmp/hdec_v15_pointmul_worktree/reports/hdec/v45_bram_vrf_2cycle_overlap_wedecode_2026_06_17/xsim_ecc_pmul_profile_v27/xsim_ecc_pmul_profile_v27/run_all.tcl}
+Time resolution is 1 ps
+source E:/HDEC/cva6-vhdc-core/tmp/hdec_v15_pointmul_worktree/reports/hdec/v45_bram_vrf_2cycle_overlap_wedecode_2026_06_17/xsim_ecc_pmul_profile_v27/xsim_ecc_pmul_profile_v27/run_all.tcl
+## run all
+PMUL_PROFILE_WALL_CYCLES=190617
+PMUL_PROFILE_STATUS_LOW16=0
+PMUL_PROFILE_SAMPLED_CYCLES=190617
+PMUL_PROFILE_PHASE_INV_SQR_CYCLES=2563
+PMUL_PROFILE_PHASE_INV_MUL_CYCLES=1340
+PMUL_PROFILE_PHASE_PMUL_FIELD_CYCLES=172085
+PMUL_PROFILE_PHASE_PMUL_ADD_CYCLES=5656
+PMUL_PROFILE_PHASE_PMUL_COPY_CYCLES=705
+PMUL_PROFILE_SUB_INIT_CYCLES=19
+PMUL_PROFILE_SUB_ADD_CYCLES=166362
+PMUL_PROFILE_SUB_DBL_CYCLES=18403
+PMUL_PROFILE_SUB_AFFINE_CYCLES=5833
+PMUL_PROFILE_SUB_ZERO_CYCLES=0
+PMUL_PROFILE_GF_MUL_STARTS=1188
+PMUL_PROFILE_GF_MUL_STARTS_ADD=1165
+PMUL_PROFILE_GF_MUL_STARTS_AFFINE=23
+PMUL_PROFILE_GF_MUL_STARTS_INV_MUL=10
+PMUL_PROFILE_SQR_STARTS=1633
+PMUL_PROFILE_SQR_STARTS_DBL=1165
+PMUL_PROFILE_SQR_STARTS_AFFINE=235
+PMUL_PROFILE_SQR_STARTS_INV_SQR=232
+PMUL_PROFILE_HBIND_STARTS=707
+PMUL_PROFILE_HBIND_STARTS_ADD=466
+PMUL_PROFILE_HBIND_STARTS_DBL=233
+PMUL_PROFILE_HBIND_STARTS_AFFINE=8
+PMUL_PROFILE_INV_STARTS=1
+PMUL_PROFILE_ST_ECC_LOAD_CYCLES=4752
+PMUL_PROFILE_ST_ECC_DIAG_CYCLES=96228
+PMUL_PROFILE_ST_ECC_LEAF_FOLD_CYCLES=42768
+PMUL_PROFILE_ST_ECC_WRITE_PAIR_CYCLES=4752
+PMUL_PROFILE_ST_ECC_WRITE_DRAIN_CYCLES=5642
+PMUL_PROFILE_ST_ECC_REDUCE_CYCLES=11284
+PMUL_PROFILE_ST_HSPREAD_CYCLES=3266
+PMUL_PROFILE_ST_ECC_UOP_CYCLES=4949
+[HDEC_ECC_PMUL_PROFILE_V27] PASS
+$finish called at time : 954413500 ps : File "E:/HDEC/cva6-vhdc-core/tmp/hdec_v15_pointmul_worktree/verif/hdec/tb_hdec_ecc_pmul_profile_v27.sv" Line 415
+## quit
+INFO: [Common 17-206] Exiting xsim at Wed Jun 17 22:56:52 2026...

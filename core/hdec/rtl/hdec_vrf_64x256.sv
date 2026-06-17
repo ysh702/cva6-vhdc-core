@@ -24,13 +24,15 @@ module hdec_vrf_64x256
     assign vrf_ready_o = 1'b1;
 
     for (genvar bid = 0; bid < LANE_NUM; bid++) begin : gen_bank
-        (* ram_style = "distributed" *) logic [LANE_WIDTH-1:0] vrf_mem [0:VRF_ENTRIES-1];
+        (* ram_style = "block" *) logic [LANE_WIDTH-1:0] vrf_mem [0:VRF_ENTRIES-1];
+        logic [LANE_WIDTH-1:0] bank_ra_raw_q;
 
         always_ff @(posedge clk_i) begin
             if (bank_we_i[bid])
                 vrf_mem[row_wa_addr_i] <= bank_wdata_i[bid];
 
-            bank_ra_data_o[bid] <= vrf_mem[row_ra_addr_i];
+            bank_ra_raw_q <= vrf_mem[row_ra_addr_i];
+            bank_ra_data_o[bid] <= bank_ra_raw_q;
         end
     end
 
