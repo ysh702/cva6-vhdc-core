@@ -73,30 +73,26 @@ module hdec_lane_4x64
     output logic [1:0][5:0]                   popcount_part_q_o,
 
     // ── HDCU CNT array update path ─────────────────────────────────────────
-    input  logic                              cnt_valid_i,
     input  logic [LANE_WIDTH-1:0]             cnt_hv_word_i,
     input  logic [LANE_WIDTH-1:0]             cnt_old_counter_i,
     input  logic [1:0]                        cnt_subgroup_i,
     output logic [LANE_WIDTH-1:0]             cnt_new_counter_o,
 
     // ── Shift-Align Compute Path (bit-granular, lane-local) ─────────────────
-    input  logic                              shift_valid_i,
     input  logic [LANE_WIDTH-1:0]             shift_src_a_i,
     input  logic [LANE_WIDTH-1:0]             shift_src_b_i,
     input  logic [5:0]                        shift_bit_i,
     output logic [LANE_WIDTH-1:0]             shift_result_o,
 
     // ── Clip Compute Path (HDC counter threshold) ───────────────────────────
-    input  logic                              clip_valid_i,
     input  logic [LANE_WIDTH-1:0]             clip_counter_i,
     input  logic [3:0]                        clip_threshold_i,
     output logic [15:0]                       clip_bits_o,
 
     input  logic [31:0]                       ecc_diag_a_i,
     input  logic [31:0]                       ecc_diag_b_i,
-    input  logic [2:0]                        ecc_diag_slot_i,
-    output logic [3:0]                        ecc_diag_parity_o,
-    output logic [3:0]                        ecc_diag_pair_parity_o
+    input  logic                              ecc_diag_half_i,
+    output logic [7:0]                        ecc_diag_parity_o
 );
 
     // ── XOR Front-End Core ──────────────────────────────────────────────────
@@ -258,8 +254,8 @@ module hdec_lane_4x64
     assign popcount_part_count[0] = 6'($countones(bool_result_q[31:0]));
     assign popcount_part_count[1] = 6'($countones(bool_result_q[63:32]));
 
-    assign {ecc_diag_pair_parity_o, ecc_diag_parity_o} =
-        ecc_diag32_oct_parity(ecc_diag_a_i, ecc_diag_b_i, ecc_diag_slot_i[2]);
+    assign ecc_diag_parity_o =
+        ecc_diag32_oct_parity(ecc_diag_a_i, ecc_diag_b_i, ecc_diag_half_i);
 
     always_ff @(posedge clk_i or negedge rst_ni) begin
         if (!rst_ni) begin
@@ -280,9 +276,7 @@ module hdec_lane_4x64
         .old_counter_i   (cnt_old_counter_i),
         .hv_word_i       (cnt_hv_word_i),
         .subgroup_i      (cnt_subgroup_i),
-        .clip_threshold_i('0),
-        .new_counter_o   (cnt_new_counter_o),
-        .clip_bits_o     ()
+        .new_counter_o   (cnt_new_counter_o)
     );
 
     // ── Shift-Align Core ───────────────────────────────────────────────────

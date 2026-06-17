@@ -12,9 +12,7 @@ module hdec_cnt_array (
     input  logic [63:0] old_counter_i,
     input  logic [63:0] hv_word_i,
     input  logic [1:0]  subgroup_i,
-    input  logic [3:0]  clip_threshold_i,
-    output logic [63:0] new_counter_o,
-    output logic [15:0] clip_bits_o
+    output logic [63:0] new_counter_o
 );
 
     logic [5:0] bit_base;
@@ -33,8 +31,6 @@ module hdec_cnt_array (
 
         always_comb begin
             new_counter_o[4*ni +: 4] = inc_sum[3:0];
-
-            clip_bits_o[ni] = (old_cnt >= clip_threshold_i);
         end
     end
 

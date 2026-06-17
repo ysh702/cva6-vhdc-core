@@ -1,0 +1,11 @@
+commit_sha=filled_by_driver
+git_describe=filled_by_driver
+branch_ref=origin/hdec-p2-popcount-microtag-p1
+vivado_version=2024.2
+top_module=hdec_top
+fpga_part=xc7z020clg400-2
+target_clock_period_ns=5.0
+ooc_tcl_script_path=E:/HDEC/cva6-vhdc-core/tmp/hdec_v15_pointmul_worktree/scripts/hdec/ooc_hdec_p2_popcount_local_keep_v1.tcl
+source_filelist_path=E:/HDEC/cva6-vhdc-core/tmp/hdec_v15_pointmul_worktree/core/Flist.cva6
+hdec_p2_pop_slice_included=1
+note=No dedicated tracked HDEC OOC flow was found in target worktree; generated temporary Vivado OOC script.
