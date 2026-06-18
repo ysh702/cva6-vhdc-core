@@ -1,0 +1,10 @@
+bucket,lut_cells,ff_cells,lutram_cells,bram_cells,carry4_cells,other_cells,lut1,lut2,lut3,lut4,lut5,lut6
+ecc_exclusive_inv_pmul_schedule,143,74,0,0,0,2,1,27,13,14,24,64
+ecc_exclusive_mul_reduce_datapath,819,384,0,0,0,3,0,11,71,105,123,509
+ecc_exclusive_product_scratch,196,0,256,0,0,1,0,0,0,63,1,132
+hdc_or_host_control,359,298,0,0,8,7,2,65,60,43,34,155
+shared_lane_operator,879,305,0,0,7,0,1,1,163,4,210,500
+shared_shift_spread_operator,8,1,0,0,0,0,0,0,2,0,1,5
+shared_vrf_bram,3810,0,0,4,0,51,0,223,347,920,309,2011
+shared_vrf_top_control,137,14,0,0,0,0,0,11,17,5,14,90
+unattributed_top_control,197,644,0,0,0,3,0,24,14,22,21,116

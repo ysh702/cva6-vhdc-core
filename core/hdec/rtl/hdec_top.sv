@@ -64,6 +64,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     logic [10:0] hmatch_best_dist_q,hmatch_best_dist_n;
     logic signed [11:0] hmatch_budget_q,hmatch_budget_n;
     logic hmatch_update_q,hmatch_update_n;
+    logic hmatch_overlap_mode;
     logic [3:0] hmatch_req_base;
     logic [3:0] hmatch_req_count_lo;
     logic [3:0] hmatch_req_max_count;
@@ -95,7 +96,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     hdec_uop_t uop_p0_q, uop_p0_n, uop_p2_q, uop_p2_n, uop_p3_q, uop_p3_n;
 
     // ── Lane compute wires ──────────────────────────────────────────────────
-    logic                                hdc_pop_issue, hdc_xor_issue;
+    logic                                hdc_pop_issue, hdc_xor_issue, hdc_and_issue;
     logic                                uop_p2_use_counter, uop_p2_use_shift, uop_p2_use_clip;
     logic                                p2_lane_compute_q, p2_lane_compute_n;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] hdc_src0_q, hdc_src0_n;
@@ -126,7 +127,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
 
     // ── Scalar Response Registers (P4) ──────────────────────────────────────
     hdec_op_t    p4_arch_op_q, p4_arch_op_n;
-    logic [10:0] group_dist_q, group_dist_n, group_dist_sum;
+    logic [10:0] group_dist_q, group_dist_n, group_dist_sum, hsim_total_step;
     logic signed [11:0] hmatch_budget_step;
     logic        hmatch_budget_step_nonnegative;
 
@@ -276,9 +277,11 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     assign hmatch_req_base = a_q[7:4];
     assign hmatch_req_count_lo = a_q[11:8];
     assign hmatch_req_max_count = 4'd8 - hmatch_req_base;
+    assign hmatch_overlap_mode = a_q[16];
     assign hmatch_req_invalid = (a_q[15:8] == 8'd0) || (|a_q[15:12])
                               || hmatch_req_base[3]
                               || (hmatch_req_count_lo > hmatch_req_max_count);
+    assign hsim_total_step = hsim_total_q + group_dist_q;
     assign hmatch_budget_step = hmatch_budget_q - $signed({1'b0, group_dist_q});
     assign hmatch_budget_step_nonnegative = !hmatch_budget_step[11];
     assign hdc_pop_issue = p2_lane_compute_q && uop_p2_q.valid
@@ -288,6 +291,9 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                          && ((uop_p2_q.op_type == UOP_HBIND_CHUNK)
                           || (uop_p2_q.op_type == UOP_HSIM_CHUNK)
                           || (uop_p2_q.op_type == UOP_HMATCH_CHUNK));
+    assign hdc_and_issue = p2_lane_compute_q && uop_p2_q.valid
+                         && (uop_p2_q.op_type == UOP_HMATCH_CHUNK)
+                         && hmatch_overlap_mode;
     assign hspread_dst_base = (ecc_job_active_q && hperm_spread_q) ? ecc_dst_q
                                                                    : hperm_dst_base_q;
     assign uop_p2_use_counter = (uop_p2_q.op_type == UOP_HCNTADD_SUBGROUP);
@@ -863,7 +869,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             .neighbor_in_i('0), .neighbor_out_o(), .carry_in_i('0), .carry_out_o(),
             .borrow_in_i('0), .borrow_out_o(), .count_in_i('0), .count_out_o(),
             .flag_in_i('0), .flag_out_o(), .local_wb_data_o(), .local_wb_addr_o(), .local_wb_we_o(),
-            .bool_tag_i({hdc_pop_issue, hdc_xor_issue}),
+            .bool_tag_i({hdc_pop_issue, hdc_xor_issue, hdc_and_issue}),
             .bool_src_a_i(pop_src_a[lid]),
             .bool_src_b_i(pop_src_b[lid]),
             .bool_src_c_i(ecc_reduce_src2[lid]),
@@ -2025,8 +2031,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
 
         S_HMATCH_INIT: begin
             hmatch_best_idx_n=3'd0;
-            hmatch_best_dist_n=11'd1025;
-            hmatch_budget_n=12'sd1024;
+            hmatch_best_dist_n = hmatch_overlap_mode ? 11'd0 : 11'd1025;
+            hmatch_budget_n = hmatch_overlap_mode ? 12'sd0 : 12'sd1024;
             hmatch_update_n=1'b0;
             hsim_total_n='0;
             uop_p0_n='0;
@@ -2050,8 +2056,10 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                 end
                 hmatch_update_n = 1'b0;
                 hsim_total_n    = '0;
-                hmatch_budget_n = (hmatch_update_q ? $signed({1'b0, hsim_total_q})
-                                                    : $signed({1'b0, hmatch_best_dist_q})) - 12'sd1;
+                hmatch_budget_n = hmatch_overlap_mode
+                                 ? 12'sd0
+                                 : ((hmatch_update_q ? $signed({1'b0, hsim_total_q})
+                                                     : $signed({1'b0, hmatch_best_dist_q})) - 12'sd1);
             end
             vrf_req.ra=uop_p0_q.src0_addr;
             st_n=S_UOP_P1_RD0_WAIT;
@@ -2188,12 +2196,14 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         end
 
         S_UOP_P3_ACCUM: begin
-            hsim_total_n = hsim_total_q + group_dist_q;
+            hsim_total_n = hsim_total_step;
             if (uop_p3_q.op_type == UOP_HMATCH_CHUNK)
-                hmatch_budget_n = hmatch_budget_step;
+                hmatch_budget_n = hmatch_overlap_mode ? 12'sd0 : hmatch_budget_step;
             if (uop_p3_q.chunk_idx == 2'd3) begin
                 if (uop_p3_q.op_type == UOP_HMATCH_CHUNK) begin
-                    hmatch_update_n = hmatch_budget_step_nonnegative;
+                    hmatch_update_n = hmatch_overlap_mode
+                                     ? (hsim_total_step > hmatch_best_dist_q)
+                                     : hmatch_budget_step_nonnegative;
                     if (uop_p3_q.is_last_class) begin
                         st_n = S_UOP_P4_RESP;
                     end else begin

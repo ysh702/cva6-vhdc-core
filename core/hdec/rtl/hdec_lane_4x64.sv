@@ -58,7 +58,7 @@ module hdec_lane_4x64
     output logic                              local_wb_we_o,
 
     // ── XOR Front-End Compute Path ──────────────────────────────────────────
-    input  logic [1:0]                        bool_tag_i,
+    input  logic [2:0]                        bool_tag_i,
     input  logic [LANE_WIDTH-1:0]             bool_src_a_i,
     input  logic [LANE_WIDTH-1:0]             bool_src_b_i,
     input  logic [LANE_WIDTH-1:0]             bool_src_c_i,
@@ -96,6 +96,7 @@ module hdec_lane_4x64
     // ── XOR Front-End Core ──────────────────────────────────────────────────
     logic        pop_q;
     logic [LANE_WIDTH-1:0] bool_xor_word;
+    logic [LANE_WIDTH-1:0] bool_product_word;
     logic [63:0] bool_result_q;
     logic [1:0][5:0] popcount_part_count;
 
@@ -203,6 +204,7 @@ module hdec_lane_4x64
 
     assign bool_result_q_o = bool_result_q;
     assign bool_xor_word = bool_src_a_i ^ bool_src_b_i;
+    assign bool_product_word = bool_src_a_i & bool_src_b_i;
     assign ecc_reduce_word_o = ecc_reduce_src_a_i ^ ecc_reduce_src_b_i
                              ^ bool_src_c_i ^ bool_src_d_i;
     assign popcount_part_count[0] = 6'($countones(bool_result_q[31:0]));
@@ -217,9 +219,13 @@ module hdec_lane_4x64
             bool_result_q     <= '0;
             popcount_part_q_o <= '0;
         end else begin
-            pop_q <= bool_tag_i[1];
-            if (bool_tag_i[0])
-                bool_result_q <= bool_xor_word;
+            pop_q <= bool_tag_i[2];
+            if (bool_tag_i[1]) begin
+                if (bool_tag_i[0])
+                    bool_result_q <= bool_product_word;
+                else
+                    bool_result_q <= bool_xor_word;
+            end
             if (pop_q)
                 popcount_part_q_o <= popcount_part_count;
         end
