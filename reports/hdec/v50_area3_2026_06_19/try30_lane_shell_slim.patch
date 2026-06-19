@@ -1,0 +1,97 @@
+diff --git a/core/hdec/rtl/hdec_lane_4x64.sv b/core/hdec/rtl/hdec_lane_4x64.sv
+index a2de2882..ef14637e 100644
+--- a/core/hdec/rtl/hdec_lane_4x64.sv
++++ b/core/hdec/rtl/hdec_lane_4x64.sv
+@@ -15,47 +15,16 @@ module hdec_lane_4x64
+     input  logic                              rst_ni,
+ 
+     // ── VRF Bank Connection (this lane ↔ its bank) ──────────────────────────
+-    output logic [VRF_IDX_W-1:0]              vrf_ra_addr_o,
+-    input  logic [LANE_WIDTH-1:0]             vrf_ra_data_i,
+-    output logic                              vrf_we_o,
+-    output logic [VRF_IDX_W-1:0]              vrf_wa_addr_o,
+-    output logic [LANE_WIDTH-1:0]             vrf_wdata_o,
+ 
+     // ── Control Interface (from engine / cmd_decode) ────────────────────────
+-    input  logic                              ctrl_valid_i,
+-    output logic                              ctrl_ready_o,
+-    input  logic [1:0]                        ctrl_owner_i,
+-    input  hdec_op_t                          ctrl_op_i,
+-    input  logic [VRF_IDX_W-1:0]              ctrl_rd_reg_i,
+-    input  logic [VRF_IDX_W-1:0]              ctrl_wr_reg_i,
+-    input  logic [LANE_WIDTH-1:0]             ctrl_wr_data_i,
+-    input  logic                              ctrl_is_write_i,
+-    input  logic                              ctrl_is_read_i,
+ 
+     // ── Result Interface (to engine) ────────────────────────────────────────
+-    output logic                              res_valid_o,
+-    input  logic                              res_ready_i,
+-    output logic [LANE_WIDTH-1:0]             res_data_o,
+-    output logic [1:0]                        res_owner_o,
+ 
+     // ── Neighbor Lane Interface (reserved) ──────────────────────────────────
+-    input  logic [LANE_WIDTH-1:0]             neighbor_in_i,
+-    output logic [LANE_WIDTH-1:0]             neighbor_out_o,
+ 
+     // ── Carry / Borrow / Count / Flag (reserved) ────────────────────────────
+-    input  logic                              carry_in_i,
+-    output logic                              carry_out_o,
+-    input  logic                              borrow_in_i,
+-    output logic                              borrow_out_o,
+-    input  logic [6:0]                        count_in_i,
+-    output logic [6:0]                        count_out_o,
+-    input  logic                              flag_in_i,
+-    output logic                              flag_out_o,
+ 
+     // ── Local Writeback (reserved) ──────────────────────────────────────────
+-    output logic [LANE_WIDTH-1:0]             local_wb_data_o,
+-    output logic [VRF_IDX_W-1:0]              local_wb_addr_o,
+-    output logic                              local_wb_we_o,
+ 
+     // ── XOR Front-End Compute Path ──────────────────────────────────────────
+     input  logic [2:0]                        bool_tag_i,
+@@ -256,24 +225,4 @@ module hdec_lane_4x64
+ 
+     // The top-level HDEC pipeline uses only the static function blocks above.
+     // The old per-lane command shell is intentionally tied off here.
+-    assign ctrl_ready_o    = 1'b1;
+-    assign res_valid_o     = 1'b0;
+-    assign res_data_o      = '0;
+-    assign res_owner_o     = OWNER_NONE;
+-
+-    assign vrf_ra_addr_o   = '0;
+-    assign vrf_we_o        = 1'b0;
+-    assign vrf_wa_addr_o   = '0;
+-    assign vrf_wdata_o     = '0;
+-
+-    assign neighbor_out_o  = neighbor_in_i;
+-    assign carry_out_o     = 1'b0;
+-    assign borrow_out_o    = 1'b0;
+-    assign count_out_o     = '0;
+-    assign flag_out_o      = 1'b0;
+-
+-    assign local_wb_data_o = '0;
+-    assign local_wb_addr_o = '0;
+-    assign local_wb_we_o   = 1'b0;
+-
+ endmodule
+diff --git a/core/hdec/rtl/hdec_top.sv b/core/hdec/rtl/hdec_top.sv
+index 551a5a93..0fa4a42c 100644
+--- a/core/hdec/rtl/hdec_top.sv
++++ b/core/hdec/rtl/hdec_top.sv
+@@ -859,15 +859,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
+ 
+         hdec_lane_4x64 #(.LANE_ID(lid)) i_lane (
+             .clk_i(clk_i), .rst_ni(rst_ni),
+-            .vrf_ra_addr_o(), .vrf_ra_data_i('0),
+-            .vrf_we_o(), .vrf_wa_addr_o(), .vrf_wdata_o(),
+-            .ctrl_valid_i('0), .ctrl_ready_o(), .ctrl_owner_i('0), .ctrl_op_i(HDEC_VWR64),
+-            .ctrl_rd_reg_i('0), .ctrl_wr_reg_i('0), .ctrl_wr_data_i('0),
+-            .ctrl_is_write_i('0), .ctrl_is_read_i('0),
+-            .res_valid_o(), .res_ready_i('0), .res_data_o(), .res_owner_o(),
+-            .neighbor_in_i('0), .neighbor_out_o(), .carry_in_i('0), .carry_out_o(),
+-            .borrow_in_i('0), .borrow_out_o(), .count_in_i('0), .count_out_o(),
+-            .flag_in_i('0), .flag_out_o(), .local_wb_data_o(), .local_wb_addr_o(), .local_wb_we_o(),
+             .bool_tag_i({hdc_pop_issue, hdc_xor_issue, hdc_and_issue}),
+             .bool_src_a_i(pop_src_a[lid]),
+             .bool_src_b_i(pop_src_b[lid]),
