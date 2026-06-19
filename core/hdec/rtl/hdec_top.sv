@@ -1656,7 +1656,12 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
 
         S_ECC_PMUL_READ_SCALAR: begin
             ecc_pmul_scalar_bit_n=ecc_scalar_bit_from_row(vrf_rd, ecc_pmul_bit_q);
-            st_n=S_ECC_PMUL_START_ADD;
+            ecc_pmul_ctrl_n=ECC_PMUL_CTRL_ADD;
+            ecc_pmul_step_n='0;
+            if (ecc_scalar_bit_from_row(vrf_rd, ecc_pmul_bit_q))
+                ecc_pmul_r0_inf_n=1'b0;
+            ecc_pmul_subop_n=ECC_PMUL_SUB_ADD;
+            st_n=S_ECC_PMUL_STEP;
         end
 
         S_ECC_PMUL_START_ADD: begin
@@ -1955,7 +1960,10 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                     st_n=S_ECC_PMUL_READ_SCALAR_WAIT;
                 end
                 ECC_PMUL_CTRL_ADD: begin
-                    st_n=S_ECC_PMUL_START_DBL;
+                    ecc_pmul_ctrl_n=ECC_PMUL_CTRL_DBL;
+                    ecc_pmul_step_n='0;
+                    ecc_pmul_subop_n=ECC_PMUL_SUB_DBL;
+                    st_n=S_ECC_PMUL_STEP;
                 end
                 ECC_PMUL_CTRL_DBL: begin
                     if (ecc_pmul_bit_q == 8'd0) begin
