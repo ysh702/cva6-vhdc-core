@@ -18,7 +18,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] vrf_wd;
     typedef struct packed {
         logic [VRF_IDX_W-1:0]                 ra;
-        logic [LANE_NUM-1:0]                  we;
         logic [VRF_IDX_W-1:0]                 wa;
         logic [LANE_NUM-1:0][LANE_WIDTH-1:0]  wd;
     } hdec_vrf_req_t;
@@ -946,7 +945,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         ecc_pmul_const_one_n=ecc_pmul_const_one_q; ecc_pmul_result_n=ecc_pmul_result_q; ecc_pmul_point_n=ecc_pmul_point_q;
         ecc_pipe0_valid_n=1'b0; ecc_pipe0_diag_slot_n=ecc_pipe0_diag_slot_q;
         lane_shift_a='0; lane_shift_b='0; lane_shift_window='0; lane_shift_bit='0;
-        vrf_req.ra='0; vrf_req.we='0; vrf_req.wa='x; vrf_req.wd='x;
+        vrf_req.ra='0; vrf_req.wa='x; vrf_req.wd='x;
         vrf_we_direct='0;
 
         if (p2_lane_compute_q && uop_p2_q.valid) begin
@@ -1000,7 +999,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
 
         S_EXEC: begin uop_p0_n='0; unique case(op_q)
             HDEC_VADDR: begin vaddr_bank_n=a_q[7:6];vaddr_idx_n=a_q[5:0];res_n='0;st_n=S_RESULT;end
-            HDEC_VWR64: begin vrf_req.we[vaddr_bank_q]=1'b1;vrf_req.wa=vaddr_idx_q;vrf_req.wd[vaddr_bank_q]=a_q;res_n='0;st_n=S_VWR_WAIT;end
+            HDEC_VWR64: begin vrf_req.wa=vaddr_idx_q;vrf_req.wd[vaddr_bank_q]=a_q;res_n='0;st_n=S_VWR_WAIT;end
             HDEC_VRD64: begin vrf_req.ra=vaddr_idx_q;bk_n=vaddr_bank_q;st_n=S_RD_WAIT;end
 
             HDEC_ECC_MUL: begin
@@ -1281,7 +1280,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
 
         S_HSPREAD_LO_WRITE: begin
             hdc_src0_n = vrf_rd;
-            vrf_req.we = '1;
             vrf_req.wa=hspread_dst_base;
             vrf_req.wd[0]=hspread_half64(vrf_rd[0], 1'b0);
             vrf_req.wd[1]=hspread_half64(vrf_rd[0], 1'b1);
@@ -1291,7 +1289,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         end
 
         S_HSPREAD_HI_WRITE: begin
-            vrf_req.we = '1;
             vrf_req.wa=hspread_dst_base + 6'd1;
             vrf_req.wd[0]=hspread_half64(hdc_src0_q[2], 1'b0);
             vrf_req.wd[1]=hspread_half64(hdc_src0_q[2], 1'b1);
@@ -1447,15 +1444,11 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             vrf_req.wa=ecc_product_wb_addr;
             unique case (ecc_fold_word_q[0])
                 1'b0: begin
-                    vrf_req.we[0]=1'b1;
                     vrf_req.wd[0]=ecc_product_pair_rdata[63:0];
-                    vrf_req.we[1]=1'b1;
                     vrf_req.wd[1]=ecc_product_pair_rdata[127:64];
                 end
                 default: begin
-                    vrf_req.we[2]=1'b1;
                     vrf_req.wd[2]=ecc_product_pair_rdata[63:0];
-                    vrf_req.we[3]=1'b1;
                     vrf_req.wd[3]=ecc_product_pair_rdata[127:64];
                 end
             endcase
@@ -1518,7 +1511,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         end
 
         S_ECC_REDUCE_WRITE: begin
-            vrf_req.we = '1;
             vrf_req.wa=ecc_dst_q;
             vrf_req.wd[0]=lane_ecc_reduce_word[0];
             vrf_req.wd[1]=lane_ecc_reduce_word[1];
@@ -1560,7 +1552,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         end
 
         S_ECC_INV_COPY_WRITE: begin
-            vrf_req.we='1;
             vrf_req.wa=ecc_job_copy_dst_q;
             vrf_req.wd=vrf_rd;
             if (ecc_job_phase_q == ECC_PHASE_PMUL_COPY) begin
@@ -1638,7 +1629,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         end
 
         S_ECC_PMUL_CONST_WRITE: begin
-            vrf_req.we='1;
             vrf_req.wa=ecc_job_copy_dst_q;
             vrf_req.wd='0;
             if (ecc_pmul_const_one_q)
@@ -2013,7 +2003,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         end
 
         S_CLR: begin
-            vrf_req.we='1;
             vrf_req.wa=clr_base_q+clr_cnt_q;
             vrf_req.wd='0;
             if((op_q==HDEC_HCLR&&clr_cnt_q==4'd3)||(op_q==HDEC_HCNTCLR&&clr_cnt_q==4'd15))begin res_n='0;st_n=S_CLR_DRAIN;end
@@ -2122,12 +2111,10 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             uop_p3_n.valid  = 1'b0;
             p4_arch_op_n    = ecc_mac_q ? HDEC_ECC_MUL : p4_arch_from_uop(uop_p3_q.op_type);
             if (uop_p3_q.op_type == UOP_HBIND_CHUNK) begin
-                vrf_req.we = '1;
                 vrf_req.wa = uop_p3_q.dst_addr;
                 vrf_req.wd = lane_bool_result;
             end else if ((uop_p3_q.op_type == UOP_HCNTADD_SUBGROUP)
                       || (uop_p3_q.op_type == UOP_HPERM_CHUNK)) begin
-                vrf_req.we = '1;
                 vrf_req.wa = uop_p3_q.dst_addr;
                 vrf_req.wd = lane_result_q;
             end
@@ -2242,7 +2229,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         end
 
         S_UOP_CLIP_WRITE: begin
-            vrf_req.we = '1;
             vrf_req.wa=hcntclip_dst_base_q+hcntclip_chunk_q;
             vrf_req.wd = hdc_src0_q;
             hdc_src0_n = '0;
