@@ -880,7 +880,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     // ── Main FSM ────────────────────────────────────────────────────────────
     always_comb begin
         st_n=st_q; ready_o=(st_q==S_IDLE); valid_o=(st_q==S_RESULT); result_o=res_q;
-        res_n='0; op_n=op_q; a_n=a_q; bk_n=bk_q; vaddr_bank_n=vaddr_bank_q; vaddr_idx_n=vaddr_idx_q;
+        res_n=res_q; op_n=op_q; a_n=a_q; bk_n=bk_q; vaddr_bank_n=vaddr_bank_q; vaddr_idx_n=vaddr_idx_q;
         clr_cnt_n=clr_cnt_q; clr_base_n=clr_base_q;
         hsim_src0_base_n=hsim_src0_base_q; hsim_src1_base_n=hsim_src1_base_q; hsim_total_n=hsim_total_q;
         group_dist_n=group_dist_q;
