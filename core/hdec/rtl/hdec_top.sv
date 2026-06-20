@@ -22,6 +22,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         logic [LANE_NUM-1:0][LANE_WIDTH-1:0]  wd;
     } hdec_vrf_req_t;
     hdec_vrf_req_t vrf_req;
+    (* keep_hierarchy = "yes" *)
     hdec_vrf_64x256 i_vrf(.clk_i,.row_ra_addr_i(vrf_ra_q),.bank_ra_data_o(vrf_rd),.bank_we_i(vrf_we),.row_wa_addr_i(vrf_wa),.bank_wdata_i(vrf_wd),.vrf_ready_o());
     logic [VRF_BNK_W-1:0] vaddr_bank_q,vaddr_bank_n; logic [VRF_IDX_W-1:0] vaddr_idx_q,vaddr_idx_n;
 
