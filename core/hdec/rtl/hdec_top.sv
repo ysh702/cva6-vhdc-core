@@ -166,6 +166,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     (* ram_style = "distributed" *) logic [127:0] ecc_product_pair [0:3];
     logic                 ecc_product_we;
     logic [127:0]         ecc_product_pair_rdata;
+    logic                 ecc_product_pair_hold_we;
+    logic [127:0]         ecc_product_pair_hold_q;
     logic [127:0]         ecc_product_pair_wdata;
     logic [63:0]          ecc_product_even_contrib;
     logic [63:0]          ecc_product_odd_contrib;
@@ -927,6 +929,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         ecc_leaf_path_n=ecc_leaf_path_q;
         ecc_fold_word_n=ecc_fold_word_q;
         ecc_product_we=1'b0;
+        ecc_product_pair_hold_we=1'b0;
         ecc_autoreduce_n=ecc_autoreduce_q; ecc_mac_n=ecc_mac_q; ecc_sqr_repeat_n=ecc_sqr_repeat_q;
         ecc_job_kind_n=ecc_job_kind_q; ecc_job_phase_n=ecc_job_phase_q;
         ecc_job_active_n=ecc_job_active_q; ecc_job_done_n=ecc_job_done_q;
@@ -1443,24 +1446,24 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
 
         S_ECC_WRITE_PAIR: begin
             vrf_req.wa=ecc_product_wb_addr;
-            unique case (ecc_fold_word_q[0])
-                1'b0: begin
-                    vrf_req.wd[0]=ecc_product_pair_rdata[63:0];
-                    vrf_req.wd[1]=ecc_product_pair_rdata[127:64];
-                end
-                default: begin
-                    vrf_req.wd[2]=ecc_product_pair_rdata[63:0];
-                    vrf_req.wd[3]=ecc_product_pair_rdata[127:64];
-                end
-            endcase
-            if (ecc_fold_word_q == 2'd3) begin
-                res_n={56'b0, ecc_dst_q, STATUS_OK};
-                if (ecc_autoreduce_q)
-                    ecc_src_a_n = ecc_dst_q;
-                st_n=S_ECC_WRITE_DRAIN;
-            end else begin
-                ecc_fold_word_n = ecc_fold_word_q + 2'd1;
+            if (!ecc_fold_word_q[0]) begin
+                ecc_product_pair_hold_we=1'b1;
+                ecc_fold_word_n=ecc_fold_word_q + 2'd1;
                 st_n=S_ECC_WRITE_PAIR;
+            end else begin
+                vrf_req.wd[0]=ecc_product_pair_hold_q[63:0];
+                vrf_req.wd[1]=ecc_product_pair_hold_q[127:64];
+                vrf_req.wd[2]=ecc_product_pair_rdata[63:0];
+                vrf_req.wd[3]=ecc_product_pair_rdata[127:64];
+                if (ecc_fold_word_q[1]) begin
+                    res_n={56'b0, ecc_dst_q, STATUS_OK};
+                    if (ecc_autoreduce_q)
+                        ecc_src_a_n = ecc_dst_q;
+                    st_n=S_ECC_WRITE_DRAIN;
+                end else begin
+                    ecc_fold_word_n = 2'd2;
+                    st_n=S_ECC_WRITE_PAIR;
+                end
             end
         end
 
@@ -2364,7 +2367,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             vrf_we_direct = '1;
         end
         S_ECC_WRITE_PAIR: begin
-            vrf_we_direct = ecc_fold_word_q[0] ? 4'b1100 : 4'b0011;
+            if (ecc_fold_word_q[0])
+                vrf_we_direct = '1;
         end
         S_UOP_P3_GLOBAL: begin
             if ((uop_p3_q.op_type == UOP_HBIND_CHUNK)
@@ -2389,6 +2393,9 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     always_ff @(posedge clk_i) begin
         if (ecc_product_we) begin
             ecc_product_pair[ecc_fold_word_q] <= ecc_product_pair_wdata;
+        end
+        if (ecc_product_pair_hold_we) begin
+            ecc_product_pair_hold_q <= ecc_product_pair_rdata;
         end
     end
 
