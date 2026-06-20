@@ -325,26 +325,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     assign ecc_pmul_add_out_z = ecc_pmul_scalar_bit_q ? ECC_PMUL_R0Z : ECC_PMUL_R1Z;
     assign ecc_pmul_dbl_x = ecc_pmul_scalar_bit_q ? ECC_PMUL_R1X : ECC_PMUL_R0X;
     assign ecc_pmul_dbl_z = ecc_pmul_scalar_bit_q ? ECC_PMUL_R1Z : ECC_PMUL_R0Z;
-    assign ecc_diag_lane_a = ecc_diag_slot_q
-                           ? {ecc_leaf_a_q[0],  ecc_leaf_a_q[1],  ecc_leaf_a_q[2],  ecc_leaf_a_q[3],
-                              ecc_leaf_a_q[4],  ecc_leaf_a_q[5],  ecc_leaf_a_q[6],  ecc_leaf_a_q[7],
-                              ecc_leaf_a_q[8],  ecc_leaf_a_q[9],  ecc_leaf_a_q[10], ecc_leaf_a_q[11],
-                              ecc_leaf_a_q[12], ecc_leaf_a_q[13], ecc_leaf_a_q[14], ecc_leaf_a_q[15],
-                              ecc_leaf_a_q[16], ecc_leaf_a_q[17], ecc_leaf_a_q[18], ecc_leaf_a_q[19],
-                              ecc_leaf_a_q[20], ecc_leaf_a_q[21], ecc_leaf_a_q[22], ecc_leaf_a_q[23],
-                              ecc_leaf_a_q[24], ecc_leaf_a_q[25], ecc_leaf_a_q[26], ecc_leaf_a_q[27],
-                              ecc_leaf_a_q[28], ecc_leaf_a_q[29], ecc_leaf_a_q[30], ecc_leaf_a_q[31]}
-                           : ecc_leaf_a_q;
-    assign ecc_diag_lane_b = ecc_diag_slot_q
-                           ? {ecc_leaf_b_q[0],  ecc_leaf_b_q[1],  ecc_leaf_b_q[2],  ecc_leaf_b_q[3],
-                              ecc_leaf_b_q[4],  ecc_leaf_b_q[5],  ecc_leaf_b_q[6],  ecc_leaf_b_q[7],
-                              ecc_leaf_b_q[8],  ecc_leaf_b_q[9],  ecc_leaf_b_q[10], ecc_leaf_b_q[11],
-                              ecc_leaf_b_q[12], ecc_leaf_b_q[13], ecc_leaf_b_q[14], ecc_leaf_b_q[15],
-                              ecc_leaf_b_q[16], ecc_leaf_b_q[17], ecc_leaf_b_q[18], ecc_leaf_b_q[19],
-                              ecc_leaf_b_q[20], ecc_leaf_b_q[21], ecc_leaf_b_q[22], ecc_leaf_b_q[23],
-                              ecc_leaf_b_q[24], ecc_leaf_b_q[25], ecc_leaf_b_q[26], ecc_leaf_b_q[27],
-                              ecc_leaf_b_q[28], ecc_leaf_b_q[29], ecc_leaf_b_q[30], ecc_leaf_b_q[31]}
-                           : ecc_leaf_b_q;
+    assign ecc_diag_lane_a = ecc_leaf_a_q;
+    assign ecc_diag_lane_b = ecc_leaf_b_q;
     assign ecc_diag32_low_parity = {lane_ecc_diag_parity[3][7:4], lane_ecc_diag_parity[2][7:4],
                                     lane_ecc_diag_parity[1][7:4], lane_ecc_diag_parity[0][7:4],
                                     lane_ecc_diag_parity[3][3:0], lane_ecc_diag_parity[2][3:0],
@@ -376,6 +358,17 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             UOP_HCNTCLIP_READ:    p4_arch_from_uop = HDEC_HCNTCLIP;
             default:              p4_arch_from_uop = HDEC_VWR64;
         endcase
+    endfunction
+
+    function automatic logic [31:0] ecc_bitrev32(input logic [31:0] word);
+        ecc_bitrev32 = {word[0],  word[1],  word[2],  word[3],
+                        word[4],  word[5],  word[6],  word[7],
+                        word[8],  word[9],  word[10], word[11],
+                        word[12], word[13], word[14], word[15],
+                        word[16], word[17], word[18], word[19],
+                        word[20], word[21], word[22], word[23],
+                        word[24], word[25], word[26], word[27],
+                        word[28], word[29], word[30], word[31]};
     endfunction
 
     function automatic logic ecc_inv_step_needs_tmp(input logic [3:0] step);
@@ -1357,8 +1350,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                 ecc_leaf128_prod_n = ecc_kpd64_sub32_accum(ecc_leaf128_prod_q, ecc_kpd64_sub_q, ecc_leaf_prod_flush_value);
                 ecc_kpd64_sub_n = ecc_kpd64_sub_q + 2'd1;
                 if (ecc_kpd64_sub_q == 2'd0) begin
-                    ecc_leaf_a_n = ecc_leaf_a_q ^ ecc_leaf_xor_a_q;
-                    ecc_leaf_b_n = ecc_leaf_b_q ^ ecc_leaf_xor_b_q;
+                    ecc_leaf_a_n = ecc_bitrev32(ecc_leaf_a_q) ^ ecc_leaf_xor_a_q;
+                    ecc_leaf_b_n = ecc_bitrev32(ecc_leaf_b_q) ^ ecc_leaf_xor_b_q;
                 end else begin
                     ecc_leaf_a_n = ecc_leaf_xor_a_q;
                     ecc_leaf_b_n = ecc_leaf_xor_b_q;
@@ -2305,6 +2298,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                     ecc_diag_bg_state_n=ECC_DIAG_BG_FLUSH;
             end else begin
                 ecc_diag_slot_n = 1'b1;
+                ecc_leaf_a_n = ecc_bitrev32(ecc_leaf_a_q);
+                ecc_leaf_b_n = ecc_bitrev32(ecc_leaf_b_q);
             end
         end
         if (ecc_diag_flush_fire) begin
