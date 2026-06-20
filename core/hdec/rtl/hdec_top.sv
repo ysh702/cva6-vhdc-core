@@ -50,7 +50,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         S_ECC_INV_COPY_WAIT2, S_ECC_PMUL_READ_SCALAR_WAIT2,
         S_UOP_P1_RD0_WAIT2, S_UOP_P3_VRF_WAIT2
     } st_t;
-    st_t st_q, st_n;
+    (* fsm_encoding = "one_hot" *) st_t st_q, st_n;
 
     logic [63:0] res_q,res_n; hdec_op_t op_q,op_n; logic [63:0] a_q,a_n; logic [VRF_BNK_W-1:0] bk_q,bk_n;
     logic [3:0] clr_cnt_q,clr_cnt_n; logic [VRF_IDX_W-1:0] clr_base_q,clr_base_n;
