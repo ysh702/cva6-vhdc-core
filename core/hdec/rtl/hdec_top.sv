@@ -258,7 +258,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     logic [VRF_IDX_W-1:0] ecc_job_dst_q, ecc_job_dst_n;
     logic [VRF_IDX_W-1:0] ecc_job_copy_dst_q, ecc_job_copy_dst_n;
     ecc_pmul_ctrl_e     ecc_pmul_ctrl_q, ecc_pmul_ctrl_n;
-    ecc_pmul_subop_e    ecc_pmul_subop_q, ecc_pmul_subop_n;
+    (* fsm_encoding = "one_hot" *) ecc_pmul_subop_e ecc_pmul_subop_q, ecc_pmul_subop_n;
     logic [5:0]         ecc_pmul_step_q, ecc_pmul_step_n;
     logic [7:0]         ecc_pmul_bit_q, ecc_pmul_bit_n;
     logic               ecc_pmul_scalar_bit_q, ecc_pmul_scalar_bit_n;
