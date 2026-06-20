@@ -156,7 +156,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] ecc_reduce_src2;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] ecc_reduce_src3;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] lane_ecc_reduce_word;
-    logic [31:0]          ecc_diag32_parity;
     logic [31:0]          ecc_diag32_low_parity;
     logic [31:0]          ecc_diag_lane_a;
     logic [31:0]          ecc_diag_lane_b;
@@ -331,26 +330,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                                     lane_ecc_diag_parity[1][7:4], lane_ecc_diag_parity[0][7:4],
                                     lane_ecc_diag_parity[3][3:0], lane_ecc_diag_parity[2][3:0],
                                     lane_ecc_diag_parity[1][3:0], lane_ecc_diag_parity[0][3:0]};
-    assign ecc_diag32_parity = ecc_diag_slot_q
-                             ? {1'b0,
-                                ecc_diag32_low_parity[0],  ecc_diag32_low_parity[1],
-                                ecc_diag32_low_parity[2],  ecc_diag32_low_parity[3],
-                                ecc_diag32_low_parity[4],  ecc_diag32_low_parity[5],
-                                ecc_diag32_low_parity[6],  ecc_diag32_low_parity[7],
-                                ecc_diag32_low_parity[8],  ecc_diag32_low_parity[9],
-                                ecc_diag32_low_parity[10], ecc_diag32_low_parity[11],
-                                ecc_diag32_low_parity[12], ecc_diag32_low_parity[13],
-                                ecc_diag32_low_parity[14], ecc_diag32_low_parity[15],
-                                ecc_diag32_low_parity[16], ecc_diag32_low_parity[17],
-                                ecc_diag32_low_parity[18], ecc_diag32_low_parity[19],
-                                ecc_diag32_low_parity[20], ecc_diag32_low_parity[21],
-                                ecc_diag32_low_parity[22], ecc_diag32_low_parity[23],
-                                ecc_diag32_low_parity[24], ecc_diag32_low_parity[25],
-                                ecc_diag32_low_parity[26], ecc_diag32_low_parity[27],
-                                ecc_diag32_low_parity[28], ecc_diag32_low_parity[29],
-                                ecc_diag32_low_parity[30]}
-                             : ecc_diag32_low_parity;
-
     function automatic hdec_op_t p4_arch_from_uop(input hdec_uop_type_e op_type);
         unique case (op_type)
             UOP_HSIM_CHUNK:       p4_arch_from_uop = HDEC_HSIM;
@@ -687,7 +666,14 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         begin
             updated = leaf_product;
             if (half_idx) begin
-                updated[62:32] = parity[30:0];
+                updated[62:32] = {parity[0],  parity[1],  parity[2],  parity[3],
+                                  parity[4],  parity[5],  parity[6],  parity[7],
+                                  parity[8],  parity[9],  parity[10], parity[11],
+                                  parity[12], parity[13], parity[14], parity[15],
+                                  parity[16], parity[17], parity[18], parity[19],
+                                  parity[20], parity[21], parity[22], parity[23],
+                                  parity[24], parity[25], parity[26], parity[27],
+                                  parity[28], parity[29], parity[30]};
                 updated[63]    = 1'b0;
             end else begin
                 updated[31:0] = parity;
@@ -2292,7 +2278,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                 ecc_leaf_prod_n = ecc_kpd32_leaf_store_pack32(ecc_leaf_prod_q, ecc_pipe0_diag_slot_q, ecc_diag32_pipe_q);
             ecc_pipe0_valid_n = 1'b1;
             ecc_pipe0_diag_slot_n = ecc_diag_slot_q;
-            ecc_diag32_pipe_n = ecc_diag32_parity;
+            ecc_diag32_pipe_n = ecc_diag32_low_parity;
             if (ecc_diag_slot_q) begin
                 if (ecc_diag_bg_state_q == ECC_DIAG_BG_ISSUE)
                     ecc_diag_bg_state_n=ECC_DIAG_BG_FLUSH;
