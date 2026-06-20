@@ -178,7 +178,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     logic                 ecc_leaf_first;
     logic                 ecc_leaf_last;
     logic [6:0]           ecc_leaf64_offset_mask;
-    logic [127:0]         ecc_leaf128_fold_value;
     localparam logic [VRF_IDX_W-1:0] ECC_PMUL_R0X = 6'd32;
     localparam logic [VRF_IDX_W-1:0] ECC_PMUL_R0Y = 6'd34;
     localparam logic [VRF_IDX_W-1:0] ECC_PMUL_R0Z = 6'd36;
@@ -306,9 +305,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     assign ecc_leaf_first = (ecc_leaf_path_q[3:0] == 4'b00_00);
     assign ecc_leaf_last  = (ecc_leaf_path_q[3:0] == 4'b10_10);
     assign ecc_leaf64_offset_mask = ecc_kpd64_leaf_offset_mask(ecc_leaf_path_q[3:0]);
-    assign ecc_leaf128_fold_value = (ecc_kpd64_sub_q == 2'd2)
-                                  ? ecc_kpd64_sub32_accum(ecc_leaf128_prod_q, ecc_kpd64_sub_q, ecc_leaf_prod_q)
-                                  : ecc_leaf128_prod_q;
     assign ecc_leaf_prod_flush_value = ecc_pipe0_valid_q
                                      ? ecc_kpd32_leaf_store_pack32(ecc_leaf_prod_q, ecc_pipe0_diag_slot_q, ecc_diag32_pipe_q)
                                      : ecc_leaf_prod_q;
@@ -320,8 +316,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     assign ecc_diag_issue_fire = (st_q == S_ECC_DIAG_ISSUE) || (ecc_diag_bg_state_q == ECC_DIAG_BG_ISSUE);
     assign ecc_diag_flush_fire = (st_q == S_ECC_DIAG_WAIT)  || (ecc_diag_bg_state_q == ECC_DIAG_BG_FLUSH);
     assign ecc_product_pair_rdata = ecc_product_pair[ecc_fold_word_q];
-    assign ecc_product_even_contrib = ecc_kpd64_fold_word_contrib(ecc_leaf64_offset_mask, {ecc_fold_word_q, 1'b0}, ecc_leaf128_fold_value);
-    assign ecc_product_odd_contrib  = ecc_kpd64_fold_word_contrib(ecc_leaf64_offset_mask, {ecc_fold_word_q, 1'b1}, ecc_leaf128_fold_value);
+    assign ecc_product_even_contrib = ecc_kpd64_fold_word_contrib(ecc_leaf64_offset_mask, {ecc_fold_word_q, 1'b0}, ecc_leaf128_prod_q);
+    assign ecc_product_odd_contrib  = ecc_kpd64_fold_word_contrib(ecc_leaf64_offset_mask, {ecc_fold_word_q, 1'b1}, ecc_leaf128_prod_q);
     assign ecc_product_pair_wdata = (ecc_leaf_first ? '0 : ecc_product_pair_rdata)
                                   ^ {ecc_product_odd_contrib, ecc_product_even_contrib};
     assign ecc_product_wb_addr = ecc_dst_q + {5'b0, ecc_fold_word_q[1]};
@@ -1378,6 +1374,9 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                     st_n=S_ECC_DIAG_ISSUE;
                 end
             end else begin
+                ecc_leaf128_prod_n = ecc_kpd64_sub32_accum(ecc_leaf128_prod_q, 2'd2, ecc_leaf_prod_flush_value);
+                ecc_leaf_prod_n = '0;
+                ecc_kpd64_sub_n = 2'd3;
                 if (!ecc_leaf_last)
                     vrf_req.ra=ecc_src_a_q;
                 st_n=S_ECC_LEAF_FOLD;
@@ -1385,11 +1384,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         end
 
         S_ECC_LEAF_FOLD: begin
-            if (ecc_kpd64_sub_q == 2'd2) begin
-                ecc_leaf128_prod_n = ecc_leaf128_fold_value;
-                ecc_leaf_prod_n = '0;
-                ecc_kpd64_sub_n = 2'd3;
-            end
             ecc_product_we = 1'b1;
             if (!ecc_leaf_last) begin
                 unique case (ecc_fold_word_q)
@@ -2244,6 +2238,11 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         S_ECC_BG_DISPATCH: begin
             if (ecc_diag_bg_state_q == ECC_DIAG_BG_DONE) begin
                 ecc_diag_bg_state_n=ECC_DIAG_BG_IDLE;
+                if (ecc_kpd64_sub_q == 2'd2) begin
+                    ecc_leaf128_prod_n = ecc_kpd64_sub32_accum(ecc_leaf128_prod_q, 2'd2, ecc_leaf_prod_q);
+                    ecc_leaf_prod_n = '0;
+                    ecc_kpd64_sub_n = 2'd3;
+                end
                 if ((ecc_kpd64_sub_q >= 2'd2) && !ecc_leaf_last)
                     vrf_req.ra=ecc_src_a_q;
                 st_n=(ecc_kpd64_sub_q < 2'd2) ? S_ECC_DIAG_WAIT : S_ECC_LEAF_FOLD;
