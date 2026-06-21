@@ -891,7 +891,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         hcntclip_dst_base_n=hcntclip_dst_base_q; hcntclip_acc_sel_n=hcntclip_acc_sel_q; hcntclip_threshold_n=hcntclip_threshold_q; hcntclip_chunk_n=hcntclip_chunk_q; hcntclip_word_with_result=hdc_src0_q;
         uop_p0_n=uop_p0_q; uop_p2_n=uop_p2_q; uop_p3_n=uop_p3_q;
         hdc_src0_n=hdc_src0_q;
-        lane_result_n=lane_result_q; lane_clip_n=lane_clip_q;
+        // P3 consumes these one-cycle payloads; later values are don't-care.
+        lane_result_n='x; lane_clip_n='x;
         p2_lane_compute_n=1'b0;
         p4_arch_op_n=p4_arch_op_q;
         ecc_src_a_n=ecc_src_a_q; ecc_src_b_n=ecc_src_b_q; ecc_dst_n=ecc_dst_q; ecc_acc_dst_n=ecc_acc_dst_q;
