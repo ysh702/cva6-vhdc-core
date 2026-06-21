@@ -573,15 +573,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
 
         hdec_lane_4x64 #(.LANE_ID(lid)) i_lane (
             .clk_i(clk_i), .rst_ni(rst_ni),
-            .vrf_ra_addr_o(), .vrf_ra_data_i('0),
-            .vrf_we_o(), .vrf_wa_addr_o(), .vrf_wdata_o(),
-            .ctrl_valid_i('0), .ctrl_ready_o(), .ctrl_owner_i('0), .ctrl_op_i(HDEC_VWR64),
-            .ctrl_rd_reg_i('0), .ctrl_wr_reg_i('0), .ctrl_wr_data_i('0),
-            .ctrl_is_write_i('0), .ctrl_is_read_i('0),
-            .res_valid_o(), .res_ready_i('0), .res_data_o(), .res_owner_o(),
-            .neighbor_in_i('0), .neighbor_out_o(), .carry_in_i('0), .carry_out_o(),
-            .borrow_in_i('0), .borrow_out_o(), .count_in_i('0), .count_out_o(),
-            .flag_in_i('0), .flag_out_o(), .local_wb_data_o(), .local_wb_addr_o(), .local_wb_we_o(),
             .bool_tag_i({hdc_pop_issue, hdc_bool_issue, hdc_and_issue}),
             .bool_src_a_i(hdc_src0_q[lid]),
             .bool_src_b_i(pop_src_b[lid]),
