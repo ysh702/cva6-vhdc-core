@@ -40,9 +40,8 @@ module hdec_lane_4x64
     input  logic [5:0]                        shift_bit_i,
     output logic [LANE_WIDTH-1:0]             shift_result_o,
 
-    // ── Clip Compute Path (HDC counter threshold) ───────────────────────────
+    // ── Clip Compute Path (HDC counter non-zero predicate) ──────────────────
     input  logic [LANE_WIDTH-1:0]             clip_counter_i,
-    input  logic [3:0]                        clip_threshold_i,
     output logic [15:0]                       clip_bits_o,
 
     input  logic [31:0]                       ecc_diag_a_i,
@@ -205,7 +204,6 @@ module hdec_lane_4x64
     // ── Clip Core ──────────────────────────────────────────────────────────
     hdec_lane_clip i_clip (
         .counter_i  (clip_counter_i),
-        .threshold_i(clip_threshold_i),
         .bits_o     (clip_bits_o)
     );
 

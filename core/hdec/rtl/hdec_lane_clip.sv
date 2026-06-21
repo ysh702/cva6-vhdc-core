@@ -2,13 +2,12 @@
 // hdec_lane_clip.sv - Lane-local HDC clip comparator/packer
 // =============================================================================
 // HDC use: pack the non-zero predicate of 16 bit-plane 4-bit counters into a
-// 16-bit hypervector slice. The threshold input is kept for ISA compatibility;
-// the current low-area bit-plane mode fixes clip semantics to threshold 1.
+// 16-bit hypervector slice. Current low-area bit-plane mode fixes clip
+// semantics to threshold 1; the ISA threshold field is ignored in hdec_top.
 // =============================================================================
 
 module hdec_lane_clip (
     input  logic [63:0] counter_i,
-    input  logic [3:0]  threshold_i,
     output logic [15:0] bits_o
 );
 

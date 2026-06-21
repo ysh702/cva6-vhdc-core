@@ -80,7 +80,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     logic [VRF_IDX_W-1:0] hdc_cnt_base0, hdc_cnt_base1;
     logic interleave_active;
     logic hcntclip_acc_sel_q,hcntclip_acc_sel_n;
-    logic [3:0] hcntclip_threshold_q,hcntclip_threshold_n;
     logic [1:0] hcntclip_chunk_q,hcntclip_chunk_n;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] hcntclip_word_with_result;
     // hcntclip_acc_base selects the active counter bank; per-entry addresses are
@@ -592,7 +591,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             .shift_bit_i(lane_shift_bit),
             .shift_result_o(lane_shift_result[lid]),
             .clip_counter_i(vrf_rd[lid]),
-            .clip_threshold_i(hcntclip_threshold_q),
             .clip_bits_o(lane_clip_bits[lid]),
             .ecc_diag_a_i(ecc_diag_lane_a),
             .ecc_diag_b_i(ecc_diag_lane_b),
@@ -615,7 +613,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         hmatch_last_idx_n=hmatch_last_idx_q; hmatch_best_idx_n=hmatch_best_idx_q; hmatch_class_slot_n=hmatch_class_slot_q; hmatch_best_dist_n=hmatch_best_dist_q; hmatch_update_n=hmatch_update_q;
         hperm_dst_base_n=hperm_dst_base_q;
         hperm_bit_low_n=hperm_bit_low_q; hperm_spread_n=hperm_spread_q; hperm_lane_base_n=hperm_lane_base_q;
-        hcntclip_dst_base_n=hcntclip_dst_base_q; hcntclip_acc_sel_n=hcntclip_acc_sel_q; hcntclip_threshold_n=hcntclip_threshold_q; hcntclip_chunk_n=hcntclip_chunk_q; hcntclip_word_with_result=hdc_src0_q;
+        hcntclip_dst_base_n=hcntclip_dst_base_q; hcntclip_acc_sel_n=hcntclip_acc_sel_q; hcntclip_chunk_n=hcntclip_chunk_q; hcntclip_word_with_result=hdc_src0_q;
         uop_p0_n=uop_p0_q; uop_p2_n=uop_p2_q; uop_p3_n=uop_p3_q;
         p2_is_pop_n=p2_is_pop_q; p2_is_hbind_n=p2_is_hbind_q;
         hdc_src0_n=hdc_src0_q;
@@ -900,7 +898,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             HDEC_HCNTCLIP: begin
                 hcntclip_dst_base_n={a_q[2:0],2'b00};
                 hcntclip_acc_sel_n=a_q[3];
-                hcntclip_threshold_n=a_q[7:4];
+                // Low-area bit-plane mode fixes clip to the non-zero predicate.
                 hcntclip_chunk_n=2'd0;
                 uop_p0_n.valid       = 1'b1;
                 uop_p0_n.op_type     = UOP_HCNTCLIP_READ;
@@ -1980,7 +1978,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             hsim_src0_base_q<='0;hsim_src1_base_q<='0;hsim_total_q<='0;group_dist_q<='0;
             hmatch_last_idx_q<='0;hmatch_best_idx_q<='0;hmatch_class_slot_q<='0;hmatch_best_dist_q<='0;hmatch_update_q<=1'b0;
             hperm_dst_base_q<='0;hperm_bit_low_q<='0;hperm_spread_q<=1'b0;hperm_lane_base_q<='0;
-            hcntclip_dst_base_q<='0;hcntclip_acc_sel_q<='0;hcntclip_threshold_q<='0;hcntclip_chunk_q<='0;
+            hcntclip_dst_base_q<='0;hcntclip_acc_sel_q<='0;hcntclip_chunk_q<='0;
             vrf_ra_q<='0;
             uop_p0_q<='0;uop_p2_q<='0;uop_p3_q<='0;
             p2_is_pop_q<=1'b0;p2_is_hbind_q<=1'b0;
@@ -2003,7 +2001,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             hsim_src0_base_q<=hsim_src0_base_n;hsim_src1_base_q<=hsim_src1_base_n;hsim_total_q<=hsim_total_n;group_dist_q<=group_dist_n;
             hmatch_last_idx_q<=hmatch_last_idx_n;hmatch_best_idx_q<=hmatch_best_idx_n;hmatch_class_slot_q<=hmatch_class_slot_n;hmatch_best_dist_q<=hmatch_best_dist_n;hmatch_update_q<=hmatch_update_n;
             hperm_dst_base_q<=hperm_dst_base_n;hperm_bit_low_q<=hperm_bit_low_n;hperm_spread_q<=hperm_spread_n;hperm_lane_base_q<=hperm_lane_base_n;
-            hcntclip_dst_base_q<=hcntclip_dst_base_n;hcntclip_acc_sel_q<=hcntclip_acc_sel_n;hcntclip_threshold_q<=hcntclip_threshold_n;hcntclip_chunk_q<=hcntclip_chunk_n;
+            hcntclip_dst_base_q<=hcntclip_dst_base_n;hcntclip_acc_sel_q<=hcntclip_acc_sel_n;hcntclip_chunk_q<=hcntclip_chunk_n;
             vrf_ra_q<=vrf_ra;
             uop_p0_q<=uop_p0_n;uop_p2_q<=uop_p2_n;uop_p3_q<=uop_p3_n;
             p2_is_pop_q<=p2_is_pop_n;p2_is_hbind_q<=p2_is_hbind_n;
