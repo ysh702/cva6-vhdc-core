@@ -288,7 +288,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     assign ecc_leaf_last  = (ecc_leaf_path_q[3:0] == 4'b10_10);
     assign ecc_leaf64_offset_mask = ecc_kpd64_leaf_offset_mask(ecc_leaf_path_q[3:0]);
     assign ecc_leaf_prod_flush_value = ecc_pipe0_valid_q
-                                     ? ecc_kpd32_leaf_store_pack32(ecc_leaf_prod_q, ecc_pipe0_diag_slot_q, ecc_diag32_pipe_q)
+                                     ? ecc_diag32_leaf_store_pack(ecc_leaf_prod_q, ecc_pipe0_diag_slot_q, ecc_diag32_pipe_q)
                                      : ecc_leaf_prod_q;
     assign ecc_job_cycle_status = ECC_STATUS_CYCLE_COUNT ? ecc_job_cycle_q : 16'd0;
     assign ecc_diag_issue_fire = (st_q == S_ECC_DIAG_ISSUE);
@@ -421,41 +421,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         end
     endfunction
 
-    function automatic logic [31:0] ecc_limb32(input logic [255:0] value, input logic [2:0] idx);
-        unique case (idx)
-            3'd0: ecc_limb32 = value[31:0];
-            3'd1: ecc_limb32 = value[63:32];
-            3'd2: ecc_limb32 = value[95:64];
-            3'd3: ecc_limb32 = value[127:96];
-            3'd4: ecc_limb32 = value[159:128];
-            3'd5: ecc_limb32 = value[191:160];
-            3'd6: ecc_limb32 = value[223:192];
-            3'd7: ecc_limb32 = value[255:224];
-            default: ecc_limb32 = '0;
-        endcase
-    endfunction
-
-    function automatic logic [5:0] ecc_kpd32_path_inc(input logic [5:0] path);
-        logic [1:0] d2, d1, d0;
-        begin
-            d2 = path[5:4];
-            d1 = path[3:2];
-            d0 = path[1:0];
-            if (d0 != 2'd2) begin
-                d0 = d0 + 2'd1;
-            end else begin
-                d0 = 2'd0;
-                if (d1 != 2'd2) begin
-                    d1 = d1 + 2'd1;
-                end else begin
-                    d1 = 2'd0;
-                    d2 = d2 + 2'd1;
-                end
-            end
-            ecc_kpd32_path_inc = {d2, d1, d0};
-        end
-    endfunction
-
     function automatic logic [3:0] ecc_kpd64_path_inc(input logic [3:0] path);
         logic [1:0] d1, d0;
         begin
@@ -506,18 +471,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         end
     endfunction
 
-    function automatic logic [31:0] ecc_kpd64_sub32_word(
-        input logic [63:0] word,
-        input logic [1:0]  sub_idx
-    );
-        unique case (sub_idx)
-            2'd0: ecc_kpd64_sub32_word = word[31:0];
-            2'd1: ecc_kpd64_sub32_word = word[63:32];
-            2'd2: ecc_kpd64_sub32_word = word[31:0] ^ word[63:32];
-            default: ecc_kpd64_sub32_word = '0;
-        endcase
-    endfunction
-
     function automatic logic [63:0] ecc_kpd64_leaf_lowxor_pack(
         input logic [255:0] value,
         input logic [3:0]   path
@@ -544,102 +497,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         endcase
     endfunction
 
-    function automatic logic [31:0] ecc_kpd32_select(
-        input logic [31:0] lo_word,
-        input logic [31:0] hi_word,
-        input logic [1:0]  sel
-    );
-        unique case (sel)
-            2'd0: ecc_kpd32_select = lo_word;
-            2'd1: ecc_kpd32_select = lo_word ^ hi_word;
-            2'd2: ecc_kpd32_select = hi_word;
-            default: ecc_kpd32_select = '0;
-        endcase
-    endfunction
-
-    function automatic logic [31:0] ecc_kpd32_leaf_word(
-        input logic [255:0] value,
-        input logic [5:0]   path
-    );
-        logic [31:0] s0_0, s0_1, s0_2, s0_3;
-        logic [31:0] s1_0, s1_1;
-        begin
-            s0_0 = ecc_kpd32_select(ecc_limb32(value, 3'd0), ecc_limb32(value, 3'd4), path[5:4]);
-            s0_1 = ecc_kpd32_select(ecc_limb32(value, 3'd1), ecc_limb32(value, 3'd5), path[5:4]);
-            s0_2 = ecc_kpd32_select(ecc_limb32(value, 3'd2), ecc_limb32(value, 3'd6), path[5:4]);
-            s0_3 = ecc_kpd32_select(ecc_limb32(value, 3'd3), ecc_limb32(value, 3'd7), path[5:4]);
-            s1_0 = ecc_kpd32_select(s0_0, s0_2, path[3:2]);
-            s1_1 = ecc_kpd32_select(s0_1, s0_3, path[3:2]);
-            ecc_kpd32_leaf_word = ecc_kpd32_select(s1_0, s1_1, path[1:0]);
-        end
-    endfunction
-
-    function automatic logic [63:0] ecc_product_word(
-        input logic [511:0] product,
-        input logic [2:0]   word_idx
-    );
-        unique case (word_idx)
-            3'd0: ecc_product_word = product[63:0];
-            3'd1: ecc_product_word = product[127:64];
-            3'd2: ecc_product_word = product[191:128];
-            3'd3: ecc_product_word = product[255:192];
-            3'd4: ecc_product_word = product[319:256];
-            3'd5: ecc_product_word = product[383:320];
-            3'd6: ecc_product_word = product[447:384];
-            3'd7: ecc_product_word = product[511:448];
-            default: ecc_product_word = '0;
-        endcase
-    endfunction
-
-    function automatic logic [63:0] ecc_kpd32_leaf_store_pack(
-        input logic [63:0] leaf_product,
-        input logic [5:0]   diag_base,
-        input logic [7:0]   parity
-    );
-        logic [63:0] updated;
-        begin
-            updated = leaf_product;
-            unique case (diag_base)
-                6'd0:  updated[7:0]   = parity;
-                6'd8:  updated[15:8]  = parity;
-                6'd16: updated[23:16] = parity;
-                6'd24: updated[31:24] = parity;
-                6'd32: updated[39:32] = parity;
-                6'd40: updated[47:40] = parity;
-                6'd48: updated[55:48] = parity;
-                6'd56: begin
-                    updated[62:56] = parity[6:0];
-                    updated[63]    = 1'b0;
-                end
-                default: updated = leaf_product;
-            endcase
-            ecc_kpd32_leaf_store_pack = updated;
-        end
-    endfunction
-
-    function automatic logic [63:0] ecc_kpd32_leaf_store_pack16(
-        input logic [63:0] leaf_product,
-        input logic [1:0]  pair_idx,
-        input logic [15:0] parity
-    );
-        logic [63:0] updated;
-        begin
-            updated = leaf_product;
-            unique case (pair_idx)
-                2'd0: updated[15:0]  = parity;
-                2'd1: updated[31:16] = parity;
-                2'd2: updated[47:32] = parity;
-                2'd3: begin
-                    updated[62:48] = parity[14:0];
-                    updated[63]    = 1'b0;
-                end
-                default: updated = leaf_product;
-            endcase
-            ecc_kpd32_leaf_store_pack16 = updated;
-        end
-    endfunction
-
-    function automatic logic [63:0] ecc_kpd32_leaf_store_pack32(
+    function automatic logic [63:0] ecc_diag32_leaf_store_pack(
         input logic [63:0] leaf_product,
         input logic        half_idx,
         input logic [31:0] parity
@@ -660,98 +518,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             end else begin
                 updated[31:0] = parity;
             end
-            ecc_kpd32_leaf_store_pack32 = updated;
-        end
-    endfunction
-
-    function automatic logic [14:0] ecc_kpd32_leaf_offset_mask(input logic [5:0] path);
-        unique case (path)
-            6'b00_00_00: ecc_kpd32_leaf_offset_mask = 15'h00ff;
-            6'b00_00_01: ecc_kpd32_leaf_offset_mask = 15'h00aa;
-            6'b00_00_10: ecc_kpd32_leaf_offset_mask = 15'h01fe;
-            6'b00_01_00: ecc_kpd32_leaf_offset_mask = 15'h00cc;
-            6'b00_01_01: ecc_kpd32_leaf_offset_mask = 15'h0088;
-            6'b00_01_10: ecc_kpd32_leaf_offset_mask = 15'h0198;
-            6'b00_10_00: ecc_kpd32_leaf_offset_mask = 15'h03fc;
-            6'b00_10_01: ecc_kpd32_leaf_offset_mask = 15'h02a8;
-            6'b00_10_10: ecc_kpd32_leaf_offset_mask = 15'h07f8;
-            6'b01_00_00: ecc_kpd32_leaf_offset_mask = 15'h00f0;
-            6'b01_00_01: ecc_kpd32_leaf_offset_mask = 15'h00a0;
-            6'b01_00_10: ecc_kpd32_leaf_offset_mask = 15'h01e0;
-            6'b01_01_00: ecc_kpd32_leaf_offset_mask = 15'h00c0;
-            6'b01_01_01: ecc_kpd32_leaf_offset_mask = 15'h0080;
-            6'b01_01_10: ecc_kpd32_leaf_offset_mask = 15'h0180;
-            6'b01_10_00: ecc_kpd32_leaf_offset_mask = 15'h03c0;
-            6'b01_10_01: ecc_kpd32_leaf_offset_mask = 15'h0280;
-            6'b01_10_10: ecc_kpd32_leaf_offset_mask = 15'h0780;
-            6'b10_00_00: ecc_kpd32_leaf_offset_mask = 15'h0ff0;
-            6'b10_00_01: ecc_kpd32_leaf_offset_mask = 15'h0aa0;
-            6'b10_00_10: ecc_kpd32_leaf_offset_mask = 15'h1fe0;
-            6'b10_01_00: ecc_kpd32_leaf_offset_mask = 15'h0cc0;
-            6'b10_01_01: ecc_kpd32_leaf_offset_mask = 15'h0880;
-            6'b10_01_10: ecc_kpd32_leaf_offset_mask = 15'h1980;
-            6'b10_10_00: ecc_kpd32_leaf_offset_mask = 15'h3fc0;
-            6'b10_10_01: ecc_kpd32_leaf_offset_mask = 15'h2a80;
-            6'b10_10_10: ecc_kpd32_leaf_offset_mask = 15'h7f80;
-            default:      ecc_kpd32_leaf_offset_mask = '0;
-        endcase
-    endfunction
-
-    function automatic logic [63:0] ecc_kpd32_fold_word_contrib(
-        input logic [14:0] mask,
-        input logic [2:0]  word_idx,
-        input logic [63:0] leaf_product
-    );
-        logic [3:0] slot;
-        logic [63:0] contrib;
-        begin
-            slot = {word_idx, 1'b0};
-            contrib = '0;
-            if (mask[slot])
-                contrib ^= leaf_product;
-            if ((slot != 4'd0) && mask[slot - 4'd1])
-                contrib ^= {32'b0, leaf_product[63:32]};
-            if ((slot != 4'd14) && mask[slot + 4'd1])
-                contrib ^= {leaf_product[31:0], 32'b0};
-            ecc_kpd32_fold_word_contrib = contrib;
-        end
-    endfunction
-
-    function automatic logic [511:0] ecc_kpd32_fold_leaf_word_pair(
-        input logic [511:0] product,
-        input logic [14:0]  mask,
-        input logic [1:0]   pair_idx,
-        input logic [63:0]  leaf_product
-    );
-        logic [511:0] updated;
-        logic [2:0]   word0, word1;
-        logic [63:0]  contrib0, contrib1;
-        begin
-            updated = product;
-            word0 = {pair_idx, 1'b0};
-            word1 = {pair_idx, 1'b1};
-            contrib0 = ecc_kpd32_fold_word_contrib(mask, word0, leaf_product);
-            contrib1 = ecc_kpd32_fold_word_contrib(mask, word1, leaf_product);
-            unique case (pair_idx)
-                2'd0: begin
-                    updated[63:0]    = product[63:0]    ^ contrib0;
-                    updated[127:64]  = product[127:64]  ^ contrib1;
-                end
-                2'd1: begin
-                    updated[191:128] = product[191:128] ^ contrib0;
-                    updated[255:192] = product[255:192] ^ contrib1;
-                end
-                2'd2: begin
-                    updated[319:256] = product[319:256] ^ contrib0;
-                    updated[383:320] = product[383:320] ^ contrib1;
-                end
-                2'd3: begin
-                    updated[447:384] = product[447:384] ^ contrib0;
-                    updated[511:448] = product[511:448] ^ contrib1;
-                end
-                default: updated = product;
-            endcase
-            ecc_kpd32_fold_leaf_word_pair = updated;
+            ecc_diag32_leaf_store_pack = updated;
         end
     endfunction
 
@@ -2170,7 +1937,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         // It does not request shared resources.
         if (ecc_diag_issue_fire) begin
             if (ecc_pipe0_valid_q)
-                ecc_leaf_prod_n = ecc_kpd32_leaf_store_pack32(ecc_leaf_prod_q, ecc_pipe0_diag_slot_q, ecc_diag32_pipe_q);
+                ecc_leaf_prod_n = ecc_diag32_leaf_store_pack(ecc_leaf_prod_q, ecc_pipe0_diag_slot_q, ecc_diag32_pipe_q);
             ecc_pipe0_valid_n = 1'b1;
             ecc_pipe0_diag_slot_n = ecc_diag_slot_q;
             ecc_diag32_pipe_n = ecc_diag32_low_parity;
