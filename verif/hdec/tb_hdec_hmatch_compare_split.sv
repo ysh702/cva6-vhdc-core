@@ -27,8 +27,8 @@ module tb_hdec_hmatch_compare_split;
     always #2.5 clk_i = ~clk_i;
 
     function automatic logic [63:0] hmatch_result(input logic [7:0] idx,
-                                                   input logic [10:0] distance);
-        hmatch_result = {45'd0, idx, distance};
+                                                   input logic [10:0] score);
+        hmatch_result = {45'd0, idx, score};
     endfunction
 
     task automatic issue(input hdec_op_t op,
@@ -124,8 +124,6 @@ module tb_hdec_hmatch_compare_split;
         end
     endtask
 
-    localparam logic [16:0] HMATCH_OVERLAP_MODE = 17'h1_0000;
-
     task automatic run_hmatch(input logic [16:0] param,
                                output logic [63:0] result,
                                output int cycles);
@@ -164,13 +162,13 @@ module tb_hdec_hmatch_compare_split;
         fill_slot(4'd0, 64'h0000_0000_0000_0000);
         fill_slot(4'd1, 64'hffff_ffff_ffff_ffff);
         run_hmatch(16'h0110, result, cycles);
-        check_result("single class max distance", result, hmatch_result(8'd0, 11'd1024));
+        check_result("single class zero overlap", result, hmatch_result(8'd0, 11'd0));
 
         write_distinct_query(4'd0);
-        fill_slot(4'd1, 64'hffff_ffff_ffff_ffff);
+        fill_slot(4'd1, 64'h0000_0000_0000_0000);
         copy_distinct_query_to_slot(4'd2);
         run_hmatch(16'h0210, result, cycles);
-        check_result("second class exact match", result, hmatch_result(8'd1, 11'd0));
+        check_result("second class higher overlap", result, hmatch_result(8'd1, 11'd477));
 
         fill_slot(4'd0, 64'h0000_0000_0000_0000);
         fill_slot(4'd4, 64'h0000_0000_0000_0000);
@@ -184,13 +182,13 @@ module tb_hdec_hmatch_compare_split;
         fill_slot(4'd0, 64'hffff_ffff_ffff_ffff);
         fill_slot(4'd1, 64'h0000_0000_0000_0000);
         fill_slot(4'd2, 64'hf0f0_f0f0_f0f0_f0f0);
-        run_hmatch(HMATCH_OVERLAP_MODE | 17'h0_0210, result, cycles);
+        run_hmatch(17'h0_0210, result, cycles);
         check_result("overlap picks larger score", result, hmatch_result(8'd1, 11'd512));
 
         fill_slot(4'd0, 64'hf0f0_f0f0_f0f0_f0f0);
         fill_slot(4'd4, 64'hf0f0_f0f0_f0f0_f0f0);
         fill_slot(4'd5, 64'hf0f0_f0f0_f0f0_f0f0);
-        run_hmatch(HMATCH_OVERLAP_MODE | 17'h0_0240, result, cycles);
+        run_hmatch(17'h0_0240, result, cycles);
         check_result("overlap tie keeps first", result, hmatch_result(8'd0, 11'd512));
 
         $display("All HDEC HMATCH compare-split xsim tests passed.");

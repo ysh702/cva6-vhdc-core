@@ -112,9 +112,9 @@ module tb_hdec_ecc_pmul_bg_hdc_loop_v31;
 
     function automatic logic [63:0] hmatch_result(
         input logic [7:0] idx,
-        input logic [10:0] distance
+        input logic [10:0] score
     );
-        hmatch_result = {45'd0, idx, distance};
+        hmatch_result = {45'd0, idx, score};
     endfunction
 
     function automatic logic [1:0] hdc_word_bank(input int word_idx);
@@ -302,7 +302,7 @@ module tb_hdec_ecc_pmul_bg_hdc_loop_v31;
             write_pattern_slot(4'd3, 1'b1);
 
             issue(HDEC_HSIM, hsim_operand(4'd2, 4'd3), last_result);
-            check_equal64("V31 HSIM complement", last_result, 64'd1024);
+            check_equal64("V31 HSIM complement overlap", last_result, 64'd0);
 
             issue(HDEC_HBIND, hbind_operand(4'd2, 4'd2, 4'd3), status);
             check_status("V31 HBIND slot2", status);
@@ -323,10 +323,10 @@ module tb_hdec_ecc_pmul_bg_hdc_loop_v31;
             check_constant_slot("V31 HCNTCLIP slot3", 4'd3, 64'hffff_ffff_ffff_ffff);
 
             issue(HDEC_HSIM, hsim_operand(4'd3, 4'd2), last_result);
-            check_equal64("V31 HSIM clipped prototype", last_result, 64'd0);
+            check_equal64("V31 HSIM clipped prototype overlap", last_result, 64'd1024);
 
             issue(HDEC_HMATCH, hmatch_operand(4'd3, 4'd2, 8'd2), last_result);
-            check_equal64("V31 HMATCH local classes", last_result, hmatch_result(8'd0, 11'd0));
+            check_equal64("V31 HMATCH local classes overlap", last_result, hmatch_result(8'd0, 11'd1024));
         end
     endtask
 

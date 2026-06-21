@@ -91,9 +91,9 @@ module tb_hdec_hdc_full_flow_v20;
 
     function automatic logic [63:0] hmatch_result(
         input logic [7:0] idx,
-        input logic [10:0] distance
+        input logic [10:0] score
     );
-        hmatch_result = {45'd0, idx, distance};
+        hmatch_result = {45'd0, idx, score};
     endfunction
 
     function automatic logic [63:0] align_word(
@@ -291,10 +291,10 @@ module tb_hdec_hdc_full_flow_v20;
         write_constant_slot(4'd2, 64'hdead_beef_cafe_babe);
 
         issue(HDEC_HSIM, hsim_operand(4'd0, 4'd0), result);
-        check_equal64("HSIM identical", result, 64'd0);
+        check_equal64("HSIM identical overlap", result, 64'd477);
 
         issue(HDEC_HSIM, hsim_operand(4'd0, 4'd1), result);
-        check_equal64("HSIM complement", result, 64'd1024);
+        check_equal64("HSIM complement overlap", result, 64'd0);
 
         issue(HDEC_HCLR, 64'd2, status);
         check_status("HCLR slot2", status);
@@ -319,10 +319,10 @@ module tb_hdec_hdc_full_flow_v20;
         check_constant_slot("HCNTCLIP threshold1", 4'd5, 64'hffff_ffff_ffff_ffff);
 
         issue(HDEC_HSIM, hsim_operand(4'd5, 4'd3), result);
-        check_equal64("HSIM clipped prototype", result, 64'd0);
+        check_equal64("HSIM clipped prototype overlap", result, 64'd1024);
 
         issue(HDEC_HMATCH, hmatch_operand(4'd5, 4'd2, 8'd2), result);
-        check_equal64("HMATCH zero vs ones classes", result, hmatch_result(8'd1, 11'd0));
+        check_equal64("HMATCH overlap score classes", result, hmatch_result(8'd1, 11'd1024));
 
         if (error_count == 0)
             $display("[HDEC_HDC_FULL_FLOW_V20] PASS");

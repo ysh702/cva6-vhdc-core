@@ -276,7 +276,7 @@ module tb_hdec_ecc_pmul_bg_v27;
             $error("Foreground HBIND bad status 0x%016h", status);
         end
         issue(HDEC_HSIM, hsim_operand(4'd4, 4'd4), result);
-        check_equal64("Foreground HSIM identical", result, 64'd0);
+        check_equal64("Foreground HSIM identical overlap", result, 64'd1024);
 
         poll_pmul_done(status);
         $display("PMUL_BG_WALL_CYCLES=%0d", status[31:16]);

@@ -220,12 +220,10 @@ module hdec_lane_4x64
             popcount_part_q_o <= '0;
         end else begin
             pop_q <= bool_tag_i[2];
-            if (bool_tag_i[1]) begin
-                if (bool_tag_i[0])
-                    bool_result_q <= bool_product_word;
-                else
-                    bool_result_q <= bool_xor_word;
-            end
+            if (bool_tag_i[0])
+                bool_result_q <= bool_product_word;
+            else if (bool_tag_i[1])
+                bool_result_q <= bool_xor_word;
             if (pop_q)
                 popcount_part_q_o <= popcount_part_count;
         end
