@@ -1240,12 +1240,12 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             vrf_req.wd[2]=hspread_half64(hdc_src0_q[3], 1'b0);
             vrf_req.wd[3]=hspread_half64(hdc_src0_q[3], 1'b1);
             hperm_spread_n=1'b0;
-            res_n={62'b0,STATUS_OK};
             if (ecc_autoreduce_q) begin
                 ecc_dst_n = hspread_dst_base;
                 ecc_src_a_n = hspread_dst_base;
                 st_n=S_ECC_WRITE_DRAIN;
             end else begin
+                res_n={62'b0,STATUS_OK};
                 st_n=S_RESULT;
             end
         end
@@ -1371,7 +1371,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                 vrf_req.wd[2]=ecc_product_pair_rdata[63:0];
                 vrf_req.wd[3]=ecc_product_pair_rdata[127:64];
                 if (ecc_fold_word_q[1]) begin
-                    res_n={56'b0, ecc_dst_q, STATUS_OK};
                     if (ecc_autoreduce_q)
                         ecc_src_a_n = ecc_dst_q;
                     st_n=S_ECC_WRITE_DRAIN;
