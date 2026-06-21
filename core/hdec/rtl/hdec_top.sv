@@ -127,7 +127,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
 
     // ── Scalar Response Registers (P4) ──────────────────────────────────────
     hdec_op_t    p4_arch_op_q, p4_arch_op_n;
-    logic [10:0] group_dist_q, group_dist_n, group_dist_sum, hsim_total_step;
+    logic [8:0]  group_dist_q, group_dist_n, group_dist_sum;
+    logic [10:0] hsim_total_step;
 
     // ── ECC V1 diagonal multiply shadow state ───────────────────────────────
     logic [VRF_IDX_W-1:0] ecc_src_a_q, ecc_src_a_n;
@@ -260,7 +261,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     assign hmatch_req_invalid = (a_q[15:8] == 8'd0) || (|a_q[15:12])
                               || hmatch_req_base[3]
                               || (hmatch_req_count_lo > hmatch_req_max_count);
-    assign hsim_total_step = hsim_total_q + group_dist_q;
+    assign hsim_total_step = hsim_total_q + {2'b00, group_dist_q};
     assign hdc_pop_issue = p2_lane_compute_q && p2_is_pop_q;
     assign hdc_xor_issue = p2_lane_compute_q && p2_is_hbind_q;
     assign hdc_bool_issue = hdc_pop_issue || hdc_xor_issue;
@@ -608,10 +609,10 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         );
     end
 
-    assign group_dist_sum = {5'b0, lane_popcnt_part_q[0][0]} + {5'b0, lane_popcnt_part_q[0][1]}
-                          + {5'b0, lane_popcnt_part_q[1][0]} + {5'b0, lane_popcnt_part_q[1][1]}
-                          + {5'b0, lane_popcnt_part_q[2][0]} + {5'b0, lane_popcnt_part_q[2][1]}
-                          + {5'b0, lane_popcnt_part_q[3][0]} + {5'b0, lane_popcnt_part_q[3][1]};
+    assign group_dist_sum = {3'b000, lane_popcnt_part_q[0][0]} + {3'b000, lane_popcnt_part_q[0][1]}
+                          + {3'b000, lane_popcnt_part_q[1][0]} + {3'b000, lane_popcnt_part_q[1][1]}
+                          + {3'b000, lane_popcnt_part_q[2][0]} + {3'b000, lane_popcnt_part_q[2][1]}
+                          + {3'b000, lane_popcnt_part_q[3][0]} + {3'b000, lane_popcnt_part_q[3][1]};
 
     // ── Main FSM ────────────────────────────────────────────────────────────
     always_comb begin
