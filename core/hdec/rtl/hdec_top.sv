@@ -1156,7 +1156,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                 hcntclip_acc_sel_n=a_q[3];
                 hcntclip_threshold_n=a_q[7:4];
                 hcntclip_chunk_n=2'd0;
-                hdc_src0_n='0;
                 uop_p0_n.valid       = 1'b1;
                 uop_p0_n.op_type     = UOP_HCNTCLIP_READ;
                 uop_p0_n.chunk_idx   = 2'd0;
@@ -2116,7 +2115,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         S_UOP_CLIP_WRITE: begin
             vrf_req.wa=hcntclip_dst_base_q+hcntclip_chunk_q;
             vrf_req.wd = hdc_src0_q;
-            hdc_src0_n = '0;
             p4_arch_op_n = HDEC_HCNTCLIP;
             if (hcntclip_chunk_q == 2'd3) st_n = S_UOP_P4_RESP;
             else begin
