@@ -308,10 +308,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                                      ? ecc_kpd32_leaf_store_pack32(ecc_leaf_prod_q, ecc_pipe0_diag_slot_q, ecc_diag32_pipe_q)
                                      : ecc_leaf_prod_q;
     assign ecc_job_cycle_status = ECC_STATUS_CYCLE_COUNT ? ecc_job_cycle_q : 16'd0;
-    assign ecc_diag_bg_can_sidecar = ecc_job_bg_q && ecc_job_active_q
-                                  && (ecc_job_kind_q == ECC_JOB_PMUL)
-                                  && ((ecc_job_phase_q == ECC_PHASE_PMUL_FIELD)
-                                   || (ecc_job_phase_q == ECC_PHASE_INV_MUL));
+    assign ecc_diag_bg_can_sidecar = 1'b0;
     assign ecc_diag_issue_fire = (st_q == S_ECC_DIAG_ISSUE) || (ecc_diag_bg_state_q == ECC_DIAG_BG_ISSUE);
     assign ecc_diag_flush_fire = (st_q == S_ECC_DIAG_WAIT)  || (ecc_diag_bg_state_q == ECC_DIAG_BG_FLUSH);
     assign ecc_product_pair_rdata = ecc_product_pair[ecc_fold_word_q];
