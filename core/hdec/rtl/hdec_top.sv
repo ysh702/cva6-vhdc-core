@@ -1223,7 +1223,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         S_RD_CAPTURE: begin res_n=vrf_rd[bk_q];st_n=S_RESULT;end
 
         S_HSPREAD_LO_WRITE: begin
-            hdc_src0_n = vrf_rd;
+            hdc_src0_n[2] = vrf_rd[2];
+            hdc_src0_n[3] = vrf_rd[3];
             vrf_req.wa=hspread_dst_base;
             vrf_req.wd[0]=hspread_half64(vrf_rd[0], 1'b0);
             vrf_req.wd[1]=hspread_half64(vrf_rd[0], 1'b1);
