@@ -276,8 +276,10 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     assign ecc_product_pair_rdata = ecc_product_pair[ecc_fold_word_q];
     assign ecc_product_even_contrib = ecc_kpd64_fold_word_contrib(ecc_leaf64_offset_mask, {ecc_fold_word_q, 1'b0}, ecc_leaf128_prod_q);
     assign ecc_product_odd_contrib  = ecc_kpd64_fold_word_contrib(ecc_leaf64_offset_mask, {ecc_fold_word_q, 1'b1}, ecc_leaf128_prod_q);
-    assign ecc_product_pair_wdata = {ecc_product_odd_contrib, ecc_product_even_contrib}
-                                  ^ (ecc_product_pair_rdata & {128{~ecc_leaf_first}});
+    assign ecc_product_pair_wdata = ecc_leaf_first
+                                  ? {ecc_product_odd_contrib, ecc_product_even_contrib}
+                                  : ({ecc_product_odd_contrib, ecc_product_even_contrib}
+                                   ^ ecc_product_pair_rdata);
     assign ecc_product_wb_addr = ecc_dst_q + {5'b0, ecc_fold_word_q[1]};
     assign ecc_pmul_add_out_x = ecc_pmul_scalar_bit_q ? ECC_PMUL_R0X : ECC_PMUL_R1X;
     assign ecc_pmul_add_out_z = ecc_pmul_scalar_bit_q ? ECC_PMUL_R0Z : ECC_PMUL_R1Z;

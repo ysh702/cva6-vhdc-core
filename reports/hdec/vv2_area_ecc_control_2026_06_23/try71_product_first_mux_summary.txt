@@ -1,0 +1,38 @@
+VV2 try71: product_first_mux
+
+Baseline:
+- Commit: 38d7b61f VV2: remove redundant VRD bank shadow
+- Total LUT=5128, Logic LUT=5000, LUTRAM=128, FF=1834, Fmax=210.393MHz
+- PMUL wall cycles=190151
+
+Change:
+- In ECC product scratch fold writeback, replace masked XOR form:
+    contrib ^ (rdata & {128{~first}})
+  with explicit first-fold mux:
+    first ? contrib : (contrib ^ rdata)
+- This keeps the same GF(2) product accumulation semantics.
+- No ISA, HDC self-learning algorithm, ECC Montgomery/ITA schedule, or PMUL cycle change.
+
+Functional checks:
+- xsim_hdec_ecc_reduce_v1: PASS
+- xsim_hdec_ecc_pmul_profile_v27: PASS, PMUL_PROFILE_WALL_CYCLES=190151
+- xsim_hdec_hdc_full_flow_v20: PASS
+- xsim_hdec_hmatch_compare_split: PASS
+- xsim_hdec_hperm_bit_align: PASS
+
+OOC result:
+- Total LUT=5128
+- Logic LUT=5000
+- LUTRAM=128
+- FF=1833
+- Fmax=210.393MHz
+- BRAM=4
+- DSP=0
+
+Decision:
+- ACCEPTED.
+- Compared with 38d7b61f, LUT/Fmax/PMUL are unchanged and FF decreases by 1.
+
+Lesson:
+- For product scratch first-fold handling, Vivado maps the explicit first mux slightly better than the masked-read XOR form.
+- This is a safe ECC-local cleanup, not an algorithm change.
