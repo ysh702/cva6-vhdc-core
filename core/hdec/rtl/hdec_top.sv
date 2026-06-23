@@ -158,7 +158,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     (* ram_style = "distributed" *) logic [127:0] ecc_product_pair [0:3];
     logic                 ecc_product_we;
     logic [127:0]         ecc_product_pair_rdata;
-    logic                 ecc_product_pair_hold_we;
     logic [127:0]         ecc_product_pair_hold_q;
     logic [127:0]         ecc_product_pair_wdata;
     logic [63:0]          ecc_product_even_contrib;
@@ -613,7 +612,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         ecc_leaf_path_n=ecc_leaf_path_q;
         ecc_fold_word_n=ecc_fold_word_q;
         ecc_product_we=1'b0;
-        ecc_product_pair_hold_we=1'b0;
         ecc_autoreduce_n=ecc_autoreduce_q; ecc_mac_n=ecc_mac_q; ecc_sqr_repeat_n=ecc_sqr_repeat_q;
         ecc_job_kind_n=ecc_job_kind_q; ecc_job_phase_n=ecc_job_phase_q;
         ecc_job_active_n=ecc_job_active_q; ecc_job_done_n=ecc_job_done_q;
@@ -1082,7 +1080,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         S_ECC_WRITE_PAIR: begin
             vrf_req.wa=ecc_product_wb_addr;
             if (!ecc_fold_word_q[0]) begin
-                ecc_product_pair_hold_we=1'b1;
                 ecc_fold_word_n=ecc_fold_word_q + 2'd1;
                 st_n=S_ECC_WRITE_PAIR;
             end else begin
@@ -1930,9 +1927,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         if (ecc_product_we) begin
             ecc_product_pair[ecc_fold_word_q] <= ecc_product_pair_wdata;
         end
-        if (ecc_product_pair_hold_we) begin
-            ecc_product_pair_hold_q <= ecc_product_pair_rdata;
-        end
+        ecc_product_pair_hold_q <= ecc_product_pair_rdata;
     end
 
     always_ff @(posedge clk_i or negedge rst_ni) begin
