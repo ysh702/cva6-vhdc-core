@@ -46,7 +46,8 @@ module hdec_lane_4x64
 
     input  logic [31:0]                       ecc_diag_a_i,
     input  logic [31:0]                       ecc_diag_b_i,
-    output logic [7:0]                        ecc_diag_parity_o
+    output logic [7:0]                        ecc_diag_parity_o,
+    output logic [7:0]                        ecc_diag_pop_parity_o
 );
 
     // ── XOR Front-End Core ──────────────────────────────────────────────────
@@ -72,73 +73,33 @@ module hdec_lane_4x64
         end
     endfunction
 
-    function automatic logic [1:0] ecc_diag32_even_parity(
+    function automatic logic ecc_diag32_line_pop_parity(
         input logic [31:0] a_word,
         input logic [31:0] b_word,
-        input logic [1:0]  slot_group
+        input int unsigned diag_idx
     );
+        logic [31:0] terms;
+        logic [5:0]  term_count;
         begin
-            unique case (slot_group)
-            2'd0: ecc_diag32_even_parity = {ecc_diag32_line_parity(a_word, b_word, LANE_ID * 2 + 1),
-                                            ecc_diag32_line_parity(a_word, b_word, LANE_ID * 2)};
-            2'd1: ecc_diag32_even_parity = {ecc_diag32_line_parity(a_word, b_word, 16 + LANE_ID * 2 + 1),
-                                            ecc_diag32_line_parity(a_word, b_word, 16 + LANE_ID * 2)};
-            2'd2: ecc_diag32_even_parity = {ecc_diag32_line_parity(a_word, b_word, 32 + LANE_ID * 2 + 1),
-                                            ecc_diag32_line_parity(a_word, b_word, 32 + LANE_ID * 2)};
-            default: ecc_diag32_even_parity = {ecc_diag32_line_parity(a_word, b_word, 48 + LANE_ID * 2 + 1),
-                                               ecc_diag32_line_parity(a_word, b_word, 48 + LANE_ID * 2)};
-            endcase
+            terms = '0;
+            for (int unsigned bit_idx = 0; bit_idx < 32; bit_idx++) begin
+                if ((diag_idx >= bit_idx) && ((diag_idx - bit_idx) < 32))
+                    terms[bit_idx] = a_word[bit_idx] & b_word[diag_idx - bit_idx];
+            end
+            term_count = 6'($countones(terms));
+            ecc_diag32_line_pop_parity = term_count[0];
         end
     endfunction
 
-    function automatic logic [1:0] ecc_diag32_pair_parity(
-        input logic [31:0] a_word,
-        input logic [31:0] b_word,
-        input logic [1:0]  slot_group
-    );
-        begin
-            unique case (slot_group)
-            2'd0: ecc_diag32_pair_parity = {ecc_diag32_line_parity(a_word, b_word, 8 + LANE_ID * 2 + 1),
-                                            ecc_diag32_line_parity(a_word, b_word, 8 + LANE_ID * 2)};
-            2'd1: ecc_diag32_pair_parity = {ecc_diag32_line_parity(a_word, b_word, 24 + LANE_ID * 2 + 1),
-                                            ecc_diag32_line_parity(a_word, b_word, 24 + LANE_ID * 2)};
-            2'd2: ecc_diag32_pair_parity = {ecc_diag32_line_parity(a_word, b_word, 40 + LANE_ID * 2 + 1),
-                                            ecc_diag32_line_parity(a_word, b_word, 40 + LANE_ID * 2)};
-            default: ecc_diag32_pair_parity = {ecc_diag32_line_parity(a_word, b_word, 56 + LANE_ID * 2 + 1),
-                                               ecc_diag32_line_parity(a_word, b_word, 56 + LANE_ID * 2)};
-            endcase
-        end
-    endfunction
-
-    function automatic logic [3:0] ecc_diag32_quad_parity(
-        input logic [31:0] a_word,
-        input logic [31:0] b_word,
-        input logic [1:0]  slot_group
-    );
-        begin
-            unique case (slot_group)
-            2'd0: ecc_diag32_quad_parity = {
-                ecc_diag32_line_parity(a_word, b_word, 8 + LANE_ID * 2 + 1),
-                ecc_diag32_line_parity(a_word, b_word, 8 + LANE_ID * 2),
-                ecc_diag32_line_parity(a_word, b_word, LANE_ID * 2 + 1),
-                ecc_diag32_line_parity(a_word, b_word, LANE_ID * 2)};
-            2'd1: ecc_diag32_quad_parity = {
-                ecc_diag32_line_parity(a_word, b_word, 24 + LANE_ID * 2 + 1),
-                ecc_diag32_line_parity(a_word, b_word, 24 + LANE_ID * 2),
-                ecc_diag32_line_parity(a_word, b_word, 16 + LANE_ID * 2 + 1),
-                ecc_diag32_line_parity(a_word, b_word, 16 + LANE_ID * 2)};
-            2'd2: ecc_diag32_quad_parity = {
-                ecc_diag32_line_parity(a_word, b_word, 40 + LANE_ID * 2 + 1),
-                ecc_diag32_line_parity(a_word, b_word, 40 + LANE_ID * 2),
-                ecc_diag32_line_parity(a_word, b_word, 32 + LANE_ID * 2 + 1),
-                ecc_diag32_line_parity(a_word, b_word, 32 + LANE_ID * 2)};
-            default: ecc_diag32_quad_parity = {
-                ecc_diag32_line_parity(a_word, b_word, 56 + LANE_ID * 2 + 1),
-                ecc_diag32_line_parity(a_word, b_word, 56 + LANE_ID * 2),
-                ecc_diag32_line_parity(a_word, b_word, 48 + LANE_ID * 2 + 1),
-                ecc_diag32_line_parity(a_word, b_word, 48 + LANE_ID * 2)};
-            endcase
-        end
+    function automatic logic [31:0] ecc_bitrev32_local(input logic [31:0] word);
+        ecc_bitrev32_local = {word[0],  word[1],  word[2],  word[3],
+                              word[4],  word[5],  word[6],  word[7],
+                              word[8],  word[9],  word[10], word[11],
+                              word[12], word[13], word[14], word[15],
+                              word[16], word[17], word[18], word[19],
+                              word[20], word[21], word[22], word[23],
+                              word[24], word[25], word[26], word[27],
+                              word[28], word[29], word[30], word[31]};
     endfunction
 
     function automatic logic [7:0] ecc_diag32_oct_parity(
@@ -158,6 +119,23 @@ module hdec_lane_4x64
         end
     endfunction
 
+    function automatic logic [7:0] ecc_diag32_oct_pop_parity(
+        input logic [31:0] a_word,
+        input logic [31:0] b_word
+    );
+        begin
+            ecc_diag32_oct_pop_parity = {
+                ecc_diag32_line_pop_parity(a_word, b_word, 16 + LANE_ID * 4 + 3),
+                ecc_diag32_line_pop_parity(a_word, b_word, 16 + LANE_ID * 4 + 2),
+                ecc_diag32_line_pop_parity(a_word, b_word, 16 + LANE_ID * 4 + 1),
+                ecc_diag32_line_pop_parity(a_word, b_word, 16 + LANE_ID * 4),
+                ecc_diag32_line_pop_parity(a_word, b_word, LANE_ID * 4 + 3),
+                ecc_diag32_line_pop_parity(a_word, b_word, LANE_ID * 4 + 2),
+                ecc_diag32_line_pop_parity(a_word, b_word, LANE_ID * 4 + 1),
+                ecc_diag32_line_pop_parity(a_word, b_word, LANE_ID * 4)};
+        end
+    endfunction
+
     assign bool_result_q_o = bool_result_q;
     assign bool_xor_word = bool_src_a_i ^ bool_src_b_i;
     assign bool_product_word = bool_src_a_i & bool_src_b_i;
@@ -168,6 +146,9 @@ module hdec_lane_4x64
 
     assign ecc_diag_parity_o =
         ecc_diag32_oct_parity(ecc_diag_a_i, ecc_diag_b_i);
+    assign ecc_diag_pop_parity_o =
+        ecc_diag32_oct_pop_parity(ecc_bitrev32_local(ecc_diag_a_i),
+                                  ecc_bitrev32_local(ecc_diag_b_i));
 
     always_ff @(posedge clk_i or negedge rst_ni) begin
         if (!rst_ni) begin
