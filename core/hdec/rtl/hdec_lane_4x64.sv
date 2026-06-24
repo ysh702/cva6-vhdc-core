@@ -9,7 +9,8 @@ module hdec_lane_4x64
     import hdec_pkg::*;
     import hdec_resource_pkg::*;
 #(
-    parameter int LANE_ID = 0   // 0, 1, 2, or 3
+    parameter int LANE_ID = 0,   // 0, 1, 2, or 3
+    parameter bit ENABLE_ECC_REDUCE = 1'b1
 ) (
     input  logic                              clk_i,
     input  logic                              rst_ni,
@@ -35,11 +36,6 @@ module hdec_lane_4x64
     output logic [LANE_WIDTH-1:0]             cnt_new_counter_o,
 
     // ── Shift-Align Compute Path (bit-granular, lane-local) ─────────────────
-    input  logic [LANE_WIDTH-1:0]             shift_src_a_i,
-    input  logic [LANE_WIDTH-1:0]             shift_src_b_i,
-    input  logic [5:0]                        shift_bit_i,
-    output logic [LANE_WIDTH-1:0]             shift_result_o,
-
     // ── Clip Compute Path (HDC counter non-zero predicate) ──────────────────
     input  logic [LANE_WIDTH-1:0]             clip_counter_i,
     output logic [15:0]                       clip_bits_o,
@@ -79,15 +75,13 @@ module hdec_lane_4x64
         input int unsigned diag_idx
     );
         logic [31:0] terms;
-        logic [5:0]  term_count;
         begin
             terms = '0;
             for (int unsigned bit_idx = 0; bit_idx < 32; bit_idx++) begin
                 if ((diag_idx >= bit_idx) && ((diag_idx - bit_idx) < 32))
                     terms[bit_idx] = a_word[bit_idx] & b_word[diag_idx - bit_idx];
             end
-            term_count = 6'($countones(terms));
-            ecc_diag32_line_pop_parity = term_count[0];
+            ecc_diag32_line_pop_parity = ^terms;
         end
     endfunction
 
@@ -125,7 +119,7 @@ module hdec_lane_4x64
     );
         begin
             ecc_diag32_oct_pop_parity = {
-                ecc_diag32_line_pop_parity(a_word, b_word, 16 + LANE_ID * 4 + 3),
+                (LANE_ID == 3) ? 1'b0 : ecc_diag32_line_pop_parity(a_word, b_word, 16 + LANE_ID * 4 + 3),
                 ecc_diag32_line_pop_parity(a_word, b_word, 16 + LANE_ID * 4 + 2),
                 ecc_diag32_line_pop_parity(a_word, b_word, 16 + LANE_ID * 4 + 1),
                 ecc_diag32_line_pop_parity(a_word, b_word, 16 + LANE_ID * 4),
@@ -139,8 +133,14 @@ module hdec_lane_4x64
     assign bool_result_q_o = bool_result_q;
     assign bool_xor_word = bool_src_a_i ^ bool_src_b_i;
     assign bool_product_word = bool_src_a_i & bool_src_b_i;
-    assign ecc_reduce_word_o = ecc_reduce_src_a_i ^ ecc_reduce_src_b_i
-                             ^ bool_src_c_i ^ bool_src_d_i;
+    generate
+        if (ENABLE_ECC_REDUCE) begin : gen_ecc_reduce_word
+            assign ecc_reduce_word_o = ecc_reduce_src_a_i ^ ecc_reduce_src_b_i
+                                   ^ bool_src_c_i ^ bool_src_d_i;
+        end else begin : gen_no_ecc_reduce_word
+            assign ecc_reduce_word_o = '0;
+        end
+    endgenerate
     assign popcount_part_count[0] = 6'($countones(bool_result_q[31:0]));
     assign popcount_part_count[1] = 6'($countones(bool_result_q[63:32]));
 
@@ -175,13 +175,6 @@ module hdec_lane_4x64
     );
 
     // ── Shift-Align Core ───────────────────────────────────────────────────
-    hdec_lane_shift_align i_shift_align (
-        .src_a_i       (shift_src_a_i),
-        .src_b_i       (shift_src_b_i),
-        .bit_shift_i   (shift_bit_i),
-        .result_o      (shift_result_o)
-    );
-
     // ── Clip Core ──────────────────────────────────────────────────────────
     hdec_lane_clip i_clip (
         .counter_i  (clip_counter_i),

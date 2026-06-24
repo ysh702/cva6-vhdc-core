@@ -29,7 +29,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     // ── State Machine ───────────────────────────────────────────────────────
     typedef enum logic [6:0] {
         S_IDLE, S_EXEC, S_VWR_WAIT, S_RD_WAIT, S_RD_CAPTURE, S_RESULT, S_CLR, S_CLR_DRAIN,
-        S_HSIM_INIT, S_HMATCH_INIT,
+        S_HSIM_INIT, S_HMATCH_INIT, S_HPERM_SERIAL,
         S_UOP_P1_RD0, S_UOP_P1_RD0_WAIT, S_UOP_P1_RD1, S_UOP_P1_RD1_WAIT,
         S_UOP_P2_LANE, S_UOP_P3_GLOBAL, S_UOP_P3_POP_CAPTURE, S_UOP_P3_VRF_WAIT, S_UOP_P3_ACCUM, S_UOP_P4_RESP,
         S_UOP_CLIP_WRITE,
@@ -41,9 +41,9 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         S_ECC_INV_INIT, S_ECC_INV_COPY_WAIT, S_ECC_INV_COPY_WRITE, S_ECC_INV_STEP, S_ECC_INV_ISSUE_SQR,
         S_ECC_INV_AFTER_SQR, S_ECC_INV_AFTER_MUL,
         S_ECC_PMUL_INIT, S_ECC_PMUL_CONST_WRITE, S_ECC_PMUL_READ_SCALAR_WAIT, S_ECC_PMUL_READ_SCALAR,
-        S_ECC_PMUL_START_ADD, S_ECC_PMUL_START_DBL, S_ECC_PMUL_STEP, S_ECC_PMUL_STEP_NEXT,
+        S_ECC_PMUL_STEP, S_ECC_PMUL_STEP_NEXT,
         S_ECC_BG_DISPATCH, S_ECC_JOB_DONE,
-        S_HSPREAD_LO_WRITE, S_HSPREAD_HI_WRITE,
+        S_ECC_SQR_WRITE, S_HSPREAD_LO_WRITE, S_HSPREAD_HI_WRITE,
         S_RD_WAIT2,
         S_ECC_LOAD_A_WAIT2,
         S_ECC_REDUCE_LOAD_LO_WAIT2,
@@ -99,11 +99,14 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     logic                                uop_p2_use_counter, uop_p2_use_shift, uop_p2_use_clip;
     logic                                p2_lane_compute_q, p2_lane_compute_n;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] hdc_src0_q, hdc_src0_n;
+    logic                                hdc_src0_we, hdc_src0_acc_we;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] lane_bool_result;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] lane_cnt_new_counter;
-    logic [LANE_NUM-1:0][LANE_WIDTH-1:0] lane_shift_a,lane_shift_b,lane_shift_result;
     logic [4:0][LANE_WIDTH-1:0]          lane_shift_window;
     logic [5:0]                          lane_shift_bit;
+    logic [5:0]                          hperm_serial_bit_q,hperm_serial_bit_n;
+    logic [LANE_NUM-1:0]                 hperm_serial_lane_bit;
+    logic                                hperm_serial_clear,hperm_serial_we;
     logic [LANE_NUM-1:0][15:0]           lane_clip_bits;
 
     // ── Lane Boundary Registers (P2→P3 cut, split by payload width) ─────────
@@ -150,6 +153,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] ecc_reduce_src2;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] ecc_reduce_src3;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] lane_ecc_reduce_word;
+    logic [232:0]         ecc_direct_reduce_bits;
+    logic [232:0]         ecc_square_reduce_bits;
     logic [31:0]          ecc_diag32_low_parity;
     logic [31:0]          ecc_diag32_high_parity;
     logic [31:0]          ecc_diag_lane_a;
@@ -165,6 +170,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     logic [63:0]          ecc_product_odd_contrib;
     logic [VRF_IDX_W-1:0] ecc_product_wb_addr;
     logic                 ecc_autoreduce_q, ecc_autoreduce_n;
+    logic                 ecc_raw_product_q, ecc_raw_product_n;
     logic                 ecc_mac_q, ecc_mac_n;
     logic [6:0]           ecc_sqr_repeat_q, ecc_sqr_repeat_n;
     logic                 ecc_leaf_first;
@@ -203,12 +209,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         ECC_PHASE_PMUL_COPY     = 4'd7
     } ecc_job_phase_e;
     typedef enum logic [2:0] {
-        ECC_PMUL_CTRL_INIT   = 3'd0,
-        ECC_PMUL_CTRL_ADD    = 3'd1,
-        ECC_PMUL_CTRL_DBL    = 3'd2,
-        ECC_PMUL_CTRL_FINAL  = 3'd3
-    } ecc_pmul_ctrl_e;
-    typedef enum logic [2:0] {
         ECC_PMUL_SUB_NONE       = 3'd0,
         ECC_PMUL_SUB_INIT       = 3'd1,
         ECC_PMUL_SUB_COPY_POINT = 3'd2,
@@ -230,7 +230,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     logic [3:0]         ecc_inv_step_q, ecc_inv_step_n;
     logic [VRF_IDX_W-1:0] ecc_job_src_q, ecc_job_src_n;
     logic [VRF_IDX_W-1:0] ecc_job_dst_q, ecc_job_dst_n;
-    ecc_pmul_ctrl_e     ecc_pmul_ctrl_q, ecc_pmul_ctrl_n;
     (* fsm_encoding = "one_hot" *) ecc_pmul_subop_e ecc_pmul_subop_q, ecc_pmul_subop_n;
     logic [5:0]         ecc_pmul_step_q, ecc_pmul_step_n;
     logic [7:0]         ecc_pmul_bit_q, ecc_pmul_bit_n;
@@ -269,13 +268,14 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     assign ecc_leaf_lowxor_rd = ecc_kpd64_leaf_lowxor_pack({vrf_rd[3], vrf_rd[2], vrf_rd[1], vrf_rd[0]}, ecc_leaf_read_path);
     assign ecc_leaf_first = (ecc_leaf_path_q[3:0] == 4'b00_00);
     assign ecc_leaf_last  = (ecc_leaf_path_q[3:0] == 4'b10_10);
-    assign ecc_leaf64_offset_mask = ecc_kpd64_leaf_offset_mask(ecc_leaf_path_q[3:0]);
     assign ecc_leaf_prod_flush_value = ecc_leaf_prod_q;
     assign ecc_job_cycle_status = ECC_STATUS_CYCLE_COUNT ? ecc_job_cycle_q : 16'd0;
     assign ecc_diag_issue_fire = (st_q == S_ECC_DIAG_ISSUE);
     assign ecc_product_pair_rdata = ecc_product_pair[ecc_fold_word_q];
+    assign ecc_leaf64_offset_mask = ecc_kpd64_leaf_offset_mask(ecc_leaf_path_q[3:0]);
     assign ecc_product_even_contrib = ecc_kpd64_fold_word_contrib(ecc_leaf64_offset_mask, {ecc_fold_word_q, 1'b0}, ecc_leaf128_prod_q);
     assign ecc_product_odd_contrib  = ecc_kpd64_fold_word_contrib(ecc_leaf64_offset_mask, {ecc_fold_word_q, 1'b1}, ecc_leaf128_prod_q);
+    assign ecc_square_reduce_bits = ecc_square_reduce233_loop(vrf_rd);
     assign ecc_product_pair_wdata = ecc_leaf_first
                                   ? {ecc_product_odd_contrib, ecc_product_even_contrib}
                                   : ({ecc_product_odd_contrib, ecc_product_even_contrib}
@@ -374,6 +374,24 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         hperm_read_addr = base + {4'b0, chunk} + {4'b0, word_off[3:2]} + VRF_IDX_W'(next_word);
     endfunction
 
+    function automatic logic hperm_window_bit(
+        input logic [4:0][LANE_WIDTH-1:0] window,
+        input logic [1:0]                 lane_id,
+        input logic [5:0]                 bit_idx,
+        input logic [5:0]                 shift
+    );
+        logic [6:0] src_bit;
+        begin
+            src_bit = {1'b0, bit_idx} + {1'b0, shift};
+            unique case (lane_id)
+            2'd0: hperm_window_bit = src_bit[6] ? window[1][src_bit[5:0]] : window[0][src_bit[5:0]];
+            2'd1: hperm_window_bit = src_bit[6] ? window[2][src_bit[5:0]] : window[1][src_bit[5:0]];
+            2'd2: hperm_window_bit = src_bit[6] ? window[3][src_bit[5:0]] : window[2][src_bit[5:0]];
+            default: hperm_window_bit = src_bit[6] ? window[4][src_bit[5:0]] : window[3][src_bit[5:0]];
+            endcase
+        end
+    endfunction
+
     function automatic logic [63:0] hspread_half64(
         input logic [63:0] word,
         input logic        hi_half
@@ -384,6 +402,275 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             hspread_half64 = '0;
             for (int bit_idx = 0; bit_idx < 32; bit_idx++)
                 hspread_half64[bit_idx << 1] = half_word[bit_idx];
+        end
+    endfunction
+
+    function automatic logic [232:0] ecc_square_reduce233(
+        input logic [LANE_NUM-1:0][LANE_WIDTH-1:0] src
+    );
+        logic [232:0] src_flat;
+        logic [232:0] reduced;
+        begin
+            src_flat = {src[3][40:0], src[2], src[1], src[0]};
+            reduced = '0;
+            reduced[0] = src_flat[0] ^ src_flat[196];
+            reduced[1] = src_flat[117];
+            reduced[2] = src_flat[1] ^ src_flat[197];
+            reduced[3] = src_flat[118];
+            reduced[4] = src_flat[2] ^ src_flat[198];
+            reduced[5] = src_flat[119];
+            reduced[6] = src_flat[3] ^ src_flat[199];
+            reduced[7] = src_flat[120];
+            reduced[8] = src_flat[4] ^ src_flat[200];
+            reduced[9] = src_flat[121];
+            reduced[10] = src_flat[5] ^ src_flat[201];
+            reduced[11] = src_flat[122];
+            reduced[12] = src_flat[6] ^ src_flat[202];
+            reduced[13] = src_flat[123];
+            reduced[14] = src_flat[7] ^ src_flat[203];
+            reduced[15] = src_flat[124];
+            reduced[16] = src_flat[8] ^ src_flat[204];
+            reduced[17] = src_flat[125];
+            reduced[18] = src_flat[9] ^ src_flat[205];
+            reduced[19] = src_flat[126];
+            reduced[20] = src_flat[10] ^ src_flat[206];
+            reduced[21] = src_flat[127];
+            reduced[22] = src_flat[11] ^ src_flat[207];
+            reduced[23] = src_flat[128];
+            reduced[24] = src_flat[12] ^ src_flat[208];
+            reduced[25] = src_flat[129];
+            reduced[26] = src_flat[13] ^ src_flat[209];
+            reduced[27] = src_flat[130];
+            reduced[28] = src_flat[14] ^ src_flat[210];
+            reduced[29] = src_flat[131];
+            reduced[30] = src_flat[15] ^ src_flat[211];
+            reduced[31] = src_flat[132];
+            reduced[32] = src_flat[16] ^ src_flat[212];
+            reduced[33] = src_flat[133];
+            reduced[34] = src_flat[17] ^ src_flat[213];
+            reduced[35] = src_flat[134];
+            reduced[36] = src_flat[18] ^ src_flat[214];
+            reduced[37] = src_flat[135];
+            reduced[38] = src_flat[19] ^ src_flat[215];
+            reduced[39] = src_flat[136];
+            reduced[40] = src_flat[20] ^ src_flat[216];
+            reduced[41] = src_flat[137];
+            reduced[42] = src_flat[21] ^ src_flat[217];
+            reduced[43] = src_flat[138];
+            reduced[44] = src_flat[22] ^ src_flat[218];
+            reduced[45] = src_flat[139];
+            reduced[46] = src_flat[23] ^ src_flat[219];
+            reduced[47] = src_flat[140];
+            reduced[48] = src_flat[24] ^ src_flat[220];
+            reduced[49] = src_flat[141];
+            reduced[50] = src_flat[25] ^ src_flat[221];
+            reduced[51] = src_flat[142];
+            reduced[52] = src_flat[26] ^ src_flat[222];
+            reduced[53] = src_flat[143];
+            reduced[54] = src_flat[27] ^ src_flat[223];
+            reduced[55] = src_flat[144];
+            reduced[56] = src_flat[28] ^ src_flat[224];
+            reduced[57] = src_flat[145];
+            reduced[58] = src_flat[29] ^ src_flat[225];
+            reduced[59] = src_flat[146];
+            reduced[60] = src_flat[30] ^ src_flat[226];
+            reduced[61] = src_flat[147];
+            reduced[62] = src_flat[31] ^ src_flat[227];
+            reduced[63] = src_flat[148];
+            reduced[64] = src_flat[32] ^ src_flat[228];
+            reduced[65] = src_flat[149];
+            reduced[66] = src_flat[33] ^ src_flat[229];
+            reduced[67] = src_flat[150];
+            reduced[68] = src_flat[34] ^ src_flat[230];
+            reduced[69] = src_flat[151];
+            reduced[70] = src_flat[35] ^ src_flat[231];
+            reduced[71] = src_flat[152];
+            reduced[72] = src_flat[36] ^ src_flat[232];
+            reduced[73] = src_flat[153];
+            reduced[74] = src_flat[37] ^ src_flat[196];
+            reduced[75] = src_flat[117] ^ src_flat[154];
+            reduced[76] = src_flat[38] ^ src_flat[197];
+            reduced[77] = src_flat[118] ^ src_flat[155];
+            reduced[78] = src_flat[39] ^ src_flat[198];
+            reduced[79] = src_flat[119] ^ src_flat[156];
+            reduced[80] = src_flat[40] ^ src_flat[199];
+            reduced[81] = src_flat[120] ^ src_flat[157];
+            reduced[82] = src_flat[41] ^ src_flat[200];
+            reduced[83] = src_flat[121] ^ src_flat[158];
+            reduced[84] = src_flat[42] ^ src_flat[201];
+            reduced[85] = src_flat[122] ^ src_flat[159];
+            reduced[86] = src_flat[43] ^ src_flat[202];
+            reduced[87] = src_flat[123] ^ src_flat[160];
+            reduced[88] = src_flat[44] ^ src_flat[203];
+            reduced[89] = src_flat[124] ^ src_flat[161];
+            reduced[90] = src_flat[45] ^ src_flat[204];
+            reduced[91] = src_flat[125] ^ src_flat[162];
+            reduced[92] = src_flat[46] ^ src_flat[205];
+            reduced[93] = src_flat[126] ^ src_flat[163];
+            reduced[94] = src_flat[47] ^ src_flat[206];
+            reduced[95] = src_flat[127] ^ src_flat[164];
+            reduced[96] = src_flat[48] ^ src_flat[207];
+            reduced[97] = src_flat[128] ^ src_flat[165];
+            reduced[98] = src_flat[49] ^ src_flat[208];
+            reduced[99] = src_flat[129] ^ src_flat[166];
+            reduced[100] = src_flat[50] ^ src_flat[209];
+            reduced[101] = src_flat[130] ^ src_flat[167];
+            reduced[102] = src_flat[51] ^ src_flat[210];
+            reduced[103] = src_flat[131] ^ src_flat[168];
+            reduced[104] = src_flat[52] ^ src_flat[211];
+            reduced[105] = src_flat[132] ^ src_flat[169];
+            reduced[106] = src_flat[53] ^ src_flat[212];
+            reduced[107] = src_flat[133] ^ src_flat[170];
+            reduced[108] = src_flat[54] ^ src_flat[213];
+            reduced[109] = src_flat[134] ^ src_flat[171];
+            reduced[110] = src_flat[55] ^ src_flat[214];
+            reduced[111] = src_flat[135] ^ src_flat[172];
+            reduced[112] = src_flat[56] ^ src_flat[215];
+            reduced[113] = src_flat[136] ^ src_flat[173];
+            reduced[114] = src_flat[57] ^ src_flat[216];
+            reduced[115] = src_flat[137] ^ src_flat[174];
+            reduced[116] = src_flat[58] ^ src_flat[217];
+            reduced[117] = src_flat[138] ^ src_flat[175];
+            reduced[118] = src_flat[59] ^ src_flat[218];
+            reduced[119] = src_flat[139] ^ src_flat[176];
+            reduced[120] = src_flat[60] ^ src_flat[219];
+            reduced[121] = src_flat[140] ^ src_flat[177];
+            reduced[122] = src_flat[61] ^ src_flat[220];
+            reduced[123] = src_flat[141] ^ src_flat[178];
+            reduced[124] = src_flat[62] ^ src_flat[221];
+            reduced[125] = src_flat[142] ^ src_flat[179];
+            reduced[126] = src_flat[63] ^ src_flat[222];
+            reduced[127] = src_flat[143] ^ src_flat[180];
+            reduced[128] = src_flat[64] ^ src_flat[223];
+            reduced[129] = src_flat[144] ^ src_flat[181];
+            reduced[130] = src_flat[65] ^ src_flat[224];
+            reduced[131] = src_flat[145] ^ src_flat[182];
+            reduced[132] = src_flat[66] ^ src_flat[225];
+            reduced[133] = src_flat[146] ^ src_flat[183];
+            reduced[134] = src_flat[67] ^ src_flat[226];
+            reduced[135] = src_flat[147] ^ src_flat[184];
+            reduced[136] = src_flat[68] ^ src_flat[227];
+            reduced[137] = src_flat[148] ^ src_flat[185];
+            reduced[138] = src_flat[69] ^ src_flat[228];
+            reduced[139] = src_flat[149] ^ src_flat[186];
+            reduced[140] = src_flat[70] ^ src_flat[229];
+            reduced[141] = src_flat[150] ^ src_flat[187];
+            reduced[142] = src_flat[71] ^ src_flat[230];
+            reduced[143] = src_flat[151] ^ src_flat[188];
+            reduced[144] = src_flat[72] ^ src_flat[231];
+            reduced[145] = src_flat[152] ^ src_flat[189];
+            reduced[146] = src_flat[73] ^ src_flat[232];
+            reduced[147] = src_flat[153] ^ src_flat[190];
+            reduced[148] = src_flat[74];
+            reduced[149] = src_flat[154] ^ src_flat[191];
+            reduced[150] = src_flat[75];
+            reduced[151] = src_flat[155] ^ src_flat[192];
+            reduced[152] = src_flat[76];
+            reduced[153] = src_flat[156] ^ src_flat[193];
+            reduced[154] = src_flat[77];
+            reduced[155] = src_flat[157] ^ src_flat[194];
+            reduced[156] = src_flat[78];
+            reduced[157] = src_flat[158] ^ src_flat[195];
+            reduced[158] = src_flat[79];
+            reduced[159] = src_flat[159] ^ src_flat[196];
+            reduced[160] = src_flat[80];
+            reduced[161] = src_flat[160] ^ src_flat[197];
+            reduced[162] = src_flat[81];
+            reduced[163] = src_flat[161] ^ src_flat[198];
+            reduced[164] = src_flat[82];
+            reduced[165] = src_flat[162] ^ src_flat[199];
+            reduced[166] = src_flat[83];
+            reduced[167] = src_flat[163] ^ src_flat[200];
+            reduced[168] = src_flat[84];
+            reduced[169] = src_flat[164] ^ src_flat[201];
+            reduced[170] = src_flat[85];
+            reduced[171] = src_flat[165] ^ src_flat[202];
+            reduced[172] = src_flat[86];
+            reduced[173] = src_flat[166] ^ src_flat[203];
+            reduced[174] = src_flat[87];
+            reduced[175] = src_flat[167] ^ src_flat[204];
+            reduced[176] = src_flat[88];
+            reduced[177] = src_flat[168] ^ src_flat[205];
+            reduced[178] = src_flat[89];
+            reduced[179] = src_flat[169] ^ src_flat[206];
+            reduced[180] = src_flat[90];
+            reduced[181] = src_flat[170] ^ src_flat[207];
+            reduced[182] = src_flat[91];
+            reduced[183] = src_flat[171] ^ src_flat[208];
+            reduced[184] = src_flat[92];
+            reduced[185] = src_flat[172] ^ src_flat[209];
+            reduced[186] = src_flat[93];
+            reduced[187] = src_flat[173] ^ src_flat[210];
+            reduced[188] = src_flat[94];
+            reduced[189] = src_flat[174] ^ src_flat[211];
+            reduced[190] = src_flat[95];
+            reduced[191] = src_flat[175] ^ src_flat[212];
+            reduced[192] = src_flat[96];
+            reduced[193] = src_flat[176] ^ src_flat[213];
+            reduced[194] = src_flat[97];
+            reduced[195] = src_flat[177] ^ src_flat[214];
+            reduced[196] = src_flat[98];
+            reduced[197] = src_flat[178] ^ src_flat[215];
+            reduced[198] = src_flat[99];
+            reduced[199] = src_flat[179] ^ src_flat[216];
+            reduced[200] = src_flat[100];
+            reduced[201] = src_flat[180] ^ src_flat[217];
+            reduced[202] = src_flat[101];
+            reduced[203] = src_flat[181] ^ src_flat[218];
+            reduced[204] = src_flat[102];
+            reduced[205] = src_flat[182] ^ src_flat[219];
+            reduced[206] = src_flat[103];
+            reduced[207] = src_flat[183] ^ src_flat[220];
+            reduced[208] = src_flat[104];
+            reduced[209] = src_flat[184] ^ src_flat[221];
+            reduced[210] = src_flat[105];
+            reduced[211] = src_flat[185] ^ src_flat[222];
+            reduced[212] = src_flat[106];
+            reduced[213] = src_flat[186] ^ src_flat[223];
+            reduced[214] = src_flat[107];
+            reduced[215] = src_flat[187] ^ src_flat[224];
+            reduced[216] = src_flat[108];
+            reduced[217] = src_flat[188] ^ src_flat[225];
+            reduced[218] = src_flat[109];
+            reduced[219] = src_flat[189] ^ src_flat[226];
+            reduced[220] = src_flat[110];
+            reduced[221] = src_flat[190] ^ src_flat[227];
+            reduced[222] = src_flat[111];
+            reduced[223] = src_flat[191] ^ src_flat[228];
+            reduced[224] = src_flat[112];
+            reduced[225] = src_flat[192] ^ src_flat[229];
+            reduced[226] = src_flat[113];
+            reduced[227] = src_flat[193] ^ src_flat[230];
+            reduced[228] = src_flat[114];
+            reduced[229] = src_flat[194] ^ src_flat[231];
+            reduced[230] = src_flat[115];
+            reduced[231] = src_flat[195] ^ src_flat[232];
+            reduced[232] = src_flat[116];
+            ecc_square_reduce233 = reduced;
+        end
+    endfunction
+
+    function automatic logic [232:0] ecc_square_reduce233_loop(
+        input logic [LANE_NUM-1:0][LANE_WIDTH-1:0] src
+    );
+        logic [232:0] src_flat;
+        logic [232:0] reduced;
+        begin
+            src_flat = {src[3][40:0], src[2], src[1], src[0]};
+            reduced = '0;
+            for (int unsigned i = 0; i < 117; i++) begin
+                reduced[2 * i] = reduced[2 * i] ^ src_flat[i];
+            end
+            for (int unsigned i = 117; i < 196; i++) begin
+                reduced[(2 * i) - 233] = reduced[(2 * i) - 233] ^ src_flat[i];
+                reduced[(2 * i) - 159] = reduced[(2 * i) - 159] ^ src_flat[i];
+            end
+            for (int unsigned i = 196; i < 233; i++) begin
+                reduced[(2 * i) - 233] = reduced[(2 * i) - 233] ^ src_flat[i];
+                reduced[(2 * i) - 392] = reduced[(2 * i) - 392] ^ src_flat[i];
+                reduced[(2 * i) - 318] = reduced[(2 * i) - 318] ^ src_flat[i];
+            end
+            ecc_square_reduce233_loop = reduced;
         end
     endfunction
 
@@ -520,6 +807,40 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         end
     endfunction
 
+    always_comb begin
+        ecc_direct_reduce_bits = '0;
+        unique case (ecc_fold_word_q)
+            2'd0: begin
+                ecc_direct_reduce_bits[63:0]   = ecc_product_even_contrib;
+                ecc_direct_reduce_bits[127:64] = ecc_product_odd_contrib;
+            end
+            2'd1: begin
+                ecc_direct_reduce_bits[63:0]    = {41'b0, ecc_product_odd_contrib[63:41]};
+                ecc_direct_reduce_bits[127:64]  = {31'b0, ecc_product_odd_contrib[63:41], 10'b0};
+                ecc_direct_reduce_bits[191:128] = ecc_product_even_contrib;
+                ecc_direct_reduce_bits[232:192] = ecc_product_odd_contrib[40:0];
+            end
+            2'd2: begin
+                ecc_direct_reduce_bits[63:0] = {ecc_product_even_contrib[40:0], 23'b0};
+                ecc_direct_reduce_bits[127:64] = {ecc_product_odd_contrib[40:0], ecc_product_even_contrib[63:41]}
+                                         ^ {ecc_product_even_contrib[30:0], 33'b0};
+                ecc_direct_reduce_bits[191:128] = {41'b0, ecc_product_odd_contrib[63:41]}
+                                         ^ {ecc_product_odd_contrib[30:0], ecc_product_even_contrib[63:31]};
+                ecc_direct_reduce_bits[232:192] = {8'b0, ecc_product_odd_contrib[63:31]};
+            end
+            default: begin
+                ecc_direct_reduce_bits[63:0] = {ecc_product_odd_contrib[7:0], ecc_product_even_contrib[63:8]}
+                                         ^ {18'b0, ecc_product_odd_contrib[63:18]};
+                ecc_direct_reduce_bits[127:64] = {ecc_product_even_contrib[61:8], ecc_product_odd_contrib[17:8]};
+                ecc_direct_reduce_bits[191:128] = {ecc_product_even_contrib[40:0], 23'b0}
+                                         ^ {ecc_product_odd_contrib[61:0], ecc_product_even_contrib[63:62]};
+                ecc_direct_reduce_bits[232:192] = {ecc_product_odd_contrib[17:0], ecc_product_even_contrib[63:41]}
+                                               ^ {ecc_product_even_contrib[7:0], 33'b0}
+                                               ^ {39'b0, ecc_product_odd_contrib[63:62]};
+            end
+        endcase
+    end
+
     assign ecc_reduce_src0[0] = hdc_src0_q[0];
     assign ecc_reduce_src1[0] = {vrf_rd[0][40:0], hdc_src0_q[3][63:41]};
     assign ecc_reduce_src2[0] = {vrf_rd[3][7:0], vrf_rd[2][63:8]};
@@ -544,7 +865,10 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     for (genvar lid = 0; lid < LANE_NUM; lid++) begin : gen_lane
         assign pop_src_b[lid] = vrf_rd[lid];
 
-        hdec_lane_4x64 #(.LANE_ID(lid)) i_lane (
+        hdec_lane_4x64 #(
+            .LANE_ID(lid),
+            .ENABLE_ECC_REDUCE(ECC_DEBUG_FIELD_OPS)
+        ) i_lane (
             .clk_i(clk_i), .rst_ni(rst_ni),
             .bool_tag_i({hdc_pop_issue, hdc_bool_issue, hdc_and_issue}),
             .bool_src_a_i(hdc_src0_q[lid]),
@@ -560,10 +884,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             .cnt_old_counter_i(vrf_rd[lid]),
             .cnt_subgroup_i(uop_p2_q.subgroup_idx),
             .cnt_new_counter_o(lane_cnt_new_counter[lid]),
-            .shift_src_a_i(lane_shift_a[lid]),
-            .shift_src_b_i(lane_shift_b[lid]),
-            .shift_bit_i(lane_shift_bit),
-            .shift_result_o(lane_shift_result[lid]),
             .clip_counter_i(vrf_rd[lid]),
             .clip_bits_o(lane_clip_bits[lid]),
             .ecc_diag_a_i(ecc_diag_lane_a),
@@ -591,18 +911,26 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         hcntclip_dst_base_n=hcntclip_dst_base_q; hcntclip_acc_sel_n=hcntclip_acc_sel_q; hcntclip_chunk_n=hcntclip_chunk_q; hcntclip_word_with_result=hdc_src0_q;
         uop_p0_n=uop_p0_q; uop_p2_n=uop_p2_q; uop_p3_n=uop_p3_q;
         p2_is_pop_n=p2_is_pop_q; p2_is_hbind_n=p2_is_hbind_q;
-        hdc_src0_n=hdc_src0_q;
+        hdc_src0_n='x;
+        hdc_src0_we=1'b0;
+        hdc_src0_acc_we=1'b0;
+        hperm_serial_bit_n=hperm_serial_bit_q;
+        hperm_serial_lane_bit='0;
+        hperm_serial_clear=1'b0;
+        hperm_serial_we=1'b0;
         // P3 consumes these one-cycle payloads; later values are don't-care.
         lane_result_n='x; lane_clip_n='x;
         p2_lane_compute_n=1'b0;
         ecc_src_a_n=ecc_src_a_q; ecc_src_b_n=ecc_src_b_q; ecc_dst_n=ecc_dst_q; ecc_acc_dst_n=ecc_acc_dst_q;
-        ecc_leaf_a_n=ecc_leaf_a_q; ecc_leaf_b_n=ecc_leaf_b_q; ecc_leaf_prod_n=ecc_leaf_prod_q;
+        ecc_leaf_a_n=ecc_leaf_a_q; ecc_leaf_b_n=ecc_leaf_b_q;
+        ecc_leaf_prod_n=ecc_leaf_prod_q;
         ecc_leaf_xor_a_n=ecc_leaf_xor_a_q; ecc_leaf_xor_b_n=ecc_leaf_xor_b_q;
         ecc_leaf128_prod_n=ecc_leaf128_prod_q; ecc_kpd64_sub_n=ecc_kpd64_sub_q;
         ecc_leaf_path_n=ecc_leaf_path_q;
         ecc_fold_word_n=ecc_fold_word_q;
         ecc_product_we=1'b0;
-        ecc_autoreduce_n=ecc_autoreduce_q; ecc_mac_n=ecc_mac_q; ecc_sqr_repeat_n=ecc_sqr_repeat_q;
+        ecc_autoreduce_n=ecc_autoreduce_q; ecc_raw_product_n=ecc_raw_product_q;
+        ecc_mac_n=ecc_mac_q; ecc_sqr_repeat_n=ecc_sqr_repeat_q;
         ecc_job_kind_n=ecc_job_kind_q; ecc_job_phase_n=ecc_job_phase_q;
         ecc_job_active_n=ecc_job_active_q; ecc_job_done_n=ecc_job_done_q;
         ecc_job_bg_n=ecc_job_bg_q;
@@ -611,49 +939,18 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         else
             ecc_job_cycle_n='0;
         ecc_inv_step_n=ecc_inv_step_q; ecc_job_src_n=ecc_job_src_q; ecc_job_dst_n=ecc_job_dst_q;
-        ecc_pmul_ctrl_n=ecc_pmul_ctrl_q; ecc_pmul_subop_n=ecc_pmul_subop_q;
+        ecc_pmul_subop_n=ecc_pmul_subop_q;
         ecc_pmul_step_n=ecc_pmul_step_q; ecc_pmul_bit_n=ecc_pmul_bit_q;
         ecc_pmul_scalar_bit_n=ecc_pmul_scalar_bit_q;
         ecc_pmul_r0_inf_n=ecc_pmul_r0_inf_q;
         ecc_pmul_result_n=ecc_pmul_result_q; ecc_pmul_point_n=ecc_pmul_point_q;
-        lane_shift_a='0; lane_shift_b='0; lane_shift_window='0; lane_shift_bit='0;
+        lane_shift_window='0; lane_shift_bit='0;
         vrf_req.ra='0; vrf_req.wa='x; vrf_req.wd='x;
         vrf_we_direct='0;
 
         if (p2_lane_compute_q && uop_p2_q.valid) begin
-            if (uop_p2_use_shift) begin
-                lane_shift_bit = {uop_p2_q.perm_nibble, hperm_bit_low_q};
-                unique case (hperm_lane_base_q)
-                2'd0: begin
-                    lane_shift_window[0]=hdc_src0_q[0]; lane_shift_window[1]=hdc_src0_q[1];
-                    lane_shift_window[2]=hdc_src0_q[2]; lane_shift_window[3]=hdc_src0_q[3];
-                    lane_shift_window[4]=vrf_rd[0];
-                end
-                2'd1: begin
-                    lane_shift_window[0]=hdc_src0_q[1]; lane_shift_window[1]=hdc_src0_q[2];
-                    lane_shift_window[2]=hdc_src0_q[3]; lane_shift_window[3]=vrf_rd[0];
-                    lane_shift_window[4]=vrf_rd[1];
-                end
-                2'd2: begin
-                    lane_shift_window[0]=hdc_src0_q[2]; lane_shift_window[1]=hdc_src0_q[3];
-                    lane_shift_window[2]=vrf_rd[0];     lane_shift_window[3]=vrf_rd[1];
-                    lane_shift_window[4]=vrf_rd[2];
-                end
-                default: begin
-                    lane_shift_window[0]=hdc_src0_q[3]; lane_shift_window[1]=vrf_rd[0];
-                    lane_shift_window[2]=vrf_rd[1];     lane_shift_window[3]=vrf_rd[2];
-                    lane_shift_window[4]=vrf_rd[3];
-                end
-                endcase
-                lane_shift_a[0]=lane_shift_window[0]; lane_shift_a[1]=lane_shift_window[1];
-                lane_shift_a[2]=lane_shift_window[2]; lane_shift_a[3]=lane_shift_window[3];
-                lane_shift_b[0]=lane_shift_window[1]; lane_shift_b[1]=lane_shift_window[2];
-                lane_shift_b[2]=lane_shift_window[3]; lane_shift_b[3]=lane_shift_window[4];
-            end
             if (uop_p2_use_counter)
                 lane_result_n = lane_cnt_new_counter;
-            else if (uop_p2_use_shift)
-                lane_result_n = lane_shift_result;
             else if (uop_p2_use_clip) begin
                 lane_clip_n[0] = lane_clip_bits[0];
                 lane_clip_n[1] = lane_clip_bits[1];
@@ -681,7 +978,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                     if ((a_q[17:12] == 6'd63)
                      || (a_q[32] && ((a_q[23:18] == a_q[17:12])
                                    || (a_q[23:18] == (a_q[17:12] + 6'd1))))) begin
-                        ecc_autoreduce_n=1'b0; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0;
+                        ecc_autoreduce_n=1'b0; ecc_raw_product_n=1'b0;
+                        ecc_mac_n=1'b0; ecc_sqr_repeat_n='0;
                         res_n={62'b0,STATUS_ERROR};st_n=S_RESULT;
                     end else begin
                         ecc_dst_n   = a_q[17:12];
@@ -689,6 +987,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                         ecc_src_a_n = a_q[11:6];
                         ecc_src_b_n = a_q[5:0];
                         ecc_autoreduce_n = a_q[31] | a_q[32];
+                        ecc_raw_product_n = ~(a_q[31] | a_q[32]);
                         ecc_mac_n = a_q[32];
                         ecc_sqr_repeat_n='0;
                         vrf_req.ra=a_q[11:6];
@@ -745,7 +1044,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                         ecc_pmul_bit_n=8'd232;
                         ecc_pmul_scalar_bit_n=1'b0;
                         ecc_pmul_r0_inf_n=1'b1;
-                        ecc_pmul_ctrl_n=ECC_PMUL_CTRL_INIT;
                         ecc_pmul_subop_n=ECC_PMUL_SUB_INIT;
                         ecc_pmul_step_n='0;
                         if (a_q[ECC_STATUS_BG_BIT]) begin
@@ -803,7 +1101,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                 if (!ECC_DEBUG_FIELD_OPS) begin
                     res_n={62'b0,STATUS_NOT_IMPLEMENTED};st_n=S_RESULT;
                 end else begin
-                    ecc_autoreduce_n=1'b0; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0;
+                    ecc_autoreduce_n=1'b0; ecc_raw_product_n=1'b0;
+                    ecc_mac_n=1'b0; ecc_sqr_repeat_n='0;
                     if (a_q[5:0] == 6'd63) begin
                         res_n={62'b0,STATUS_ERROR};st_n=S_RESULT;
                     end else begin
@@ -886,7 +1185,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                     end else if ((a_q[5:0] == 6'd63)
                      || (a_q[20] && ((a_q[17:12] == a_q[5:0])
                                    || (a_q[17:12] == (a_q[5:0] + 6'd1))))) begin
-                        ecc_autoreduce_n=1'b0; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0;
+                        ecc_autoreduce_n=1'b0; ecc_raw_product_n=1'b0;
+                        ecc_mac_n=1'b0; ecc_sqr_repeat_n='0;
                         res_n={62'b0,STATUS_ERROR};st_n=S_RESULT;
                     end else begin
                         hperm_dst_base_n=a_q[5:0];
@@ -926,9 +1226,14 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         end
 
         S_RD_WAIT2: begin
-            if (((op_q == HDEC_HPERM) && hperm_spread_q)
-             || (ecc_job_active_q && (ecc_job_phase_q == ECC_PHASE_INV_SQR))
-             || (ecc_job_active_q && hperm_spread_q && (ecc_job_phase_q == ECC_PHASE_PMUL_FIELD)))
+            if (ecc_autoreduce_q
+             && (((op_q == HDEC_HPERM) && hperm_spread_q)
+              || (ecc_job_active_q && (ecc_job_phase_q == ECC_PHASE_INV_SQR))
+              || (ecc_job_active_q && hperm_spread_q && (ecc_job_phase_q == ECC_PHASE_PMUL_FIELD))))
+                st_n=S_ECC_SQR_WRITE;
+            else if (((op_q == HDEC_HPERM) && hperm_spread_q)
+                  || (ecc_job_active_q && (ecc_job_phase_q == ECC_PHASE_INV_SQR))
+                  || (ecc_job_active_q && hperm_spread_q && (ecc_job_phase_q == ECC_PHASE_PMUL_FIELD)))
                 st_n=S_HSPREAD_LO_WRITE;
             else
                 st_n=S_RD_CAPTURE;
@@ -936,10 +1241,34 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
 
         S_RD_CAPTURE: begin res_n=vrf_rd[vaddr_bank_q];st_n=S_RESULT;end
 
+        S_ECC_SQR_WRITE: begin
+            vrf_req.wa=hspread_dst_base;
+            vrf_req.wd[0]=ecc_square_reduce_bits[63:0];
+            vrf_req.wd[1]=ecc_square_reduce_bits[127:64];
+            vrf_req.wd[2]=ecc_square_reduce_bits[191:128];
+            vrf_req.wd[3]={23'b0, ecc_square_reduce_bits[232:192]};
+            hperm_spread_n=1'b0;
+            ecc_dst_n=hspread_dst_base;
+            ecc_autoreduce_n=1'b0;
+            if (ecc_mac_q && (ecc_sqr_repeat_q == 7'd0)) begin
+                uop_p0_n='0;
+                uop_p0_n.valid     = 1'b1;
+                uop_p0_n.op_type   = UOP_HBIND_CHUNK;
+                uop_p0_n.src0_addr = ecc_acc_dst_q;
+                uop_p0_n.src1_addr = hspread_dst_base;
+                uop_p0_n.dst_addr  = ecc_acc_dst_q;
+                uop_p0_n.chunk_idx = 2'd3;
+                st_n=S_UOP_P1_RD0;
+            end else begin
+                st_n=S_ECC_WRITE_DRAIN;
+            end
+        end
+
         S_HSPREAD_LO_WRITE: begin
+            vrf_req.wa=hspread_dst_base;
             hdc_src0_n[2] = vrf_rd[2];
             hdc_src0_n[3] = vrf_rd[3];
-            vrf_req.wa=hspread_dst_base;
+            hdc_src0_we=1'b1;
             vrf_req.wd[0]=hspread_half64(vrf_rd[0], 1'b0);
             vrf_req.wd[1]=hspread_half64(vrf_rd[0], 1'b1);
             vrf_req.wd[2]=hspread_half64(vrf_rd[1], 1'b0);
@@ -954,19 +1283,17 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             vrf_req.wd[2]=hspread_half64(hdc_src0_q[3], 1'b0);
             vrf_req.wd[3]=hspread_half64(hdc_src0_q[3], 1'b1);
             hperm_spread_n=1'b0;
-            if (ecc_autoreduce_q) begin
-                ecc_dst_n = hspread_dst_base;
-                ecc_src_a_n = hspread_dst_base;
-                st_n=S_ECC_WRITE_DRAIN;
-            end else begin
-                res_n={62'b0,STATUS_OK};
-                st_n=S_RESULT;
-            end
+            res_n={62'b0,STATUS_OK};
+            st_n=S_RESULT;
         end
 
         // ── ECC V1 raw GF(2) diagonal multiply ─────────────────────────────
         S_ECC_LOAD_A_WAIT: begin
             ecc_leaf_path_n = '0;
+            if (ecc_autoreduce_q) begin
+                hdc_src0_n = '0;
+                hdc_src0_we=1'b1;
+            end
             st_n=S_ECC_LOAD_A_WAIT2;
         end
 
@@ -1016,8 +1343,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                 st_n=S_ECC_DIAG_ISSUE;
             end else begin
                 ecc_leaf128_prod_n = ecc_kpd64_sub32_accum(ecc_leaf128_prod_q, 2'd2, ecc_leaf_prod_flush_value);
-                ecc_leaf_prod_n = '0;
                 ecc_kpd64_sub_n = 2'd3;
+                ecc_leaf_prod_n = '0;
                 if (!ecc_leaf_last)
                     vrf_req.ra=ecc_src_a_q;
                 st_n=S_ECC_LEAF_FOLD;
@@ -1025,7 +1352,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         end
 
         S_ECC_LEAF_FOLD: begin
-            ecc_product_we = 1'b1;
+            ecc_product_we = ECC_DEBUG_FIELD_OPS && ecc_raw_product_q;
             if (!ecc_leaf_last) begin
                 unique case (ecc_fold_word_q)
                     2'd0: begin
@@ -1043,13 +1370,15 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                     end
                 endcase
             end
+            if (ecc_autoreduce_q) begin
+                hdc_src0_acc_we=1'b1;
+            end
             if (ecc_fold_word_q == 2'd3) begin
                 ecc_fold_word_n = 2'd0;
                 if (ecc_leaf_last) begin
                     st_n=S_ECC_WRITE_PAIR;
                 end else begin
                     ecc_leaf_path_n = ecc_next_leaf_path;
-                    ecc_leaf_prod_n = '0;
                     ecc_leaf128_prod_n = '0;
                     ecc_kpd64_sub_n = 2'd0;
                     st_n=S_ECC_DIAG_ISSUE;
@@ -1061,29 +1390,53 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         end
 
         S_ECC_WRITE_PAIR: begin
-            vrf_req.wa=ecc_product_wb_addr;
-            if (!ecc_fold_word_q[0]) begin
-                ecc_fold_word_n=ecc_fold_word_q + 2'd1;
-                st_n=S_ECC_WRITE_PAIR;
-            end else begin
-                vrf_req.wd[0]=ecc_product_pair_hold_q[63:0];
-                vrf_req.wd[1]=ecc_product_pair_hold_q[127:64];
-                vrf_req.wd[2]=ecc_product_pair_rdata[63:0];
-                vrf_req.wd[3]=ecc_product_pair_rdata[127:64];
-                if (ecc_fold_word_q[1]) begin
-                    if (ecc_autoreduce_q)
-                        ecc_src_a_n = ecc_dst_q;
+            if (ecc_autoreduce_q) begin
+                vrf_req.wa=ecc_dst_q;
+                vrf_req.wd=hdc_src0_q;
+                ecc_autoreduce_n=1'b0;
+                if (ecc_mac_q && (ecc_sqr_repeat_q == 7'd0)) begin
+                    uop_p0_n='0;
+                    uop_p0_n.valid     = 1'b1;
+                    uop_p0_n.op_type   = UOP_HBIND_CHUNK;
+                    uop_p0_n.src0_addr = ecc_acc_dst_q;
+                    uop_p0_n.src1_addr = ecc_dst_q;
+                    uop_p0_n.dst_addr  = ecc_acc_dst_q;
+                    uop_p0_n.chunk_idx = 2'd3;
+                    st_n=S_UOP_P1_RD0;
+                end else if (ecc_sqr_repeat_q == 7'd0) begin
+                    res_n={56'b0, ecc_dst_q, STATUS_OK};
                     st_n=S_ECC_WRITE_DRAIN;
                 end else begin
-                    ecc_fold_word_n = 2'd2;
-                    st_n=S_ECC_WRITE_PAIR;
+                    st_n=S_ECC_WRITE_DRAIN;
                 end
+            end else if (ECC_DEBUG_FIELD_OPS) begin
+                vrf_req.wa=ecc_product_wb_addr;
+                if (!ecc_fold_word_q[0]) begin
+                    ecc_fold_word_n=ecc_fold_word_q + 2'd1;
+                    st_n=S_ECC_WRITE_PAIR;
+                end else begin
+                    vrf_req.wd[0]=ecc_product_pair_hold_q[63:0];
+                    vrf_req.wd[1]=ecc_product_pair_hold_q[127:64];
+                    vrf_req.wd[2]=ecc_product_pair_rdata[63:0];
+                    vrf_req.wd[3]=ecc_product_pair_rdata[127:64];
+                    if (ecc_fold_word_q[1]) begin
+                        if (ecc_autoreduce_q)
+                            ecc_src_a_n = ecc_dst_q;
+                        ecc_raw_product_n = 1'b0;
+                        st_n=S_ECC_WRITE_DRAIN;
+                    end else begin
+                        ecc_fold_word_n = 2'd2;
+                        st_n=S_ECC_WRITE_PAIR;
+                    end
+                end
+            end else begin
+                st_n=S_ECC_WRITE_DRAIN;
             end
         end
 
         // ── S_CLR: shared by HCLR (4 entries) and HCNTCLR (16 entries) ──────
         S_ECC_WRITE_DRAIN: begin
-            if (ecc_autoreduce_q) begin
+            if (ECC_DEBUG_FIELD_OPS && ecc_autoreduce_q) begin
                 vrf_req.ra=ecc_src_a_q;
                 st_n=S_ECC_REDUCE_LOAD_LO_WAIT;
             end else if (ecc_sqr_repeat_q != 7'd0) begin
@@ -1120,6 +1473,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
 
         S_ECC_REDUCE_LOAD_LO: begin
             hdc_src0_n = vrf_rd;
+            hdc_src0_we=1'b1;
             vrf_req.ra=ecc_src_a_q + 6'd1;
             st_n=S_ECC_REDUCE_LOAD_HI_WAIT;
         end
@@ -1233,7 +1587,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         end
 
         S_ECC_PMUL_INIT: begin
-            ecc_pmul_ctrl_n=ECC_PMUL_CTRL_INIT;
             ecc_pmul_subop_n=ECC_PMUL_SUB_INIT;
             ecc_pmul_step_n='0;
             st_n=S_ECC_PMUL_STEP;
@@ -1257,27 +1610,10 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
 
         S_ECC_PMUL_READ_SCALAR: begin
             ecc_pmul_scalar_bit_n=ecc_scalar_bit_from_row(vrf_rd, ecc_pmul_bit_q);
-            ecc_pmul_ctrl_n=ECC_PMUL_CTRL_ADD;
             ecc_pmul_step_n='0;
             if (ecc_scalar_bit_from_row(vrf_rd, ecc_pmul_bit_q))
                 ecc_pmul_r0_inf_n=1'b0;
             ecc_pmul_subop_n=ECC_PMUL_SUB_ADD;
-            st_n=S_ECC_PMUL_STEP;
-        end
-
-        S_ECC_PMUL_START_ADD: begin
-            ecc_pmul_ctrl_n=ECC_PMUL_CTRL_ADD;
-            ecc_pmul_step_n='0;
-            if (ecc_pmul_scalar_bit_q)
-                ecc_pmul_r0_inf_n=1'b0;
-            ecc_pmul_subop_n=ECC_PMUL_SUB_ADD;
-            st_n=S_ECC_PMUL_STEP;
-        end
-
-        S_ECC_PMUL_START_DBL: begin
-            ecc_pmul_ctrl_n=ECC_PMUL_CTRL_DBL;
-            ecc_pmul_step_n='0;
-            ecc_pmul_subop_n=ECC_PMUL_SUB_DBL;
             st_n=S_ECC_PMUL_STEP;
         end
 
@@ -1527,20 +1863,18 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         S_ECC_PMUL_STEP_NEXT: begin
             if (ecc_pmul_subop_last(ecc_pmul_subop_q, ecc_pmul_step_q)) begin
                 ecc_pmul_step_n='0;
-                unique case (ecc_pmul_ctrl_q)
-                ECC_PMUL_CTRL_INIT: begin
+                unique case (ecc_pmul_subop_q)
+                ECC_PMUL_SUB_INIT: begin
                     vrf_req.ra=ecc_job_src_q;
                     st_n=S_ECC_PMUL_READ_SCALAR_WAIT;
                 end
-                ECC_PMUL_CTRL_ADD: begin
-                    ecc_pmul_ctrl_n=ECC_PMUL_CTRL_DBL;
+                ECC_PMUL_SUB_ADD: begin
                     ecc_pmul_step_n='0;
                     ecc_pmul_subop_n=ECC_PMUL_SUB_DBL;
                     st_n=S_ECC_PMUL_STEP;
                 end
-                ECC_PMUL_CTRL_DBL: begin
+                ECC_PMUL_SUB_DBL: begin
                     if (ecc_pmul_bit_q == 8'd0) begin
-                        ecc_pmul_ctrl_n=ECC_PMUL_CTRL_FINAL;
                         ecc_pmul_subop_n=ecc_pmul_r0_inf_n ? ECC_PMUL_SUB_ZERO_OUT : ECC_PMUL_SUB_AFFINE;
                         st_n=(ecc_job_bg_q && valid_i) ? S_IDLE : S_ECC_PMUL_STEP;
                     end else begin
@@ -1660,7 +1994,14 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
              || (uop_p0_q.op_type == UOP_HBIND_CHUNK)
              || (uop_p0_q.op_type == UOP_HSIM_CHUNK)
              || (uop_p0_q.op_type == UOP_HMATCH_CHUNK))
+            begin
                 hdc_src0_n = vrf_rd;
+                hdc_src0_we=1'b1;
+            end
+            else if (uop_p0_q.op_type == UOP_HCNTCLIP_READ) begin
+                hdc_src0_n = '0;
+                hdc_src0_we=1'b1;
+            end
             vrf_req.ra=uop_p0_q.src1_addr;
             st_n=S_UOP_P1_RD1_WAIT;
         end
@@ -1687,7 +2028,51 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                 else $error("HDEC P2 invalid compute mode flags: op_type=%0d",
                             uop_p2_q.op_type);
 `endif
-            st_n=S_UOP_P3_GLOBAL;
+            if (uop_p2_use_shift) begin
+                vrf_req.ra = uop_p2_q.src1_addr;
+                hperm_serial_bit_n = '0;
+                hperm_serial_clear = 1'b1;
+                st_n = S_HPERM_SERIAL;
+            end else begin
+                st_n=S_UOP_P3_GLOBAL;
+            end
+        end
+
+        S_HPERM_SERIAL: begin
+            vrf_req.ra = uop_p3_q.src1_addr;
+            lane_shift_bit = {uop_p3_q.perm_nibble, hperm_bit_low_q};
+            unique case (hperm_lane_base_q)
+            2'd0: begin
+                lane_shift_window[0]=hdc_src0_q[0]; lane_shift_window[1]=hdc_src0_q[1];
+                lane_shift_window[2]=hdc_src0_q[2]; lane_shift_window[3]=hdc_src0_q[3];
+                lane_shift_window[4]=vrf_rd[0];
+            end
+            2'd1: begin
+                lane_shift_window[0]=hdc_src0_q[1]; lane_shift_window[1]=hdc_src0_q[2];
+                lane_shift_window[2]=hdc_src0_q[3]; lane_shift_window[3]=vrf_rd[0];
+                lane_shift_window[4]=vrf_rd[1];
+            end
+            2'd2: begin
+                lane_shift_window[0]=hdc_src0_q[2]; lane_shift_window[1]=hdc_src0_q[3];
+                lane_shift_window[2]=vrf_rd[0];     lane_shift_window[3]=vrf_rd[1];
+                lane_shift_window[4]=vrf_rd[2];
+            end
+            default: begin
+                lane_shift_window[0]=hdc_src0_q[3]; lane_shift_window[1]=vrf_rd[0];
+                lane_shift_window[2]=vrf_rd[1];     lane_shift_window[3]=vrf_rd[2];
+                lane_shift_window[4]=vrf_rd[3];
+            end
+            endcase
+            hperm_serial_lane_bit[0] = hperm_window_bit(lane_shift_window, 2'd0, hperm_serial_bit_q, lane_shift_bit);
+            hperm_serial_lane_bit[1] = hperm_window_bit(lane_shift_window, 2'd1, hperm_serial_bit_q, lane_shift_bit);
+            hperm_serial_lane_bit[2] = hperm_window_bit(lane_shift_window, 2'd2, hperm_serial_bit_q, lane_shift_bit);
+            hperm_serial_lane_bit[3] = hperm_window_bit(lane_shift_window, 2'd3, hperm_serial_bit_q, lane_shift_bit);
+            hperm_serial_we = 1'b1;
+            if (hperm_serial_bit_q == 6'd63) begin
+                st_n = S_UOP_P3_GLOBAL;
+            end else begin
+                hperm_serial_bit_n = hperm_serial_bit_q + 6'd1;
+            end
         end
 
         S_UOP_P3_GLOBAL: begin
@@ -1743,6 +2128,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                 hcntclip_word_with_result[2][{uop_p3_q.subgroup_idx,4'b0000} +: 16] = lane_clip_q[2];
                 hcntclip_word_with_result[3][{uop_p3_q.subgroup_idx,4'b0000} +: 16] = lane_clip_q[3];
                 hdc_src0_n = hcntclip_word_with_result;
+                hdc_src0_we=1'b1;
                 if (uop_p3_q.subgroup_idx < 2'd3) begin
                     vrf_req.ra=hcntclip_acc_base+{2'b00,uop_p3_q.chunk_idx,2'b00}+{4'b0,(uop_p3_q.subgroup_idx + 2'd1)};
                     uop_p2_n = uop_p3_q; uop_p2_n.valid = 1'b1;
@@ -1872,13 +2258,17 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             if (op_q == HDEC_VWR64)
                 vrf_we_direct = (4'b0001 << vaddr_bank_q);
         end
-        S_HSPREAD_LO_WRITE, S_HSPREAD_HI_WRITE,
-        S_ECC_REDUCE_WRITE, S_ECC_INV_COPY_WRITE, S_ECC_PMUL_CONST_WRITE,
+        S_ECC_SQR_WRITE, S_HSPREAD_LO_WRITE, S_HSPREAD_HI_WRITE,
+        S_ECC_INV_COPY_WRITE, S_ECC_PMUL_CONST_WRITE,
         S_CLR, S_UOP_CLIP_WRITE: begin
             vrf_we_direct = '1;
         end
+        S_ECC_REDUCE_WRITE: begin
+            if (ECC_DEBUG_FIELD_OPS)
+                vrf_we_direct = '1;
+        end
         S_ECC_WRITE_PAIR: begin
-            if (ecc_fold_word_q[0])
+            if (ecc_autoreduce_q || (ECC_DEBUG_FIELD_OPS && ecc_fold_word_q[0]))
                 vrf_we_direct = '1;
         end
         S_UOP_P3_GLOBAL: begin
@@ -1915,6 +2305,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             hsim_src0_base_q<='0;hsim_src1_base_q<='0;hsim_total_q<='0;group_dist_q<='0;
             hmatch_last_idx_q<='0;hmatch_best_idx_q<='0;hmatch_class_slot_q<='0;hmatch_best_dist_q<='0;hmatch_update_q<=1'b0;
             hperm_dst_base_q<='0;hperm_bit_low_q<='0;hperm_spread_q<=1'b0;hperm_lane_base_q<='0;
+            hperm_serial_bit_q<='0;
             hcntclip_dst_base_q<='0;hcntclip_acc_sel_q<='0;hcntclip_chunk_q<='0;
             vrf_ra_q<='0;
             uop_p0_q<='0;uop_p2_q<='0;uop_p3_q<='0;
@@ -1925,9 +2316,9 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             ecc_src_a_q<='0;ecc_src_b_q<='0;ecc_dst_q<='0;ecc_acc_dst_q<='0;
             ecc_leaf_a_q<='0;ecc_leaf_b_q<='0;ecc_leaf_prod_q<='0;ecc_leaf_path_q<='0;ecc_fold_word_q<='0;
             ecc_leaf_xor_a_q<='0;ecc_leaf_xor_b_q<='0;ecc_leaf128_prod_q<='0;ecc_kpd64_sub_q<='0;
-            ecc_autoreduce_q<=1'b0;ecc_mac_q<=1'b0;ecc_sqr_repeat_q<='0;
+            ecc_autoreduce_q<=1'b0;ecc_raw_product_q<=1'b0;ecc_mac_q<=1'b0;ecc_sqr_repeat_q<='0;
             ecc_job_kind_q<=ECC_JOB_NONE;ecc_job_phase_q<=ECC_PHASE_NONE;ecc_job_active_q<=1'b0;ecc_job_done_q<=1'b0;ecc_job_bg_q<=1'b0;ecc_job_cycle_q<='0;ecc_inv_step_q<='0;ecc_job_src_q<='0;ecc_job_dst_q<='0;
-            ecc_pmul_ctrl_q<=ECC_PMUL_CTRL_INIT;ecc_pmul_subop_q<=ECC_PMUL_SUB_NONE;ecc_pmul_step_q<='0;ecc_pmul_bit_q<='0;ecc_pmul_scalar_bit_q<=1'b0;
+            ecc_pmul_subop_q<=ECC_PMUL_SUB_NONE;ecc_pmul_step_q<='0;ecc_pmul_bit_q<='0;ecc_pmul_scalar_bit_q<=1'b0;
             ecc_pmul_r0_inf_q<=1'b1;ecc_pmul_result_q<='0;ecc_pmul_point_q<='0;
         end
         else begin
@@ -1936,19 +2327,39 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             hsim_src0_base_q<=hsim_src0_base_n;hsim_src1_base_q<=hsim_src1_base_n;hsim_total_q<=hsim_total_n;group_dist_q<=group_dist_n;
             hmatch_last_idx_q<=hmatch_last_idx_n;hmatch_best_idx_q<=hmatch_best_idx_n;hmatch_class_slot_q<=hmatch_class_slot_n;hmatch_best_dist_q<=hmatch_best_dist_n;hmatch_update_q<=hmatch_update_n;
             hperm_dst_base_q<=hperm_dst_base_n;hperm_bit_low_q<=hperm_bit_low_n;hperm_spread_q<=hperm_spread_n;hperm_lane_base_q<=hperm_lane_base_n;
+            hperm_serial_bit_q<=hperm_serial_bit_n;
             hcntclip_dst_base_q<=hcntclip_dst_base_n;hcntclip_acc_sel_q<=hcntclip_acc_sel_n;hcntclip_chunk_q<=hcntclip_chunk_n;
             vrf_ra_q<=vrf_ra;
             uop_p0_q<=uop_p0_n;uop_p2_q<=uop_p2_n;uop_p3_q<=uop_p3_n;
             p2_is_pop_q<=p2_is_pop_n;p2_is_hbind_q<=p2_is_hbind_n;
-            hdc_src0_q<=hdc_src0_n;
-            lane_result_q<=lane_result_n;lane_clip_q<=lane_clip_n;
+            if (hdc_src0_acc_we) begin
+                hdc_src0_q[0]<=hdc_src0_q[0] ^ ecc_direct_reduce_bits[63:0];
+                hdc_src0_q[1]<=hdc_src0_q[1] ^ ecc_direct_reduce_bits[127:64];
+                hdc_src0_q[2]<=hdc_src0_q[2] ^ ecc_direct_reduce_bits[191:128];
+                hdc_src0_q[3][40:0]<=hdc_src0_q[3][40:0] ^ ecc_direct_reduce_bits[232:192];
+                hdc_src0_q[3][63:41]<='0;
+            end else if (hdc_src0_we) begin
+                hdc_src0_q<=hdc_src0_n;
+            end
+            if (hperm_serial_clear) begin
+                lane_result_q <= '0;
+            end else if (hperm_serial_we) begin
+                lane_result_q[0][hperm_serial_bit_q] <= hperm_serial_lane_bit[0];
+                lane_result_q[1][hperm_serial_bit_q] <= hperm_serial_lane_bit[1];
+                lane_result_q[2][hperm_serial_bit_q] <= hperm_serial_lane_bit[2];
+                lane_result_q[3][hperm_serial_bit_q] <= hperm_serial_lane_bit[3];
+            end else if (st_q == S_UOP_P2_LANE) begin
+                lane_result_q<=lane_result_n;
+                lane_clip_q<=lane_clip_n;
+            end
             p2_lane_compute_q<=p2_lane_compute_n;
             ecc_src_a_q<=ecc_src_a_n;ecc_src_b_q<=ecc_src_b_n;ecc_dst_q<=ecc_dst_n;ecc_acc_dst_q<=ecc_acc_dst_n;
             ecc_leaf_a_q<=ecc_leaf_a_n;ecc_leaf_b_q<=ecc_leaf_b_n;ecc_leaf_prod_q<=ecc_leaf_prod_n;ecc_leaf_path_q<=ecc_leaf_path_n;ecc_fold_word_q<=ecc_fold_word_n;
             ecc_leaf_xor_a_q<=ecc_leaf_xor_a_n;ecc_leaf_xor_b_q<=ecc_leaf_xor_b_n;ecc_leaf128_prod_q<=ecc_leaf128_prod_n;ecc_kpd64_sub_q<=ecc_kpd64_sub_n;
-            ecc_autoreduce_q<=ecc_autoreduce_n;ecc_mac_q<=ecc_mac_n;ecc_sqr_repeat_q<=ecc_sqr_repeat_n;
+            ecc_autoreduce_q<=ecc_autoreduce_n;ecc_raw_product_q<=ecc_raw_product_n;
+            ecc_mac_q<=ecc_mac_n;ecc_sqr_repeat_q<=ecc_sqr_repeat_n;
             ecc_job_kind_q<=ecc_job_kind_n;ecc_job_phase_q<=ecc_job_phase_n;ecc_job_active_q<=ecc_job_active_n;ecc_job_done_q<=ecc_job_done_n;ecc_job_bg_q<=ecc_job_bg_n;ecc_job_cycle_q<=ecc_job_cycle_n;ecc_inv_step_q<=ecc_inv_step_n;ecc_job_src_q<=ecc_job_src_n;ecc_job_dst_q<=ecc_job_dst_n;
-            ecc_pmul_ctrl_q<=ecc_pmul_ctrl_n;ecc_pmul_subop_q<=ecc_pmul_subop_n;ecc_pmul_step_q<=ecc_pmul_step_n;ecc_pmul_bit_q<=ecc_pmul_bit_n;ecc_pmul_scalar_bit_q<=ecc_pmul_scalar_bit_n;
+            ecc_pmul_subop_q<=ecc_pmul_subop_n;ecc_pmul_step_q<=ecc_pmul_step_n;ecc_pmul_bit_q<=ecc_pmul_bit_n;ecc_pmul_scalar_bit_q<=ecc_pmul_scalar_bit_n;
             ecc_pmul_r0_inf_q<=ecc_pmul_r0_inf_n;ecc_pmul_result_q<=ecc_pmul_result_n;ecc_pmul_point_q<=ecc_pmul_point_n;
         end
     end

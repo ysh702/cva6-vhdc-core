@@ -1,0 +1,6 @@
+stage,total_lut,logic_lut,lutram,ff,fmax_mhz,pmul_cycles,delta_total_vs_vv2,delta_logic_vs_vv2,delta_lutram_vs_vv2,delta_ff_vs_vv2,note
+VV2_best_baseline,5127,4999,128,1833,210.393,190151,0,0,0,0,VV2 accepted area baseline used for VV3 comparison
+ECC_AND_XOR_plus_AND_POPCOUNT_only,5313,5185,128,1832,210.393,158075,186,186,0,-1,dual parity route before direct reduce
+Direct_reduce_early_best,5633,5505,128,1834,210.393,,506,506,0,1,direct reduce direction without final combined area recovery
+Combined_dual_route_direct_reduce_no_HPERM_recovery,5327,5327,0,1687,210.393,135952,200,328,-128,-146,new ECC algorithm body before HPERM area recovery
+VV3_try79_final_with_HPERM_bitserial_recovery,5137,5137,0,1701,214.041,135952,10,138,-128,-132,accepted VV3 result after HPERM area recovery
