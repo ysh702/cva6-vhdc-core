@@ -93,15 +93,13 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     hdec_uop_t uop_p0_q, uop_p0_n, uop_p2_q, uop_p2_n, uop_p3_q, uop_p3_n;
 
     // ── Lane compute wires ──────────────────────────────────────────────────
-    logic                                hdc_pop_issue, hdc_xor_issue, hdc_bool_issue, hdc_and_issue;
+    logic                                hdc_pop_issue, hdc_xor_issue;
     logic                                p2_is_pop_q, p2_is_pop_n;
     logic                                p2_is_hbind_q, p2_is_hbind_n;
     logic                                uop_p2_use_counter, uop_p2_use_shift, uop_p2_use_clip;
     logic                                p2_lane_compute_q, p2_lane_compute_n;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] hdc_src0_q, hdc_src0_n;
     logic                                hdc_src0_we, hdc_src0_acc_we;
-    logic [LANE_NUM-1:0][LANE_WIDTH-1:0] lane_bool_result;
-    logic [LANE_NUM-1:0][LANE_WIDTH-1:0] lane_cnt_new_counter;
     logic [5:0]                          lane_shift_bit;
     logic [1:0]                          hperm_lane_slot_q,hperm_lane_slot_n;
     logic                                hperm_lane_phase_q,hperm_lane_phase_n;
@@ -110,7 +108,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     logic [71:0]                         hperm_stage_q,hperm_stage_n;
     logic [LANE_WIDTH-1:0]               hperm_lane_word;
     logic                                hperm_stage_we,hperm_lane_clear,hperm_lane_we;
-    logic [LANE_NUM-1:0][15:0]           lane_clip_bits;
 
     // ── Lane Boundary Registers (P2→P3 cut, split by payload width) ─────────
     // Keep full-width lane_result_q only for true 64-bit lane payloads:
@@ -126,9 +123,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     //   VRF could save 1 cycle per chunk. Requires Vivado OOC timing proof
     //   that HBIND path is not the critical path before enabling.
     //   Do NOT implement now — keep single active writeback path.
-    logic [LANE_NUM-1:0][LANE_WIDTH-1:0] lane_result_q, lane_result_n;
-    logic [LANE_NUM-1:0][1:0][5:0]       lane_popcnt_part_q;
-    logic [LANE_NUM-1:0][15:0]           lane_clip_q, lane_clip_n;
+    logic [LANE_NUM-1:0][LANE_WIDTH-1:0] vec_payload_q;
 
     // ── Scalar Response Registers (P4) ──────────────────────────────────────
     logic [8:0]  group_dist_q, group_dist_n, group_dist_sum;
@@ -150,7 +145,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     logic [1:0]           ecc_fold_word_q, ecc_fold_word_n;
     logic [LANE_NUM-1:0][7:0]           lane_ecc_diag_parity;
     logic [LANE_NUM-1:0][7:0]           lane_ecc_diag_pop_parity;
-    logic [LANE_NUM-1:0][LANE_WIDTH-1:0] pop_src_b;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] ecc_reduce_src0;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] ecc_reduce_src1;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] ecc_reduce_src2;
@@ -260,8 +254,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     assign hsim_total_step = hsim_total_q + {2'b00, group_dist_q};
     assign hdc_pop_issue = p2_lane_compute_q && p2_is_pop_q;
     assign hdc_xor_issue = p2_lane_compute_q && p2_is_hbind_q;
-    assign hdc_bool_issue = hdc_pop_issue || hdc_xor_issue;
-    assign hdc_and_issue = hdc_pop_issue;
     assign hspread_dst_base = hperm_dst_base_q;
     assign uop_p2_use_counter = (uop_p2_q.op_type == UOP_HCNTADD_SUBGROUP);
     assign uop_p2_use_shift   = (uop_p2_q.op_type == UOP_HPERM_CHUNK);
@@ -883,41 +875,39 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     assign ecc_reduce_src3[3] = {62'b0, vrf_rd[3][63:62]};
 
     // ── 4× Lane instances ───────────────────────────────────────────────────
-    for (genvar lid = 0; lid < LANE_NUM; lid++) begin : gen_lane
-        assign pop_src_b[lid] = vrf_rd[lid];
+    hdec_vector_payload_4x64 #(
+        .ENABLE_ECC_REDUCE(ECC_DEBUG_FIELD_OPS)
+    ) i_vec (
+        .clk_i(clk_i), .rst_ni(rst_ni),
+        .payload_xor_i(hdc_xor_issue),
+        .payload_pop_i(hdc_pop_issue),
+        .payload_cnt_i(p2_lane_compute_q && uop_p2_use_counter),
+        .payload_clip_i(p2_lane_compute_q && uop_p2_use_clip),
+        .hperm_we_i(hperm_lane_we),
+        .hperm_slot_i(hperm_lane_slot_q),
+        .hperm_word_i(hperm_lane_word),
+        .bool_src_a_i(hdc_src0_q),
+        .bool_src_b_i(vrf_rd),
+        .bool_src_c_i(ecc_reduce_src2),
+        .bool_src_d_i(ecc_reduce_src3),
+        .ecc_reduce_src_a_i(ecc_reduce_src0),
+        .ecc_reduce_src_b_i(ecc_reduce_src1),
+        .payload_q_o(vec_payload_q),
+        .ecc_reduce_word_o(lane_ecc_reduce_word),
+        .cnt_hv_word_i(hdc_src0_q),
+        .cnt_old_counter_i(vrf_rd),
+        .cnt_subgroup_i(uop_p2_q.subgroup_idx),
+        .clip_counter_i(vrf_rd),
+        .ecc_diag_a_i(ecc_diag_lane_a),
+        .ecc_diag_b_i(ecc_diag_lane_b),
+        .ecc_diag_parity_o(lane_ecc_diag_parity),
+        .ecc_diag_pop_parity_o(lane_ecc_diag_pop_parity)
+    );
 
-        hdec_lane_4x64 #(
-            .LANE_ID(lid),
-            .ENABLE_ECC_REDUCE(ECC_DEBUG_FIELD_OPS)
-        ) i_lane (
-            .clk_i(clk_i), .rst_ni(rst_ni),
-            .bool_tag_i({hdc_pop_issue, hdc_bool_issue, hdc_and_issue}),
-            .bool_src_a_i(hdc_src0_q[lid]),
-            .bool_src_b_i(pop_src_b[lid]),
-            .bool_src_c_i(ecc_reduce_src2[lid]),
-            .bool_src_d_i(ecc_reduce_src3[lid]),
-            .ecc_reduce_src_a_i(ecc_reduce_src0[lid]),
-            .ecc_reduce_src_b_i(ecc_reduce_src1[lid]),
-            .bool_result_q_o(lane_bool_result[lid]),
-            .ecc_reduce_word_o(lane_ecc_reduce_word[lid]),
-            .popcount_part_q_o(lane_popcnt_part_q[lid]),
-            .cnt_hv_word_i(hdc_src0_q[lid]),
-            .cnt_old_counter_i(vrf_rd[lid]),
-            .cnt_subgroup_i(uop_p2_q.subgroup_idx),
-            .cnt_new_counter_o(lane_cnt_new_counter[lid]),
-            .clip_counter_i(vrf_rd[lid]),
-            .clip_bits_o(lane_clip_bits[lid]),
-            .ecc_diag_a_i(ecc_diag_lane_a),
-            .ecc_diag_b_i(ecc_diag_lane_b),
-            .ecc_diag_parity_o(lane_ecc_diag_parity[lid]),
-            .ecc_diag_pop_parity_o(lane_ecc_diag_pop_parity[lid])
-        );
-    end
-
-    assign group_dist_sum = {3'b000, lane_popcnt_part_q[0][0]} + {3'b000, lane_popcnt_part_q[0][1]}
-                          + {3'b000, lane_popcnt_part_q[1][0]} + {3'b000, lane_popcnt_part_q[1][1]}
-                          + {3'b000, lane_popcnt_part_q[2][0]} + {3'b000, lane_popcnt_part_q[2][1]}
-                          + {3'b000, lane_popcnt_part_q[3][0]} + {3'b000, lane_popcnt_part_q[3][1]};
+    assign group_dist_sum = {3'b000, vec_payload_q[0][5:0]} + {3'b000, vec_payload_q[0][11:6]}
+                          + {3'b000, vec_payload_q[1][5:0]} + {3'b000, vec_payload_q[1][11:6]}
+                          + {3'b000, vec_payload_q[2][5:0]} + {3'b000, vec_payload_q[2][11:6]}
+                          + {3'b000, vec_payload_q[3][5:0]} + {3'b000, vec_payload_q[3][11:6]};
 
     // ── Main FSM ────────────────────────────────────────────────────────────
     always_comb begin
@@ -946,7 +936,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         hperm_lane_clear=1'b0;
         hperm_lane_we=1'b0;
         // P3 consumes these one-cycle payloads; later values are don't-care.
-        lane_result_n='x; lane_clip_n='x;
         p2_lane_compute_n=1'b0;
         ecc_src_a_n=ecc_src_a_q; ecc_src_b_n=ecc_src_b_q; ecc_dst_n=ecc_dst_q; ecc_acc_dst_n=ecc_acc_dst_q;
         ecc_leaf_a_n=ecc_leaf_a_q; ecc_leaf_b_n=ecc_leaf_b_q;
@@ -974,17 +963,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         lane_shift_bit='0;
         vrf_req.ra='0; vrf_req.wa='x; vrf_req.wd='x;
         vrf_we_direct='0;
-
-        if (p2_lane_compute_q && uop_p2_q.valid) begin
-            if (uop_p2_use_counter)
-                lane_result_n = lane_cnt_new_counter;
-            else if (uop_p2_use_clip) begin
-                lane_clip_n[0] = lane_clip_bits[0];
-                lane_clip_n[1] = lane_clip_bits[1];
-                lane_clip_n[2] = lane_clip_bits[2];
-                lane_clip_n[3] = lane_clip_bits[3];
-            end
-        end
 
         case(st_q)
         S_IDLE: begin
@@ -2095,11 +2073,11 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             uop_p3_n.valid  = 1'b0;
             if (uop_p3_q.op_type == UOP_HBIND_CHUNK) begin
                 vrf_req.wa = uop_p3_q.dst_addr;
-                vrf_req.wd = lane_bool_result;
+                vrf_req.wd = vec_payload_q;
             end else if ((uop_p3_q.op_type == UOP_HCNTADD_SUBGROUP)
                       || (uop_p3_q.op_type == UOP_HPERM_CHUNK)) begin
                 vrf_req.wa = uop_p3_q.dst_addr;
-                vrf_req.wd = lane_result_q;
+                vrf_req.wd = vec_payload_q;
             end
             unique case (uop_p3_q.op_type)
             UOP_HBIND_CHUNK, UOP_HPERM_CHUNK: begin
@@ -2139,10 +2117,10 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             end
             UOP_HCNTCLIP_READ: begin
             hcntclip_word_with_result = hdc_src0_q;
-                hcntclip_word_with_result[0][{uop_p3_q.subgroup_idx,4'b0000} +: 16] = lane_clip_q[0];
-                hcntclip_word_with_result[1][{uop_p3_q.subgroup_idx,4'b0000} +: 16] = lane_clip_q[1];
-                hcntclip_word_with_result[2][{uop_p3_q.subgroup_idx,4'b0000} +: 16] = lane_clip_q[2];
-                hcntclip_word_with_result[3][{uop_p3_q.subgroup_idx,4'b0000} +: 16] = lane_clip_q[3];
+                hcntclip_word_with_result[0][{uop_p3_q.subgroup_idx,4'b0000} +: 16] = vec_payload_q[0][15:0];
+                hcntclip_word_with_result[1][{uop_p3_q.subgroup_idx,4'b0000} +: 16] = vec_payload_q[1][15:0];
+                hcntclip_word_with_result[2][{uop_p3_q.subgroup_idx,4'b0000} +: 16] = vec_payload_q[2][15:0];
+                hcntclip_word_with_result[3][{uop_p3_q.subgroup_idx,4'b0000} +: 16] = vec_payload_q[3][15:0];
                 hdc_src0_n = hcntclip_word_with_result;
                 hdc_src0_we=1'b1;
                 if (uop_p3_q.subgroup_idx < 2'd3) begin
@@ -2327,7 +2305,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             uop_p0_q<='0;uop_p2_q<='0;uop_p3_q<='0;
             p2_is_pop_q<=1'b0;p2_is_hbind_q<=1'b0;
             hdc_src0_q<='0;
-            lane_result_q<='0;lane_clip_q<='0;
             p2_lane_compute_q<=1'b0;
             ecc_src_a_q<='0;ecc_src_b_q<='0;ecc_dst_q<='0;ecc_acc_dst_q<='0;
             ecc_leaf_a_q<='0;ecc_leaf_b_q<='0;ecc_leaf_prod_q<='0;ecc_leaf_path_q<='0;ecc_fold_word_q<='0;
@@ -2357,14 +2334,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                 hdc_src0_q[3][63:41]<='0;
             end else if (hdc_src0_we) begin
                 hdc_src0_q<=hdc_src0_n;
-            end
-            if (hperm_lane_clear) begin
-                lane_result_q <= '0;
-            end else if (hperm_lane_we) begin
-                lane_result_q[hperm_lane_slot_q] <= hperm_lane_word;
-            end else if (st_q == S_UOP_P2_LANE) begin
-                lane_result_q<=lane_result_n;
-                lane_clip_q<=lane_clip_n;
             end
             p2_lane_compute_q<=p2_lane_compute_n;
             ecc_src_a_q<=ecc_src_a_n;ecc_src_b_q<=ecc_src_b_n;ecc_dst_q<=ecc_dst_n;ecc_acc_dst_q<=ecc_acc_dst_n;
