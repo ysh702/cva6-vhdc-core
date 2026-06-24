@@ -29,7 +29,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     // ── State Machine ───────────────────────────────────────────────────────
     typedef enum logic [6:0] {
         S_IDLE, S_EXEC, S_VWR_WAIT, S_RD_WAIT, S_RD_CAPTURE, S_RESULT, S_CLR, S_CLR_DRAIN,
-        S_HSIM_INIT, S_HMATCH_INIT, S_HPERM_SERIAL,
+        S_HSIM_INIT, S_HMATCH_INIT, S_HPERM_LANE64,
         S_UOP_P1_RD0, S_UOP_P1_RD0_WAIT, S_UOP_P1_RD1, S_UOP_P1_RD1_WAIT,
         S_UOP_P2_LANE, S_UOP_P3_GLOBAL, S_UOP_P3_POP_CAPTURE, S_UOP_P3_VRF_WAIT, S_UOP_P3_ACCUM, S_UOP_P4_RESP,
         S_UOP_CLIP_WRITE,
@@ -102,11 +102,14 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     logic                                hdc_src0_we, hdc_src0_acc_we;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] lane_bool_result;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] lane_cnt_new_counter;
-    logic [4:0][LANE_WIDTH-1:0]          lane_shift_window;
     logic [5:0]                          lane_shift_bit;
-    logic [5:0]                          hperm_serial_bit_q,hperm_serial_bit_n;
-    logic [LANE_NUM-1:0]                 hperm_serial_lane_bit;
-    logic                                hperm_serial_clear,hperm_serial_we;
+    logic [1:0]                          hperm_lane_slot_q,hperm_lane_slot_n;
+    logic                                hperm_lane_phase_q,hperm_lane_phase_n;
+    logic [2:0]                          hperm_word_sel,hperm_next_sel;
+    logic [127:0]                        hperm_wide_word;
+    logic [71:0]                         hperm_stage_q,hperm_stage_n;
+    logic [LANE_WIDTH-1:0]               hperm_lane_word;
+    logic                                hperm_stage_we,hperm_lane_clear,hperm_lane_we;
     logic [LANE_NUM-1:0][15:0]           lane_clip_bits;
 
     // ── Lane Boundary Registers (P2→P3 cut, split by payload width) ─────────
@@ -374,20 +377,38 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         hperm_read_addr = base + {4'b0, chunk} + {4'b0, word_off[3:2]} + VRF_IDX_W'(next_word);
     endfunction
 
-    function automatic logic hperm_window_bit(
-        input logic [4:0][LANE_WIDTH-1:0] window,
-        input logic [1:0]                 lane_id,
-        input logic [5:0]                 bit_idx,
-        input logic [5:0]                 shift
+    function automatic logic [71:0] hperm_byte_window(
+        input logic [127:0] wide_word,
+        input logic [2:0]   byte_sel
     );
-        logic [6:0] src_bit;
         begin
-            src_bit = {1'b0, bit_idx} + {1'b0, shift};
-            unique case (lane_id)
-            2'd0: hperm_window_bit = src_bit[6] ? window[1][src_bit[5:0]] : window[0][src_bit[5:0]];
-            2'd1: hperm_window_bit = src_bit[6] ? window[2][src_bit[5:0]] : window[1][src_bit[5:0]];
-            2'd2: hperm_window_bit = src_bit[6] ? window[3][src_bit[5:0]] : window[2][src_bit[5:0]];
-            default: hperm_window_bit = src_bit[6] ? window[4][src_bit[5:0]] : window[3][src_bit[5:0]];
+            unique case (byte_sel)
+            3'd0: hperm_byte_window = wide_word[71:0];
+            3'd1: hperm_byte_window = wide_word[79:8];
+            3'd2: hperm_byte_window = wide_word[87:16];
+            3'd3: hperm_byte_window = wide_word[95:24];
+            3'd4: hperm_byte_window = wide_word[103:32];
+            3'd5: hperm_byte_window = wide_word[111:40];
+            3'd6: hperm_byte_window = wide_word[119:48];
+            default: hperm_byte_window = wide_word[127:56];
+            endcase
+        end
+    endfunction
+
+    function automatic logic [63:0] hperm_low_shift(
+        input logic [71:0] window,
+        input logic [2:0]  bit_sel
+    );
+        begin
+            unique case (bit_sel)
+            3'd0: hperm_low_shift = window[63:0];
+            3'd1: hperm_low_shift = window[64:1];
+            3'd2: hperm_low_shift = window[65:2];
+            3'd3: hperm_low_shift = window[66:3];
+            3'd4: hperm_low_shift = window[67:4];
+            3'd5: hperm_low_shift = window[68:5];
+            3'd6: hperm_low_shift = window[69:6];
+            default: hperm_low_shift = window[70:7];
             endcase
         end
     endfunction
@@ -914,10 +935,16 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         hdc_src0_n='x;
         hdc_src0_we=1'b0;
         hdc_src0_acc_we=1'b0;
-        hperm_serial_bit_n=hperm_serial_bit_q;
-        hperm_serial_lane_bit='0;
-        hperm_serial_clear=1'b0;
-        hperm_serial_we=1'b0;
+        hperm_lane_slot_n=hperm_lane_slot_q;
+        hperm_lane_phase_n=hperm_lane_phase_q;
+        hperm_word_sel='0;
+        hperm_next_sel='0;
+        hperm_wide_word='x;
+        hperm_stage_n=hperm_stage_q;
+        hperm_lane_word='x;
+        hperm_stage_we=1'b0;
+        hperm_lane_clear=1'b0;
+        hperm_lane_we=1'b0;
         // P3 consumes these one-cycle payloads; later values are don't-care.
         lane_result_n='x; lane_clip_n='x;
         p2_lane_compute_n=1'b0;
@@ -944,7 +971,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         ecc_pmul_scalar_bit_n=ecc_pmul_scalar_bit_q;
         ecc_pmul_r0_inf_n=ecc_pmul_r0_inf_q;
         ecc_pmul_result_n=ecc_pmul_result_q; ecc_pmul_point_n=ecc_pmul_point_q;
-        lane_shift_window='0; lane_shift_bit='0;
+        lane_shift_bit='0;
         vrf_req.ra='0; vrf_req.wa='x; vrf_req.wd='x;
         vrf_we_direct='0;
 
@@ -2030,48 +2057,37 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
 `endif
             if (uop_p2_use_shift) begin
                 vrf_req.ra = uop_p2_q.src1_addr;
-                hperm_serial_bit_n = '0;
-                hperm_serial_clear = 1'b1;
-                st_n = S_HPERM_SERIAL;
+                hperm_lane_slot_n = 2'd0;
+                hperm_lane_phase_n = 1'b0;
+                hperm_lane_clear = 1'b1;
+                st_n = S_HPERM_LANE64;
             end else begin
                 st_n=S_UOP_P3_GLOBAL;
             end
         end
 
-        S_HPERM_SERIAL: begin
+        S_HPERM_LANE64: begin
             vrf_req.ra = uop_p3_q.src1_addr;
             lane_shift_bit = {uop_p3_q.perm_nibble, hperm_bit_low_q};
-            unique case (hperm_lane_base_q)
-            2'd0: begin
-                lane_shift_window[0]=hdc_src0_q[0]; lane_shift_window[1]=hdc_src0_q[1];
-                lane_shift_window[2]=hdc_src0_q[2]; lane_shift_window[3]=hdc_src0_q[3];
-                lane_shift_window[4]=vrf_rd[0];
-            end
-            2'd1: begin
-                lane_shift_window[0]=hdc_src0_q[1]; lane_shift_window[1]=hdc_src0_q[2];
-                lane_shift_window[2]=hdc_src0_q[3]; lane_shift_window[3]=vrf_rd[0];
-                lane_shift_window[4]=vrf_rd[1];
-            end
-            2'd2: begin
-                lane_shift_window[0]=hdc_src0_q[2]; lane_shift_window[1]=hdc_src0_q[3];
-                lane_shift_window[2]=vrf_rd[0];     lane_shift_window[3]=vrf_rd[1];
-                lane_shift_window[4]=vrf_rd[2];
-            end
-            default: begin
-                lane_shift_window[0]=hdc_src0_q[3]; lane_shift_window[1]=vrf_rd[0];
-                lane_shift_window[2]=vrf_rd[1];     lane_shift_window[3]=vrf_rd[2];
-                lane_shift_window[4]=vrf_rd[3];
-            end
-            endcase
-            hperm_serial_lane_bit[0] = hperm_window_bit(lane_shift_window, 2'd0, hperm_serial_bit_q, lane_shift_bit);
-            hperm_serial_lane_bit[1] = hperm_window_bit(lane_shift_window, 2'd1, hperm_serial_bit_q, lane_shift_bit);
-            hperm_serial_lane_bit[2] = hperm_window_bit(lane_shift_window, 2'd2, hperm_serial_bit_q, lane_shift_bit);
-            hperm_serial_lane_bit[3] = hperm_window_bit(lane_shift_window, 2'd3, hperm_serial_bit_q, lane_shift_bit);
-            hperm_serial_we = 1'b1;
-            if (hperm_serial_bit_q == 6'd63) begin
-                st_n = S_UOP_P3_GLOBAL;
+            hperm_word_sel = {1'b0, hperm_lane_base_q} + {1'b0, hperm_lane_slot_q};
+            hperm_next_sel = hperm_word_sel + 3'd1;
+            hperm_wide_word = {
+                hperm_pick_word(hperm_next_sel, hdc_src0_q, vrf_rd),
+                hperm_pick_word(hperm_word_sel,  hdc_src0_q, vrf_rd)
+            };
+            if (!hperm_lane_phase_q) begin
+                hperm_stage_n = hperm_byte_window(hperm_wide_word, lane_shift_bit[5:3]);
+                hperm_stage_we = 1'b1;
+                hperm_lane_phase_n = 1'b1;
             end else begin
-                hperm_serial_bit_n = hperm_serial_bit_q + 6'd1;
+                hperm_lane_word = hperm_low_shift(hperm_stage_q, lane_shift_bit[2:0]);
+                hperm_lane_we = 1'b1;
+                hperm_lane_phase_n = 1'b0;
+                if (hperm_lane_slot_q == 2'd3) begin
+                    st_n = S_UOP_P3_GLOBAL;
+                end else begin
+                    hperm_lane_slot_n = hperm_lane_slot_q + 2'd1;
+                end
             end
         end
 
@@ -2305,7 +2321,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             hsim_src0_base_q<='0;hsim_src1_base_q<='0;hsim_total_q<='0;group_dist_q<='0;
             hmatch_last_idx_q<='0;hmatch_best_idx_q<='0;hmatch_class_slot_q<='0;hmatch_best_dist_q<='0;hmatch_update_q<=1'b0;
             hperm_dst_base_q<='0;hperm_bit_low_q<='0;hperm_spread_q<=1'b0;hperm_lane_base_q<='0;
-            hperm_serial_bit_q<='0;
+            hperm_lane_slot_q<='0;hperm_lane_phase_q<=1'b0;hperm_stage_q<='0;
             hcntclip_dst_base_q<='0;hcntclip_acc_sel_q<='0;hcntclip_chunk_q<='0;
             vrf_ra_q<='0;
             uop_p0_q<='0;uop_p2_q<='0;uop_p3_q<='0;
@@ -2327,7 +2343,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             hsim_src0_base_q<=hsim_src0_base_n;hsim_src1_base_q<=hsim_src1_base_n;hsim_total_q<=hsim_total_n;group_dist_q<=group_dist_n;
             hmatch_last_idx_q<=hmatch_last_idx_n;hmatch_best_idx_q<=hmatch_best_idx_n;hmatch_class_slot_q<=hmatch_class_slot_n;hmatch_best_dist_q<=hmatch_best_dist_n;hmatch_update_q<=hmatch_update_n;
             hperm_dst_base_q<=hperm_dst_base_n;hperm_bit_low_q<=hperm_bit_low_n;hperm_spread_q<=hperm_spread_n;hperm_lane_base_q<=hperm_lane_base_n;
-            hperm_serial_bit_q<=hperm_serial_bit_n;
+            hperm_lane_slot_q<=hperm_lane_slot_n;hperm_lane_phase_q<=hperm_lane_phase_n;
+            if (hperm_stage_we) hperm_stage_q<=hperm_stage_n;
             hcntclip_dst_base_q<=hcntclip_dst_base_n;hcntclip_acc_sel_q<=hcntclip_acc_sel_n;hcntclip_chunk_q<=hcntclip_chunk_n;
             vrf_ra_q<=vrf_ra;
             uop_p0_q<=uop_p0_n;uop_p2_q<=uop_p2_n;uop_p3_q<=uop_p3_n;
@@ -2341,13 +2358,10 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             end else if (hdc_src0_we) begin
                 hdc_src0_q<=hdc_src0_n;
             end
-            if (hperm_serial_clear) begin
+            if (hperm_lane_clear) begin
                 lane_result_q <= '0;
-            end else if (hperm_serial_we) begin
-                lane_result_q[0][hperm_serial_bit_q] <= hperm_serial_lane_bit[0];
-                lane_result_q[1][hperm_serial_bit_q] <= hperm_serial_lane_bit[1];
-                lane_result_q[2][hperm_serial_bit_q] <= hperm_serial_lane_bit[2];
-                lane_result_q[3][hperm_serial_bit_q] <= hperm_serial_lane_bit[3];
+            end else if (hperm_lane_we) begin
+                lane_result_q[hperm_lane_slot_q] <= hperm_lane_word;
             end else if (st_q == S_UOP_P2_LANE) begin
                 lane_result_q<=lane_result_n;
                 lane_clip_q<=lane_clip_n;

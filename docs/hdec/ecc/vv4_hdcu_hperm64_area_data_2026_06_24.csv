@@ -1,0 +1,6 @@
+stage,total_lut,logic_lut,lutram,ff,fmax_mhz,pmul_cycles,delta_total_vs_vv2,delta_logic_vs_vv2,delta_ff_vs_vv2,note
+VV2_best_baseline,5127,4999,128,1833,210.393,190151,0,0,0,VV2 comparison baseline
+VV3_algorithm_body_no_HPERM_recovery,5327,5327,0,1687,210.393,135952,200,328,-146,dual-route direct-reduce before HPERM area recovery
+VV3_try79_bitserial_HPERM,5137,5137,0,1701,214.041,135952,10,138,-132,previous VV3 best
+VV4_try1_onecycle_lane64,5154,5154,0,1694,171.116,135952,27,155,-139,rejected due timing
+VV4_try2_twostage_lane64,4722,4722,0,1747,207.684,135952,-405,-277,-86,accepted HDCU-style HPERM64
