@@ -1,0 +1,134 @@
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2024 Advanced Micro Devices, Inc. All Rights Reserved.
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2024.2 (win64) Build 5239630 Fri Nov 08 22:35:27 MST 2024
+| Date         : Wed Jul  1 02:42:38 2026
+| Host         : WIN-20240824NZS running 64-bit major release  (build 9200)
+| Command      : report_utilization -hierarchical -hierarchical_depth 8 -file E:/HDEC/cva6-vhdc-core/tmp/hdec_v15_pointmul_worktree/reports/cva6_hdec_lite_impl_2026_07_01/impl_zynq7020_lite_bufg/utilization_hier_post_synth.rpt
+| Design       : cva6_hdec_lite_impl_wrapper
+| Device       : xc7z020clg400-2
+| Speed File   : -2
+| Design State : Synthesized
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Utilization Design Information
+
+Table of Contents
+-----------------
+1. Utilization by Hierarchy
+
+1. Utilization by Hierarchy
+---------------------------
+
++---------------------------------------------------+--------------------------------+------------+------------+---------+------+------+--------+--------+------------+
+|                      Instance                     |             Module             | Total LUTs | Logic LUTs | LUTRAMs | SRLs |  FFs | RAMB36 | RAMB18 | DSP Blocks |
++---------------------------------------------------+--------------------------------+------------+------------+---------+------+------+--------+--------+------------+
+| cva6_hdec_lite_impl_wrapper                       |                          (top) |      15566 |      15154 |     412 |    0 | 6525 |     12 |      0 |         16 |
+|   (cva6_hdec_lite_impl_wrapper)                   |                          (top) |          0 |          0 |       0 |    0 |    4 |      0 |      0 |          0 |
+|   i_ariane                                        |                         ariane |      15566 |      15154 |     412 |    0 | 6521 |     12 |      0 |         16 |
+|     gen_hdec_coprocessor.i_hdec_coprocessor       |             hdec_cvxif_wrapper |       4652 |       4652 |       0 |    0 | 1535 |      4 |      0 |          0 |
+|       (gen_hdec_coprocessor.i_hdec_coprocessor)   |             hdec_cvxif_wrapper |        217 |        217 |       0 |    0 |  152 |      0 |      0 |          0 |
+|       i_hdec_top                                  |                       hdec_top |       4435 |       4435 |       0 |    0 | 1383 |      4 |      0 |          0 |
+|         (i_hdec_top)                              |                       hdec_top |       2607 |       2607 |       0 |    0 | 1127 |      0 |      0 |          0 |
+|         i_vec                                     |       hdec_vector_payload_4x64 |       1828 |       1828 |       0 |    0 |  256 |      0 |      0 |          0 |
+|         i_vrf                                     |                hdec_vrf_64x256 |          0 |          0 |       0 |    0 |    0 |      4 |      0 |          0 |
+|     i_cva6                                        |                           cva6 |      10914 |      10502 |     412 |    0 | 4986 |      8 |      0 |         16 |
+|       controller_i                                |                     controller |          2 |          2 |       0 |    0 |    0 |      0 |      0 |          0 |
+|       csr_regfile_i                               |                    csr_regfile |         62 |         62 |       0 |    0 |  424 |      0 |      0 |          0 |
+|       ex_stage_i                                  |                       ex_stage |       2229 |       2229 |       0 |    0 | 1880 |      0 |      0 |         16 |
+|         alu_i                                     |                            alu |         17 |         17 |       0 |    0 |    0 |      0 |      0 |          0 |
+|         branch_unit_i                             |                    branch_unit |          1 |          1 |       0 |    0 |    0 |      0 |      0 |          0 |
+|         csr_buffer_i                              |                     csr_buffer |        234 |        234 |       0 |    0 |   13 |      0 |      0 |          0 |
+|         i_mult                                    |                           mult |        625 |        625 |       0 |    0 |  322 |      0 |      0 |         16 |
+|           (i_mult)                                |                           mult |          0 |          0 |       0 |    0 |    1 |      0 |      0 |          0 |
+|           i_div                                   |                         serdiv |        314 |        314 |       0 |    0 |  208 |      0 |      0 |          0 |
+|           i_multiplier                            |                     multiplier |        311 |        311 |       0 |    0 |  113 |      0 |      0 |         16 |
+|         lsu_i                                     |                load_store_unit |       1352 |       1352 |       0 |    0 | 1545 |      0 |      0 |          0 |
+|           (lsu_i)                                 |                load_store_unit |          0 |          0 |       0 |    0 |   55 |      0 |      0 |          0 |
+|           i_load_unit                             |                      load_unit |        124 |        124 |       0 |    0 |   34 |      0 |      0 |          0 |
+|           i_pipe_reg_load                         |                      shift_reg |        290 |        290 |       0 |    0 |   70 |      0 |      0 |          0 |
+|           i_store_unit                            |                     store_unit |        681 |        681 |       0 |    0 | 1098 |      0 |      0 |          0 |
+|             (i_store_unit)                        |                     store_unit |        296 |        296 |       0 |    0 |   76 |      0 |      0 |          0 |
+|             store_buffer_i                        |                   store_buffer |        385 |        385 |       0 |    0 | 1022 |      0 |      0 |          0 |
+|           lsu_bypass_i                            |                     lsu_bypass |        257 |        257 |       0 |    0 |  288 |      0 |      0 |          0 |
+|       gen_cache_wt.i_cache_subsystem              |             wt_cache_subsystem |       1993 |       1869 |     124 |    0 |  679 |      8 |      0 |          0 |
+|         i_adapter                                 |                 wt_axi_adapter |        257 |        133 |     124 |    0 |   17 |      0 |      0 |          0 |
+|           (i_adapter)                             |                 wt_axi_adapter |          0 |          0 |       0 |    0 |    2 |      0 |      0 |          0 |
+|           i_b_fifo                                |   cva6_fifo_v3__parameterized2 |          3 |          3 |       0 |    0 |    3 |      0 |      0 |          0 |
+|           i_dcache_data_fifo                      |   cva6_fifo_v3__parameterized1 |        124 |         40 |      84 |    0 |    3 |      0 |      0 |          0 |
+|             (i_dcache_data_fifo)                  |   cva6_fifo_v3__parameterized1 |          3 |          3 |       0 |    0 |    3 |      0 |      0 |          0 |
+|             gen_fpga_queue.fifo_ram               |     AsyncDpRam__parameterized1 |        121 |         37 |      84 |    0 |    0 |      0 |      0 |          0 |
+|           i_icache_data_fifo                      |   cva6_fifo_v3__parameterized0 |        123 |         83 |      40 |    0 |    3 |      0 |      0 |          0 |
+|             (i_icache_data_fifo)                  |   cva6_fifo_v3__parameterized0 |         15 |         15 |       0 |    0 |    3 |      0 |      0 |          0 |
+|             gen_fpga_queue.fifo_ram               |     AsyncDpRam__parameterized0 |        108 |         68 |      40 |    0 |    0 |      0 |      0 |          0 |
+|           i_rr_arb_tree                           |    rr_arb_tree__parameterized3 |          3 |          3 |       0 |    0 |    3 |      0 |      0 |          0 |
+|           i_wr_dcache_id                          |                cva6_fifo_v3_26 |          4 |          4 |       0 |    0 |    3 |      0 |      0 |          0 |
+|         i_cva6_icache                             |                    cva6_icache |        263 |        263 |       0 |    0 |  125 |      3 |      0 |          0 |
+|           (i_cva6_icache)                         |                    cva6_icache |        114 |        114 |       0 |    0 |  125 |      0 |      0 |          0 |
+|           gen_sram[0].tag_sram                    |                  sram_cache_14 |         18 |         18 |       0 |    0 |    0 |      1 |      0 |          0 |
+|             data_sram                             |                        sram_23 |         18 |         18 |       0 |    0 |    0 |      1 |      0 |          0 |
+|               gen_cut[0].i_tc_sram_wrapper        |             tc_sram_wrapper_24 |         18 |         18 |       0 |    0 |    0 |      1 |      0 |          0 |
+|                 i_ram                             |             SyncSpRamBeNx64_25 |         18 |         18 |       0 |    0 |    0 |      1 |      0 |          0 |
+|           gen_sram[1].data_sram                   |  sram_cache__parameterized0_15 |         34 |         34 |       0 |    0 |    0 |      1 |      0 |          0 |
+|             data_sram                             |        sram__parameterized0_20 |         34 |         34 |       0 |    0 |    0 |      1 |      0 |          0 |
+|               gen_cut[1].i_tc_sram_wrapper        |             tc_sram_wrapper_21 |         34 |         34 |       0 |    0 |    0 |      1 |      0 |          0 |
+|                 i_ram                             |             SyncSpRamBeNx64_22 |         34 |         34 |       0 |    0 |    0 |      1 |      0 |          0 |
+|           gen_sram[1].tag_sram                    |                  sram_cache_16 |         97 |         97 |       0 |    0 |    0 |      1 |      0 |          0 |
+|             data_sram                             |                        sram_17 |         97 |         97 |       0 |    0 |    0 |      1 |      0 |          0 |
+|               gen_cut[0].i_tc_sram_wrapper        |             tc_sram_wrapper_18 |         97 |         97 |       0 |    0 |    0 |      1 |      0 |          0 |
+|                 i_ram                             |             SyncSpRamBeNx64_19 |         97 |         97 |       0 |    0 |    0 |      1 |      0 |          0 |
+|         i_wt_dcache                               |                      wt_dcache |       1473 |       1473 |       0 |    0 |  537 |      5 |      0 |          0 |
+|           gen_rd_ports[1].i_wt_dcache_ctrl        |                 wt_dcache_ctrl |        165 |        165 |       0 |    0 |   66 |      0 |      0 |          0 |
+|           i_wt_dcache_mem                         |                  wt_dcache_mem |         78 |         78 |       0 |    0 |   14 |      5 |      0 |          0 |
+|             (i_wt_dcache_mem)                     |                  wt_dcache_mem |          4 |          4 |       0 |    0 |   12 |      0 |      0 |          0 |
+|             gen_data_banks[0].i_data_sram         |     sram_cache__parameterized0 |          0 |          0 |       0 |    0 |    0 |      2 |      0 |          0 |
+|               data_sram                           |         sram__parameterized0_9 |          0 |          0 |       0 |    0 |    0 |      2 |      0 |          0 |
+|                 gen_cut[0].i_tc_sram_wrapper      |             tc_sram_wrapper_10 |          0 |          0 |       0 |    0 |    0 |      1 |      0 |          0 |
+|                 gen_cut[1].i_tc_sram_wrapper      |             tc_sram_wrapper_11 |          0 |          0 |       0 |    0 |    0 |      1 |      0 |          0 |
+|             gen_data_banks[1].i_data_sram         |   sram_cache__parameterized0_4 |         64 |         64 |       0 |    0 |    0 |      2 |      0 |          0 |
+|               data_sram                           |           sram__parameterized0 |         64 |         64 |       0 |    0 |    0 |      2 |      0 |          0 |
+|                 gen_cut[0].i_tc_sram_wrapper      |              tc_sram_wrapper_5 |          0 |          0 |       0 |    0 |    0 |      1 |      0 |          0 |
+|                 gen_cut[1].i_tc_sram_wrapper      |              tc_sram_wrapper_6 |         64 |         64 |       0 |    0 |    0 |      1 |      0 |          0 |
+|             gen_tag_srams[1].i_tag_sram           |                     sram_cache |          9 |          9 |       0 |    0 |    0 |      1 |      0 |          0 |
+|               data_sram                           |                           sram |          9 |          9 |       0 |    0 |    0 |      1 |      0 |          0 |
+|                 gen_cut[0].i_tc_sram_wrapper      |                tc_sram_wrapper |          9 |          9 |       0 |    0 |    0 |      1 |      0 |          0 |
+|             i_rr_arb_tree                         |    rr_arb_tree__parameterized2 |          1 |          1 |       0 |    0 |    2 |      0 |      0 |          0 |
+|           i_wt_dcache_missunit                    |             wt_dcache_missunit |        151 |        151 |       0 |    0 |   81 |      0 |      0 |          0 |
+|             (i_wt_dcache_missunit)                |             wt_dcache_missunit |        141 |        141 |       0 |    0 |   73 |      0 |      0 |          0 |
+|             i_lfsr_inv                            |                           lfsr |         10 |         10 |       0 |    0 |    8 |      0 |      0 |          0 |
+|           i_wt_dcache_wbuffer                     |              wt_dcache_wbuffer |       1079 |       1079 |       0 |    0 |  376 |      0 |      0 |          0 |
+|             (i_wt_dcache_wbuffer)                 |              wt_dcache_wbuffer |        302 |        302 |       0 |    0 |  361 |      0 |      0 |          0 |
+|             i_clean_rr                            |    rr_arb_tree__parameterized1 |         37 |         37 |       0 |    0 |    1 |      0 |      0 |          0 |
+|             i_dirty_rr                            |    rr_arb_tree__parameterized0 |        649 |        649 |       0 |    0 |    4 |      0 |      0 |          0 |
+|             i_rtrn_id_fifo                        |                   cva6_fifo_v3 |         71 |         71 |       0 |    0 |    3 |      0 |      0 |          0 |
+|             i_tx_id_rr                            |                    rr_arb_tree |         20 |         20 |       0 |    0 |    7 |      0 |      0 |          0 |
+|       i_frontend                                  |                       frontend |       2122 |       1922 |     200 |    0 |  853 |      0 |      0 |          0 |
+|         (i_frontend)                              |                       frontend |        308 |        308 |       0 |    0 |  423 |      0 |      0 |          0 |
+|         bht_gen.i_bht                             |                            bht |         22 |          6 |      16 |    0 |    0 |      0 |      0 |          0 |
+|           gen_fpga_bht.gen_bht_ram[0].i_bht_ram   |              AsyncThreePortRam |          8 |          0 |       8 |    0 |    0 |      0 |      0 |          0 |
+|           gen_fpga_bht.gen_bht_ram[1].i_bht_ram   |            AsyncThreePortRam_3 |         14 |          6 |       8 |    0 |    0 |      0 |      0 |          0 |
+|         btb_gen.i_btb                             |                            btb |        152 |         64 |      88 |    0 |  130 |      0 |      0 |          0 |
+|           gen_fpga_btb.gen_btb_ram[0].i_btb_ram   |                      SyncDpRam |         44 |          0 |      44 |    0 |   65 |      0 |      0 |          0 |
+|           gen_fpga_btb.gen_btb_ram[1].i_btb_ram   |                    SyncDpRam_2 |        108 |         64 |      44 |    0 |   65 |      0 |      0 |          0 |
+|         i_instr_queue                             |                    instr_queue |        692 |        596 |      96 |    0 |   86 |      0 |      0 |          0 |
+|           (i_instr_queue)                         |                    instr_queue |          2 |          2 |       0 |    0 |   68 |      0 |      0 |          0 |
+|           gen_instr_fifo[0].i_fifo_instr_data     |   cva6_fifo_v3__parameterized3 |        114 |         88 |      26 |    0 |    7 |      0 |      0 |          0 |
+|             (gen_instr_fifo[0].i_fifo_instr_data) |   cva6_fifo_v3__parameterized3 |         13 |         13 |       0 |    0 |    7 |      0 |      0 |          0 |
+|             gen_fpga_queue.fifo_ram               |   AsyncDpRam__parameterized3_1 |        101 |         75 |      26 |    0 |    0 |      0 |      0 |          0 |
+|           gen_instr_fifo[1].i_fifo_instr_data     | cva6_fifo_v3__parameterized3_0 |        515 |        489 |      26 |    0 |    7 |      0 |      0 |          0 |
+|             (gen_instr_fifo[1].i_fifo_instr_data) | cva6_fifo_v3__parameterized3_0 |         23 |         23 |       0 |    0 |    7 |      0 |      0 |          0 |
+|             gen_fpga_queue.fifo_ram               |     AsyncDpRam__parameterized3 |        492 |        466 |      26 |    0 |    0 |      0 |      0 |          0 |
+|           i_fifo_address                          |   cva6_fifo_v3__parameterized4 |         61 |         17 |      44 |    0 |    4 |      0 |      0 |          0 |
+|             (i_fifo_address)                      |   cva6_fifo_v3__parameterized4 |          5 |          5 |       0 |    0 |    4 |      0 |      0 |          0 |
+|             gen_fpga_queue.fifo_ram               |     AsyncDpRam__parameterized4 |         56 |         12 |      44 |    0 |    0 |      0 |      0 |          0 |
+|         i_instr_realign                           |                  instr_realign |        928 |        928 |       0 |    0 |   84 |      0 |      0 |          0 |
+|         ras_gen.i_ras                             |                            ras |         65 |         65 |       0 |    0 |  130 |      0 |      0 |          0 |
+|       id_stage_i                                  |                       id_stage |        247 |        247 |       0 |    0 |  221 |      0 |      0 |          0 |
+|       issue_stage_i                               |                    issue_stage |       4290 |       4202 |      88 |    0 |  929 |      0 |      0 |          0 |
+|         (issue_stage_i)                           |                    issue_stage |         29 |         29 |       0 |    0 |    0 |      0 |      0 |          0 |
+|         i_issue_read_operands                     |            issue_read_operands |       2500 |       2412 |      88 |    0 |  317 |      0 |      0 |          0 |
+|           (i_issue_read_operands)                 |            issue_read_operands |       2412 |       2412 |       0 |    0 |  317 |      0 |      0 |          0 |
+|           gen_fpga_regfile.i_ariane_regfile_fpga  |            ariane_regfile_fpga |         88 |          0 |      88 |    0 |    0 |      0 |      0 |          0 |
+|         i_scoreboard                              |                     scoreboard |       1761 |       1761 |       0 |    0 |  612 |      0 |      0 |          0 |
++---------------------------------------------------+--------------------------------+------------+------------+---------+------+------+--------+--------+------------+
+
+
