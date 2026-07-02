@@ -181,6 +181,41 @@ module hdec_lane_4x64
 
 endmodule
 
+// Common bit-matrix tile fabric.
+// The physical shape is eight 32-bit rows packed into the existing 4x64 payload.
+// HDC chunks and ECC diagonal windows both enter as paired rows; the operator
+// only sees row-wise bit pairs, not algorithm-specific lane control.
+module hdec_bitmatrix_tile_8x32
+    import hdec_pkg::*;
+    import hdec_resource_pkg::*;
+(
+    input  logic                         matrix_edge_hi_i,
+    input  logic [LANE_NUM*2-1:0][31:0] matrix_src_a_i,
+    input  logic [LANE_NUM*2-1:0][31:0] matrix_src_b_i,
+    input  logic [LANE_NUM*2-1:0][31:0] matrix_product_q_i,
+
+    output logic [LANE_NUM*2-1:0][31:0] matrix_product_o,
+    output logic [LANE_NUM*2-1:0][5:0]  matrix_count_o,
+    output logic [LANE_NUM*2-1:0]       matrix_parity_o,
+    output logic [LANE_NUM*2-1:0]       matrix_parity_lo16_o,
+    output logic [LANE_NUM*2-1:0]       matrix_parity_edge8_o
+);
+
+    for (genvar rid = 0; rid < LANE_NUM*2; rid++) begin : gen_bitmatrix_row
+        logic edge_lo_parity;
+        logic edge_hi_parity;
+
+        assign edge_lo_parity = ^matrix_product_q_i[rid][7:0];
+        assign edge_hi_parity = ^matrix_product_q_i[rid][31:24];
+        assign matrix_product_o[rid] = matrix_src_a_i[rid] & matrix_src_b_i[rid];
+        assign matrix_count_o[rid] = 6'($countones(matrix_product_q_i[rid]));
+        assign matrix_parity_o[rid] = matrix_count_o[rid][0];
+        assign matrix_parity_lo16_o[rid] = ^matrix_product_q_i[rid][15:0];
+        assign matrix_parity_edge8_o[rid] = matrix_edge_hi_i ? edge_hi_parity : edge_lo_parity;
+    end
+
+endmodule
+
 // Aggressive vector payload fabric:
 // one P2/P3 payload register for HBIND, HSIM/HMATCH, HCNTADD, HCNTCLIP and
 // HPERM, while the actual math remains four 64-bit slices.
@@ -194,7 +229,10 @@ module hdec_vector_payload_4x64
     input  logic                                rst_ni,
 
     input  logic                                payload_xor_i,
+    input  logic                                payload_product_i,
     input  logic                                payload_pop_i,
+    input  logic                                payload_bitband_i,
+    input  logic                                bitband_edge_hi_i,
     input  logic                                payload_cnt_i,
     input  logic                                payload_clip_i,
     input  logic                                hperm_we_i,
@@ -205,10 +243,13 @@ module hdec_vector_payload_4x64
     input  logic [LANE_NUM-1:0][LANE_WIDTH-1:0] bool_src_b_i,
     input  logic [LANE_NUM-1:0][LANE_WIDTH-1:0] bool_src_c_i,
     input  logic [LANE_NUM-1:0][LANE_WIDTH-1:0] bool_src_d_i,
+    input  logic [31:0]                         bitband_src_a_i,
+    input  logic [LANE_NUM-1:0][LANE_WIDTH-1:0] bitband_src_b_i,
     input  logic [LANE_NUM-1:0][LANE_WIDTH-1:0] ecc_reduce_src_a_i,
     input  logic [LANE_NUM-1:0][LANE_WIDTH-1:0] ecc_reduce_src_b_i,
 
     output logic [LANE_NUM-1:0][LANE_WIDTH-1:0] payload_q_o,
+    output logic [LANE_NUM-1:0][1:0][5:0]       payload_pop_q_o,
     output logic [LANE_NUM-1:0][LANE_WIDTH-1:0] ecc_reduce_word_o,
 
     input  logic [LANE_NUM-1:0][LANE_WIDTH-1:0] cnt_hv_word_i,
@@ -217,69 +258,48 @@ module hdec_vector_payload_4x64
 
     input  logic [LANE_NUM-1:0][LANE_WIDTH-1:0] clip_counter_i,
 
-    input  logic [31:0]                         ecc_diag_a_i,
-    input  logic [31:0]                         ecc_diag_b_i,
-    output logic [LANE_NUM-1:0][7:0]            ecc_diag_parity_o,
-    output logic [LANE_NUM-1:0][7:0]            ecc_diag_pop_parity_o
+    output logic [2:0][LANE_NUM*2-1:0]          bitband_parity_o
 );
 
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] bool_xor_word;
-    logic [LANE_NUM-1:0][LANE_WIDTH-1:0] bool_product_word;
-    logic [LANE_NUM-1:0][1:0][5:0]       popcount_part_count;
+    logic [LANE_NUM-1:0][LANE_WIDTH-1:0] tile_product_word;
+    logic [LANE_NUM*2-1:0][31:0]         matrix_src_a;
+    logic [LANE_NUM*2-1:0][31:0]         matrix_src_b;
+    logic [LANE_NUM*2-1:0][31:0]         matrix_product_q;
+    logic [LANE_NUM*2-1:0][31:0]         matrix_product;
+    logic [LANE_NUM*2-1:0][5:0]          matrix_count;
+    logic [LANE_NUM*2-1:0]               matrix_parity;
+    logic [LANE_NUM*2-1:0]               matrix_parity_lo16;
+    logic [LANE_NUM*2-1:0]               matrix_parity_edge8;
+    logic [LANE_NUM-1:0][1:0][5:0]       matrix_count_by_lane;
+    logic [LANE_NUM-1:0][1:0][5:0]       popcount_part_q;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] cnt_new_counter;
     logic [LANE_NUM-1:0][15:0]           clip_bits;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] payload_q;
 
-    function automatic logic ecc_diag32_line_parity(
-        input logic [31:0] a_word,
-        input logic [31:0] b_word,
-        input int unsigned diag_idx
-    );
-        logic parity;
-        begin
-            parity = 1'b0;
-            for (int unsigned bit_idx = 0; bit_idx < 32; bit_idx++) begin
-                if ((diag_idx >= bit_idx) && ((diag_idx - bit_idx) < 32))
-                    parity ^= a_word[bit_idx] & b_word[diag_idx - bit_idx];
-            end
-            ecc_diag32_line_parity = parity;
-        end
-    endfunction
-
-    function automatic logic ecc_diag32_line_pop_parity(
-        input logic [31:0] a_word,
-        input logic [31:0] b_word,
-        input int unsigned diag_idx
-    );
-        logic [31:0] terms;
-        begin
-            terms = '0;
-            for (int unsigned bit_idx = 0; bit_idx < 32; bit_idx++) begin
-                if ((diag_idx >= bit_idx) && ((diag_idx - bit_idx) < 32))
-                    terms[bit_idx] = a_word[bit_idx] & b_word[diag_idx - bit_idx];
-            end
-            ecc_diag32_line_pop_parity = ^terms;
-        end
-    endfunction
-
-    function automatic logic [31:0] ecc_bitrev32_local(input logic [31:0] word);
-        ecc_bitrev32_local = {word[0],  word[1],  word[2],  word[3],
-                              word[4],  word[5],  word[6],  word[7],
-                              word[8],  word[9],  word[10], word[11],
-                              word[12], word[13], word[14], word[15],
-                              word[16], word[17], word[18], word[19],
-                              word[20], word[21], word[22], word[23],
-                              word[24], word[25], word[26], word[27],
-                              word[28], word[29], word[30], word[31]};
-    endfunction
-
     assign payload_q_o = payload_q;
+    assign payload_pop_q_o = popcount_part_q;
 
     for (genvar lid = 0; lid < LANE_NUM; lid++) begin : gen_payload_slice
         assign bool_xor_word[lid] = bool_src_a_i[lid] ^ bool_src_b_i[lid];
-        assign bool_product_word[lid] = bool_src_a_i[lid] & bool_src_b_i[lid];
-        assign popcount_part_count[lid][0] = 6'($countones(bool_product_word[lid][31:0]));
-        assign popcount_part_count[lid][1] = 6'($countones(bool_product_word[lid][63:32]));
+
+        localparam int ROW_LO = lid * 2;
+        localparam int ROW_HI = lid * 2 + 1;
+        assign matrix_src_a[ROW_LO] = payload_bitband_i ? bitband_src_a_i             : bool_src_a_i[lid][31:0];
+        assign matrix_src_b[ROW_LO] = payload_bitband_i ? bitband_src_b_i[lid][31:0]  : bool_src_b_i[lid][31:0];
+        assign matrix_src_a[ROW_HI] = payload_bitband_i ? bitband_src_a_i             : bool_src_a_i[lid][63:32];
+        assign matrix_src_b[ROW_HI] = payload_bitband_i ? bitband_src_b_i[lid][63:32] : bool_src_b_i[lid][63:32];
+        assign matrix_product_q[ROW_LO] = payload_q[lid][31:0];
+        assign matrix_product_q[ROW_HI] = payload_q[lid][63:32];
+        assign tile_product_word[lid] = {matrix_product[ROW_HI], matrix_product[ROW_LO]};
+        assign matrix_count_by_lane[lid][0] = matrix_count[ROW_LO];
+        assign matrix_count_by_lane[lid][1] = matrix_count[ROW_HI];
+        assign bitband_parity_o[0][ROW_LO] = matrix_parity[ROW_LO];
+        assign bitband_parity_o[0][ROW_HI] = matrix_parity[ROW_HI];
+        assign bitband_parity_o[1][ROW_LO] = matrix_parity_lo16[ROW_LO];
+        assign bitband_parity_o[1][ROW_HI] = matrix_parity_lo16[ROW_HI];
+        assign bitband_parity_o[2][ROW_LO] = matrix_parity_edge8[ROW_LO];
+        assign bitband_parity_o[2][ROW_HI] = matrix_parity_edge8[ROW_HI];
 
         hdec_cnt_array i_cnt_array (
             .old_counter_i   (cnt_old_counter_i[lid]),
@@ -293,25 +313,19 @@ module hdec_vector_payload_4x64
             .bits_o     (clip_bits[lid])
         );
 
-        assign ecc_diag_parity_o[lid] = {
-            ecc_diag32_line_parity(ecc_diag_a_i, ecc_diag_b_i, 16 + lid * 4 + 3),
-            ecc_diag32_line_parity(ecc_diag_a_i, ecc_diag_b_i, 16 + lid * 4 + 2),
-            ecc_diag32_line_parity(ecc_diag_a_i, ecc_diag_b_i, 16 + lid * 4 + 1),
-            ecc_diag32_line_parity(ecc_diag_a_i, ecc_diag_b_i, 16 + lid * 4),
-            ecc_diag32_line_parity(ecc_diag_a_i, ecc_diag_b_i, lid * 4 + 3),
-            ecc_diag32_line_parity(ecc_diag_a_i, ecc_diag_b_i, lid * 4 + 2),
-            ecc_diag32_line_parity(ecc_diag_a_i, ecc_diag_b_i, lid * 4 + 1),
-            ecc_diag32_line_parity(ecc_diag_a_i, ecc_diag_b_i, lid * 4)};
-        assign ecc_diag_pop_parity_o[lid] = {
-            (lid == 3) ? 1'b0 : ecc_diag32_line_pop_parity(ecc_bitrev32_local(ecc_diag_a_i), ecc_bitrev32_local(ecc_diag_b_i), 16 + lid * 4 + 3),
-            ecc_diag32_line_pop_parity(ecc_bitrev32_local(ecc_diag_a_i), ecc_bitrev32_local(ecc_diag_b_i), 16 + lid * 4 + 2),
-            ecc_diag32_line_pop_parity(ecc_bitrev32_local(ecc_diag_a_i), ecc_bitrev32_local(ecc_diag_b_i), 16 + lid * 4 + 1),
-            ecc_diag32_line_pop_parity(ecc_bitrev32_local(ecc_diag_a_i), ecc_bitrev32_local(ecc_diag_b_i), 16 + lid * 4),
-            ecc_diag32_line_pop_parity(ecc_bitrev32_local(ecc_diag_a_i), ecc_bitrev32_local(ecc_diag_b_i), lid * 4 + 3),
-            ecc_diag32_line_pop_parity(ecc_bitrev32_local(ecc_diag_a_i), ecc_bitrev32_local(ecc_diag_b_i), lid * 4 + 2),
-            ecc_diag32_line_pop_parity(ecc_bitrev32_local(ecc_diag_a_i), ecc_bitrev32_local(ecc_diag_b_i), lid * 4 + 1),
-            ecc_diag32_line_pop_parity(ecc_bitrev32_local(ecc_diag_a_i), ecc_bitrev32_local(ecc_diag_b_i), lid * 4)};
     end
+
+    hdec_bitmatrix_tile_8x32 i_bitmatrix_tile (
+        .matrix_edge_hi_i   (bitband_edge_hi_i),
+        .matrix_src_a_i      (matrix_src_a),
+        .matrix_src_b_i      (matrix_src_b),
+        .matrix_product_q_i  (matrix_product_q),
+        .matrix_product_o    (matrix_product),
+        .matrix_count_o      (matrix_count),
+        .matrix_parity_o     (matrix_parity),
+        .matrix_parity_lo16_o(matrix_parity_lo16),
+        .matrix_parity_edge8_o(matrix_parity_edge8)
+    );
 
     generate
         if (ENABLE_ECC_REDUCE) begin : gen_ecc_reduce_word_payload
@@ -327,19 +341,23 @@ module hdec_vector_payload_4x64
     always_ff @(posedge clk_i or negedge rst_ni) begin
         if (!rst_ni) begin
             payload_q <= '0;
+            popcount_part_q <= '0;
         end else if (hperm_we_i) begin
             payload_q[hperm_slot_i] <= hperm_word_i;
-        end else if (payload_xor_i) begin
-            payload_q <= bool_xor_word;
-        end else if (payload_pop_i) begin
-            for (int lid = 0; lid < LANE_NUM; lid++) begin
-                payload_q[lid] <= {52'b0, popcount_part_count[lid][1], popcount_part_count[lid][0]};
+        end else begin
+            if (payload_pop_i) begin
+                popcount_part_q <= matrix_count_by_lane;
             end
-        end else if (payload_cnt_i) begin
-            payload_q <= cnt_new_counter;
-        end else if (payload_clip_i) begin
-            for (int lid = 0; lid < LANE_NUM; lid++) begin
-                payload_q[lid] <= {48'b0, clip_bits[lid]};
+            if (payload_xor_i) begin
+                payload_q <= bool_xor_word;
+            end else if (payload_product_i) begin
+                payload_q <= tile_product_word;
+            end else if (payload_cnt_i) begin
+                payload_q <= cnt_new_counter;
+            end else if (payload_clip_i) begin
+                for (int lid = 0; lid < LANE_NUM; lid++) begin
+                    payload_q[lid] <= {48'b0, clip_bits[lid]};
+                end
             end
         end
     end
