@@ -158,7 +158,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     logic [LANE_NUM*2-1:0][31:0]         xor1_fold_a_matrix;
     logic [LANE_NUM*2-1:0][31:0]         xor1_fold_b_matrix;
     logic [LANE_NUM*2-1:0][31:0]         xor1_fold_c_matrix;
-    logic [LANE_NUM*2-1:0][31:0]         xor1_fold_d_matrix;
     logic [LANE_NUM*2-1:0][31:0]         xor1_fold_matrix;
     logic [127:0]         ecc_sub32_accum_xor1;
     logic [31:0]          ecc_leaf_a_lowxor_xor1;
@@ -925,17 +924,52 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     assign ecc_leaf_a_lowxor_xor1 = xor1_fold_matrix[4];
     assign ecc_leaf_b_lowxor_xor1 = xor1_fold_matrix[5];
 
-    always_comb begin
-        xor1_fold_a_matrix = '0;
-        xor1_fold_b_matrix = '0;
-        xor1_fold_c_matrix = '0;
-        xor1_fold_d_matrix = '0;
+    generate
+        if (ECC_DEBUG_FIELD_OPS) begin : gen_xor1_debug_drive
+            always_comb begin
+                xor1_fold_a_matrix = '0;
+                xor1_fold_b_matrix = '0;
+                xor1_fold_c_matrix = '0;
 
-        if (ECC_DEBUG_FIELD_OPS && (st_q == S_ECC_REDUCE_WRITE)) begin
-            xor1_fold_a_matrix = xor_pack_4x64_to_8x32(ecc_reduce_src1);
-            xor1_fold_b_matrix = xor_pack_4x64_to_8x32(ecc_reduce_src2);
-            xor1_fold_c_matrix = xor_pack_4x64_to_8x32(ecc_reduce_src3);
-        end else if (st_q == S_ECC_DIAG_WAIT) begin
+                if (st_q == S_ECC_REDUCE_WRITE) begin
+                    xor1_fold_a_matrix = xor_pack_4x64_to_8x32(ecc_reduce_src1);
+                    xor1_fold_b_matrix = xor_pack_4x64_to_8x32(ecc_reduce_src2);
+                    xor1_fold_c_matrix = xor_pack_4x64_to_8x32(ecc_reduce_src3);
+                end else if (st_q == S_ECC_DIAG_WAIT) begin
+                    xor1_fold_a_matrix[0] = ecc_leaf128_prod_q[31:0];
+                    xor1_fold_a_matrix[1] = ecc_leaf128_prod_q[63:32];
+                    xor1_fold_a_matrix[2] = ecc_leaf128_prod_q[95:64];
+                    xor1_fold_a_matrix[3] = ecc_leaf128_prod_q[127:96];
+                    xor1_fold_a_matrix[4] = ecc_leaf_a_q;
+                    xor1_fold_b_matrix[4] = ecc_leaf_xor_a_q;
+                    xor1_fold_a_matrix[5] = ecc_leaf_b_q;
+                    xor1_fold_b_matrix[5] = ecc_leaf_xor_b_q;
+                    unique case (ecc_kpd64_sub_q)
+                        2'd0: begin
+                            xor1_fold_b_matrix[0] = ecc_leaf_prod_flush_value[31:0];
+                            xor1_fold_b_matrix[1] = ecc_leaf_prod_flush_value[63:32];
+                            xor1_fold_c_matrix[1] = ecc_leaf_prod_flush_value[31:0];
+                            xor1_fold_b_matrix[2] = ecc_leaf_prod_flush_value[63:32];
+                        end
+                        2'd1: begin
+                            xor1_fold_b_matrix[1] = ecc_leaf_prod_flush_value[31:0];
+                            xor1_fold_b_matrix[2] = ecc_leaf_prod_flush_value[63:32];
+                            xor1_fold_c_matrix[2] = ecc_leaf_prod_flush_value[31:0];
+                            xor1_fold_b_matrix[3] = ecc_leaf_prod_flush_value[63:32];
+                        end
+                        default: begin
+                            xor1_fold_b_matrix[1] = ecc_leaf_prod_flush_value[31:0];
+                            xor1_fold_b_matrix[2] = ecc_leaf_prod_flush_value[63:32];
+                        end
+                    endcase
+                end
+            end
+        end else begin : gen_xor1_pmul_drive
+            always_comb begin
+                xor1_fold_a_matrix = '0;
+                xor1_fold_b_matrix = '0;
+                xor1_fold_c_matrix = '0;
+
             xor1_fold_a_matrix[0] = ecc_leaf128_prod_q[31:0];
             xor1_fold_a_matrix[1] = ecc_leaf128_prod_q[63:32];
             xor1_fold_a_matrix[2] = ecc_leaf128_prod_q[95:64];
@@ -944,7 +978,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             xor1_fold_b_matrix[4] = ecc_leaf_xor_a_q;
             xor1_fold_a_matrix[5] = ecc_leaf_b_q;
             xor1_fold_b_matrix[5] = ecc_leaf_xor_b_q;
-
             unique case (ecc_kpd64_sub_q)
                 2'd0: begin
                     xor1_fold_b_matrix[0] = ecc_leaf_prod_flush_value[31:0];
@@ -963,14 +996,14 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                     xor1_fold_b_matrix[2] = ecc_leaf_prod_flush_value[63:32];
                 end
             endcase
+            end
         end
-    end
+    endgenerate
 
     hdec_xor1_matrix_8x32 i_xor1 (
         .fold_a_i     (xor1_fold_a_matrix),
         .fold_b_i     (xor1_fold_b_matrix),
         .fold_c_i     (xor1_fold_c_matrix),
-        .fold_d_i     (xor1_fold_d_matrix),
         .fold_matrix_o(xor1_fold_matrix)
     );
 

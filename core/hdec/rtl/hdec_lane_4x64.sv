@@ -223,13 +223,11 @@ module hdec_xor1_matrix_8x32
     input  logic [LANE_NUM*2-1:0][31:0] fold_a_i,
     input  logic [LANE_NUM*2-1:0][31:0] fold_b_i,
     input  logic [LANE_NUM*2-1:0][31:0] fold_c_i,
-    input  logic [LANE_NUM*2-1:0][31:0] fold_d_i,
     output logic [LANE_NUM*2-1:0][31:0] fold_matrix_o
 );
 
     for (genvar rid = 0; rid < LANE_NUM*2; rid++) begin : gen_xor1_row
-        assign fold_matrix_o[rid] = (fold_a_i[rid] ^ fold_b_i[rid])
-                                  ^ (fold_c_i[rid] ^ fold_d_i[rid]);
+        assign fold_matrix_o[rid] = (fold_a_i[rid] ^ fold_b_i[rid]) ^ fold_c_i[rid];
     end
 
 endmodule
@@ -278,11 +276,6 @@ module hdec_vector_payload_4x64
 );
 
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] xor0_merged_packet;
-    logic [LANE_NUM-1:0][LANE_WIDTH-1:0] xor0_base_packet;
-    logic [LANE_NUM-1:0][LANE_WIDTH-1:0] xor0_contribution_packet;
-    logic [LANE_NUM*2-1:0][31:0]         xor0_base_matrix;
-    logic [LANE_NUM*2-1:0][31:0]         xor0_contribution_matrix;
-    logic [LANE_NUM*2-1:0][31:0]         xor0_merged_matrix;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] tile_product_word;
     logic [LANE_NUM*2-1:0][31:0]         matrix_src_a;
     logic [LANE_NUM*2-1:0][31:0]         matrix_src_b;
@@ -304,11 +297,14 @@ module hdec_vector_payload_4x64
 
     generate
         if (ENABLE_ECC_REDUCE) begin : gen_xor0_external_packet
-            assign xor0_base_packet = xor0_base_packet_i;
-            assign xor0_contribution_packet = xor0_contribution_packet_i;
+            for (genvar lid = 0; lid < LANE_NUM; lid++) begin : gen_xor0_slice
+                assign xor0_merged_packet[lid] =
+                    xor0_base_packet_i[lid] ^ xor0_contribution_packet_i[lid];
+            end
         end else begin : gen_xor0_hdc_packet
-            assign xor0_base_packet = bool_src_a_i;
-            assign xor0_contribution_packet = bool_src_b_i;
+            for (genvar lid = 0; lid < LANE_NUM; lid++) begin : gen_xor0_slice
+                assign xor0_merged_packet[lid] = bool_src_a_i[lid] ^ bool_src_b_i[lid];
+            end
         end
     endgenerate
 
@@ -321,7 +317,6 @@ module hdec_vector_payload_4x64
         assign matrix_src_b[ROW_HI] = payload_bitband_i ? bitband_src_b_i[lid][63:32] : bool_src_b_i[lid][63:32];
         assign matrix_product_q[ROW_LO] = payload_q[lid][31:0];
         assign matrix_product_q[ROW_HI] = payload_q[lid][63:32];
-        assign xor0_merged_packet[lid] = {xor0_merged_matrix[ROW_HI], xor0_merged_matrix[ROW_LO]};
         assign tile_product_word[lid] = {matrix_product[ROW_HI], matrix_product[ROW_LO]};
         assign matrix_count_by_lane[lid][0] = matrix_count[ROW_LO];
         assign matrix_count_by_lane[lid][1] = matrix_count[ROW_HI];
@@ -344,17 +339,6 @@ module hdec_vector_payload_4x64
             .bits_o     (clip_bits[lid])
         );
 
-    end
-
-    for (genvar lid = 0; lid < LANE_NUM; lid++) begin : gen_xor0_packet_rows
-        localparam int ROW_LO = lid * 2;
-        localparam int ROW_HI = lid * 2 + 1;
-        assign xor0_base_matrix[ROW_LO] = xor0_base_packet[lid][31:0];
-        assign xor0_base_matrix[ROW_HI] = xor0_base_packet[lid][63:32];
-        assign xor0_contribution_matrix[ROW_LO] = xor0_contribution_packet[lid][31:0];
-        assign xor0_contribution_matrix[ROW_HI] = xor0_contribution_packet[lid][63:32];
-        assign xor0_merged_matrix[ROW_LO] = xor0_base_matrix[ROW_LO] ^ xor0_contribution_matrix[ROW_LO];
-        assign xor0_merged_matrix[ROW_HI] = xor0_base_matrix[ROW_HI] ^ xor0_contribution_matrix[ROW_HI];
     end
 
     hdec_bitmatrix_tile_8x32 i_bitmatrix_tile (
