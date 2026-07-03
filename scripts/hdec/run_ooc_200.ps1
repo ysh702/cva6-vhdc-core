@@ -19,7 +19,13 @@ $env:TMP = $env:TEMP
 $env:XILINX_LOCAL_USER_DATA = Join-Path $tmpRoot 'xilinx_local_user_data'
 New-Item -ItemType Directory -Force -Path $env:HOME,$env:APPDATA,$env:LOCALAPPDATA,$env:TEMP,$env:XILINX_LOCAL_USER_DATA | Out-Null
 
-$vivado = 'E:\Vivado\Vivado\2024.2\bin\vivado.bat'
+$vivado = $env:HDEC_VIVADO_2024_2
+if ([string]::IsNullOrWhiteSpace($vivado)) {
+    $vivado = 'D:\vivado2024.2\Vivado\2024.2\bin\vivado.bat'
+}
+if (-not (Test-Path -LiteralPath $vivado)) {
+    throw "Vivado 2024.2 was not found at '$vivado'. Set HDEC_VIVADO_2024_2 to override."
+}
 & $vivado -mode batch -nolog -nojournal -notrace -source (Join-Path $repoPath 'scripts\hdec\ooc_hdec_timing_atlas.tcl') -tclargs $repoPath $outPath 5.000 $Label
 
 $summaryPath = Join-Path $outPath 'reports\run_summary.txt'

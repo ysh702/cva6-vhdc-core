@@ -216,6 +216,24 @@ module hdec_bitmatrix_tile_8x32
 
 endmodule
 
+module hdec_xor1_matrix_8x32
+    import hdec_pkg::*;
+    import hdec_resource_pkg::*;
+(
+    input  logic [LANE_NUM*2-1:0][31:0] fold_a_i,
+    input  logic [LANE_NUM*2-1:0][31:0] fold_b_i,
+    input  logic [LANE_NUM*2-1:0][31:0] fold_c_i,
+    input  logic [LANE_NUM*2-1:0][31:0] fold_d_i,
+    output logic [LANE_NUM*2-1:0][31:0] fold_matrix_o
+);
+
+    for (genvar rid = 0; rid < LANE_NUM*2; rid++) begin : gen_xor1_row
+        assign fold_matrix_o[rid] = (fold_a_i[rid] ^ fold_b_i[rid])
+                                  ^ (fold_c_i[rid] ^ fold_d_i[rid]);
+    end
+
+endmodule
+
 // Aggressive vector payload fabric:
 // one P2/P3 payload register for HBIND, HSIM/HMATCH, HCNTADD, HCNTCLIP and
 // HPERM, while the actual math remains four 64-bit slices.
@@ -241,16 +259,14 @@ module hdec_vector_payload_4x64
 
     input  logic [LANE_NUM-1:0][LANE_WIDTH-1:0] bool_src_a_i,
     input  logic [LANE_NUM-1:0][LANE_WIDTH-1:0] bool_src_b_i,
-    input  logic [LANE_NUM-1:0][LANE_WIDTH-1:0] bool_src_c_i,
-    input  logic [LANE_NUM-1:0][LANE_WIDTH-1:0] bool_src_d_i,
     input  logic [31:0]                         bitband_src_a_i,
     input  logic [LANE_NUM-1:0][LANE_WIDTH-1:0] bitband_src_b_i,
-    input  logic [LANE_NUM-1:0][LANE_WIDTH-1:0] ecc_reduce_src_a_i,
-    input  logic [LANE_NUM-1:0][LANE_WIDTH-1:0] ecc_reduce_src_b_i,
+    input  logic [LANE_NUM-1:0][LANE_WIDTH-1:0] xor0_base_packet_i,
+    input  logic [LANE_NUM-1:0][LANE_WIDTH-1:0] xor0_contribution_packet_i,
 
     output logic [LANE_NUM-1:0][LANE_WIDTH-1:0] payload_q_o,
     output logic [LANE_NUM-1:0][1:0][5:0]       payload_pop_q_o,
-    output logic [LANE_NUM-1:0][LANE_WIDTH-1:0] ecc_reduce_word_o,
+    output logic [LANE_NUM-1:0][LANE_WIDTH-1:0] xor0_merged_packet_o,
 
     input  logic [LANE_NUM-1:0][LANE_WIDTH-1:0] cnt_hv_word_i,
     input  logic [LANE_NUM-1:0][LANE_WIDTH-1:0] cnt_old_counter_i,
@@ -261,7 +277,12 @@ module hdec_vector_payload_4x64
     output logic [2:0][LANE_NUM*2-1:0]          bitband_parity_o
 );
 
-    logic [LANE_NUM-1:0][LANE_WIDTH-1:0] bool_xor_word;
+    logic [LANE_NUM-1:0][LANE_WIDTH-1:0] xor0_merged_packet;
+    logic [LANE_NUM-1:0][LANE_WIDTH-1:0] xor0_base_packet;
+    logic [LANE_NUM-1:0][LANE_WIDTH-1:0] xor0_contribution_packet;
+    logic [LANE_NUM*2-1:0][31:0]         xor0_base_matrix;
+    logic [LANE_NUM*2-1:0][31:0]         xor0_contribution_matrix;
+    logic [LANE_NUM*2-1:0][31:0]         xor0_merged_matrix;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] tile_product_word;
     logic [LANE_NUM*2-1:0][31:0]         matrix_src_a;
     logic [LANE_NUM*2-1:0][31:0]         matrix_src_b;
@@ -279,10 +300,19 @@ module hdec_vector_payload_4x64
 
     assign payload_q_o = payload_q;
     assign payload_pop_q_o = popcount_part_q;
+    assign xor0_merged_packet_o = xor0_merged_packet;
+
+    generate
+        if (ENABLE_ECC_REDUCE) begin : gen_xor0_external_packet
+            assign xor0_base_packet = xor0_base_packet_i;
+            assign xor0_contribution_packet = xor0_contribution_packet_i;
+        end else begin : gen_xor0_hdc_packet
+            assign xor0_base_packet = bool_src_a_i;
+            assign xor0_contribution_packet = bool_src_b_i;
+        end
+    endgenerate
 
     for (genvar lid = 0; lid < LANE_NUM; lid++) begin : gen_payload_slice
-        assign bool_xor_word[lid] = bool_src_a_i[lid] ^ bool_src_b_i[lid];
-
         localparam int ROW_LO = lid * 2;
         localparam int ROW_HI = lid * 2 + 1;
         assign matrix_src_a[ROW_LO] = payload_bitband_i ? bitband_src_a_i             : bool_src_a_i[lid][31:0];
@@ -291,6 +321,7 @@ module hdec_vector_payload_4x64
         assign matrix_src_b[ROW_HI] = payload_bitband_i ? bitband_src_b_i[lid][63:32] : bool_src_b_i[lid][63:32];
         assign matrix_product_q[ROW_LO] = payload_q[lid][31:0];
         assign matrix_product_q[ROW_HI] = payload_q[lid][63:32];
+        assign xor0_merged_packet[lid] = {xor0_merged_matrix[ROW_HI], xor0_merged_matrix[ROW_LO]};
         assign tile_product_word[lid] = {matrix_product[ROW_HI], matrix_product[ROW_LO]};
         assign matrix_count_by_lane[lid][0] = matrix_count[ROW_LO];
         assign matrix_count_by_lane[lid][1] = matrix_count[ROW_HI];
@@ -315,6 +346,17 @@ module hdec_vector_payload_4x64
 
     end
 
+    for (genvar lid = 0; lid < LANE_NUM; lid++) begin : gen_xor0_packet_rows
+        localparam int ROW_LO = lid * 2;
+        localparam int ROW_HI = lid * 2 + 1;
+        assign xor0_base_matrix[ROW_LO] = xor0_base_packet[lid][31:0];
+        assign xor0_base_matrix[ROW_HI] = xor0_base_packet[lid][63:32];
+        assign xor0_contribution_matrix[ROW_LO] = xor0_contribution_packet[lid][31:0];
+        assign xor0_contribution_matrix[ROW_HI] = xor0_contribution_packet[lid][63:32];
+        assign xor0_merged_matrix[ROW_LO] = xor0_base_matrix[ROW_LO] ^ xor0_contribution_matrix[ROW_LO];
+        assign xor0_merged_matrix[ROW_HI] = xor0_base_matrix[ROW_HI] ^ xor0_contribution_matrix[ROW_HI];
+    end
+
     hdec_bitmatrix_tile_8x32 i_bitmatrix_tile (
         .matrix_edge_hi_i   (bitband_edge_hi_i),
         .matrix_src_a_i      (matrix_src_a),
@@ -327,17 +369,6 @@ module hdec_vector_payload_4x64
         .matrix_parity_edge8_o(matrix_parity_edge8)
     );
 
-    generate
-        if (ENABLE_ECC_REDUCE) begin : gen_ecc_reduce_word_payload
-            for (genvar lid = 0; lid < LANE_NUM; lid++) begin : gen_reduce_slice
-                assign ecc_reduce_word_o[lid] = ecc_reduce_src_a_i[lid] ^ ecc_reduce_src_b_i[lid]
-                                             ^ bool_src_c_i[lid] ^ bool_src_d_i[lid];
-            end
-        end else begin : gen_no_ecc_reduce_word_payload
-            assign ecc_reduce_word_o = '0;
-        end
-    endgenerate
-
     always_ff @(posedge clk_i or negedge rst_ni) begin
         if (!rst_ni) begin
             payload_q <= '0;
@@ -349,7 +380,7 @@ module hdec_vector_payload_4x64
                 popcount_part_q <= matrix_count_by_lane;
             end
             if (payload_xor_i) begin
-                payload_q <= bool_xor_word;
+                payload_q <= xor0_merged_packet;
             end else if (payload_product_i) begin
                 payload_q <= tile_product_word;
             end else if (payload_cnt_i) begin
