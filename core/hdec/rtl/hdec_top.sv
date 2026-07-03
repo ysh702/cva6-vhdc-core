@@ -1000,13 +1000,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         end
     endgenerate
 
-    hdec_xor1_matrix_8x32 i_xor1 (
-        .fold_a_i     (xor1_fold_a_matrix),
-        .fold_b_i     (xor1_fold_b_matrix),
-        .fold_c_i     (xor1_fold_c_matrix),
-        .fold_matrix_o(xor1_fold_matrix)
-    );
-
     // Direct reduction stays on the VV11 baseline accumulation boundary for
     // the XOR-only experiment: map the current folded product words into one
     // 4x64 contribution packet, then accumulate it locally in hdc_src0_q.
@@ -1108,9 +1101,13 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         .bitband_src_b_i(ecc_bitband_src_b),
         .xor0_base_packet_i(xor0_base_packet),
         .xor0_contribution_packet_i(xor0_contribution_packet),
+        .xor1_fold_a_matrix_i(xor1_fold_a_matrix),
+        .xor1_fold_b_matrix_i(xor1_fold_b_matrix),
+        .xor1_fold_c_matrix_i(xor1_fold_c_matrix),
         .payload_q_o(vec_payload_q),
         .payload_pop_q_o(vec_popcount_q),
         .xor0_merged_packet_o(xor0_merged_packet),
+        .xor1_fold_matrix_o(xor1_fold_matrix),
         .cnt_hv_word_i(hdc_src0_q),
         .cnt_old_counter_i(vrf_rd),
         .cnt_subgroup_i(uop_p2_q.subgroup_idx),

@@ -189,16 +189,20 @@ module hdec_bitmatrix_tile_8x32
     import hdec_pkg::*;
     import hdec_resource_pkg::*;
 (
-    input  logic                         matrix_edge_hi_i,
     input  logic [LANE_NUM*2-1:0][31:0] matrix_src_a_i,
     input  logic [LANE_NUM*2-1:0][31:0] matrix_src_b_i,
     input  logic [LANE_NUM*2-1:0][31:0] matrix_product_q_i,
+    input  logic                         matrix_edge_hi_i,
+    input  logic [LANE_NUM*2-1:0][31:0] xor1_fold_a_i,
+    input  logic [LANE_NUM*2-1:0][31:0] xor1_fold_b_i,
+    input  logic [LANE_NUM*2-1:0][31:0] xor1_fold_c_i,
 
     output logic [LANE_NUM*2-1:0][31:0] matrix_product_o,
     output logic [LANE_NUM*2-1:0][5:0]  matrix_count_o,
     output logic [LANE_NUM*2-1:0]       matrix_parity_o,
-    output logic [LANE_NUM*2-1:0]       matrix_parity_lo16_o,
-    output logic [LANE_NUM*2-1:0]       matrix_parity_edge8_o
+    output logic [LANE_NUM*2-1:0]       xor1_parity_lo16_o,
+    output logic [LANE_NUM*2-1:0]       xor1_parity_edge8_o,
+    output logic [LANE_NUM*2-1:0][31:0] xor1_fold_o
 );
 
     for (genvar rid = 0; rid < LANE_NUM*2; rid++) begin : gen_bitmatrix_row
@@ -210,24 +214,9 @@ module hdec_bitmatrix_tile_8x32
         assign matrix_product_o[rid] = matrix_src_a_i[rid] & matrix_src_b_i[rid];
         assign matrix_count_o[rid] = 6'($countones(matrix_product_q_i[rid]));
         assign matrix_parity_o[rid] = matrix_count_o[rid][0];
-        assign matrix_parity_lo16_o[rid] = ^matrix_product_q_i[rid][15:0];
-        assign matrix_parity_edge8_o[rid] = matrix_edge_hi_i ? edge_hi_parity : edge_lo_parity;
-    end
-
-endmodule
-
-module hdec_xor1_matrix_8x32
-    import hdec_pkg::*;
-    import hdec_resource_pkg::*;
-(
-    input  logic [LANE_NUM*2-1:0][31:0] fold_a_i,
-    input  logic [LANE_NUM*2-1:0][31:0] fold_b_i,
-    input  logic [LANE_NUM*2-1:0][31:0] fold_c_i,
-    output logic [LANE_NUM*2-1:0][31:0] fold_matrix_o
-);
-
-    for (genvar rid = 0; rid < LANE_NUM*2; rid++) begin : gen_xor1_row
-        assign fold_matrix_o[rid] = (fold_a_i[rid] ^ fold_b_i[rid]) ^ fold_c_i[rid];
+        assign xor1_parity_lo16_o[rid] = ^matrix_product_q_i[rid][15:0];
+        assign xor1_parity_edge8_o[rid] = matrix_edge_hi_i ? edge_hi_parity : edge_lo_parity;
+        assign xor1_fold_o[rid] = (xor1_fold_a_i[rid] ^ xor1_fold_b_i[rid]) ^ xor1_fold_c_i[rid];
     end
 
 endmodule
@@ -261,10 +250,14 @@ module hdec_vector_payload_4x64
     input  logic [LANE_NUM-1:0][LANE_WIDTH-1:0] bitband_src_b_i,
     input  logic [LANE_NUM-1:0][LANE_WIDTH-1:0] xor0_base_packet_i,
     input  logic [LANE_NUM-1:0][LANE_WIDTH-1:0] xor0_contribution_packet_i,
+    input  logic [LANE_NUM*2-1:0][31:0]         xor1_fold_a_matrix_i,
+    input  logic [LANE_NUM*2-1:0][31:0]         xor1_fold_b_matrix_i,
+    input  logic [LANE_NUM*2-1:0][31:0]         xor1_fold_c_matrix_i,
 
     output logic [LANE_NUM-1:0][LANE_WIDTH-1:0] payload_q_o,
     output logic [LANE_NUM-1:0][1:0][5:0]       payload_pop_q_o,
     output logic [LANE_NUM-1:0][LANE_WIDTH-1:0] xor0_merged_packet_o,
+    output logic [LANE_NUM*2-1:0][31:0]         xor1_fold_matrix_o,
 
     input  logic [LANE_NUM-1:0][LANE_WIDTH-1:0] cnt_hv_word_i,
     input  logic [LANE_NUM-1:0][LANE_WIDTH-1:0] cnt_old_counter_i,
@@ -283,8 +276,8 @@ module hdec_vector_payload_4x64
     logic [LANE_NUM*2-1:0][31:0]         matrix_product;
     logic [LANE_NUM*2-1:0][5:0]          matrix_count;
     logic [LANE_NUM*2-1:0]               matrix_parity;
-    logic [LANE_NUM*2-1:0]               matrix_parity_lo16;
-    logic [LANE_NUM*2-1:0]               matrix_parity_edge8;
+    logic [LANE_NUM*2-1:0]               xor1_product_parity_lo16;
+    logic [LANE_NUM*2-1:0]               xor1_product_parity_edge8;
     logic [LANE_NUM-1:0][1:0][5:0]       matrix_count_by_lane;
     logic [LANE_NUM-1:0][1:0][5:0]       popcount_part_q;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] cnt_new_counter;
@@ -322,10 +315,10 @@ module hdec_vector_payload_4x64
         assign matrix_count_by_lane[lid][1] = matrix_count[ROW_HI];
         assign bitband_parity_o[0][ROW_LO] = matrix_parity[ROW_LO];
         assign bitband_parity_o[0][ROW_HI] = matrix_parity[ROW_HI];
-        assign bitband_parity_o[1][ROW_LO] = matrix_parity_lo16[ROW_LO];
-        assign bitband_parity_o[1][ROW_HI] = matrix_parity_lo16[ROW_HI];
-        assign bitband_parity_o[2][ROW_LO] = matrix_parity_edge8[ROW_LO];
-        assign bitband_parity_o[2][ROW_HI] = matrix_parity_edge8[ROW_HI];
+        assign bitband_parity_o[1][ROW_LO] = xor1_product_parity_lo16[ROW_LO];
+        assign bitband_parity_o[1][ROW_HI] = xor1_product_parity_lo16[ROW_HI];
+        assign bitband_parity_o[2][ROW_LO] = xor1_product_parity_edge8[ROW_LO];
+        assign bitband_parity_o[2][ROW_HI] = xor1_product_parity_edge8[ROW_HI];
 
         hdec_cnt_array i_cnt_array (
             .old_counter_i   (cnt_old_counter_i[lid]),
@@ -342,15 +335,19 @@ module hdec_vector_payload_4x64
     end
 
     hdec_bitmatrix_tile_8x32 i_bitmatrix_tile (
-        .matrix_edge_hi_i   (bitband_edge_hi_i),
         .matrix_src_a_i      (matrix_src_a),
         .matrix_src_b_i      (matrix_src_b),
         .matrix_product_q_i  (matrix_product_q),
+        .matrix_edge_hi_i    (bitband_edge_hi_i),
+        .xor1_fold_a_i       (xor1_fold_a_matrix_i),
+        .xor1_fold_b_i       (xor1_fold_b_matrix_i),
+        .xor1_fold_c_i       (xor1_fold_c_matrix_i),
         .matrix_product_o    (matrix_product),
         .matrix_count_o      (matrix_count),
         .matrix_parity_o     (matrix_parity),
-        .matrix_parity_lo16_o(matrix_parity_lo16),
-        .matrix_parity_edge8_o(matrix_parity_edge8)
+        .xor1_parity_lo16_o  (xor1_product_parity_lo16),
+        .xor1_parity_edge8_o (xor1_product_parity_edge8),
+        .xor1_fold_o         (xor1_fold_matrix_o)
     );
 
     always_ff @(posedge clk_i or negedge rst_ni) begin
