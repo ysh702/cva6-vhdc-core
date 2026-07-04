@@ -168,8 +168,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     logic [31:0]          ecc_leaf_b_matrix_rev;
     logic [31:0]          ecc_bitband_src_a;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] ecc_bitband_src_b;
-    logic                 ecc_bitband_edge_hi;
-    logic [2:0][LANE_NUM*2-1:0]          ecc_bitband_parity_row;
+    logic [LANE_NUM*2-1:0]               ecc_bitband_parity_row;
     logic [5:0]           ecc_leaf_path_q, ecc_leaf_path_n;
     logic [5:0]           ecc_next_leaf_path;
     (* ram_style = "distributed" *) logic [127:0] ecc_product_pair [0:3];
@@ -299,14 +298,13 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                                       || (ecc_dst_q == ECC_PMUL_R1Z)
                                       || (ecc_dst_q == ECC_PMUL_T9);
     assign ecc_diag_product_issue = (st_q == S_ECC_DIAG_ISSUE)
-                                 || ((st_q == S_ECC_DIAG_CAPTURE) && (ecc_diag_group_q != 3'd4));
+                                 || ((st_q == S_ECC_DIAG_CAPTURE) && (ecc_diag_group_q != 3'd7));
     assign ecc_diag_issue_group = (st_q == S_ECC_DIAG_CAPTURE)
                                 ? (ecc_diag_group_q + 3'd1)
                                 : ecc_diag_group_q;
     assign ecc_leaf_b_matrix_rev = ecc_leaf_b_q;
     assign ecc_bitband_src_a = ecc_leaf_a_q;
     assign ecc_bitband_src_b = ecc_diag32_bitband_b_words(ecc_leaf_b_matrix_rev, ecc_diag_issue_group);
-    assign ecc_bitband_edge_hi = (st_q == S_ECC_DIAG_CAPTURE) && (ecc_diag_group_q == 3'd2);
 
     function automatic logic ecc_inv_step_needs_tmp(input logic [3:0] step);
         unique case (step)
@@ -811,37 +809,17 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         input logic [2:0]  group_idx
     );
         logic [LANE_NUM-1:0][63:0] words;
+        logic [5:0] diag_base;
         logic [5:0] diag_idx;
-        logic [31:0] low_window;
-        logic [31:0] high_window;
         logic [31:0] row_word;
         begin
             words = '0;
+            diag_base = {group_idx, 3'b000};
             for (int rid = 0; rid < LANE_NUM*2; rid++) begin
-                unique case (group_idx)
-                    3'd0: begin
-                        low_window = ecc_diag32_bitband_window(b_rev, rid[5:0]);
-                        high_window = ecc_diag32_bitband_window(b_rev, 6'd39 + rid[5:0]);
-                        row_word = {high_window[31:8], low_window[7:0]};
-                    end
-                    3'd1: begin
-                        low_window = ecc_diag32_bitband_window(b_rev, 6'd8 + rid[5:0]);
-                        high_window = ecc_diag32_bitband_window(b_rev, 6'd47 + rid[5:0]);
-                        row_word = {high_window[31:16], low_window[15:0]};
-                    end
-                    3'd2: begin
-                        low_window = ecc_diag32_bitband_window(b_rev, 6'd16 + rid[5:0]);
-                        high_window = ecc_diag32_bitband_window(b_rev, 6'd55 + rid[5:0]);
-                        row_word = {high_window[31:24], low_window[23:0]};
-                    end
-                    3'd3: begin
-                        row_word = ecc_diag32_bitband_window(b_rev, 6'd24 + rid[5:0]);
-                    end
-                    default: begin
-                        diag_idx = 6'd32 + rid[5:0];
-                        row_word = (diag_idx <= 6'd38) ? ecc_diag32_bitband_window(b_rev, diag_idx) : 32'b0;
-                    end
-                endcase
+                diag_idx = diag_base + rid[5:0];
+                row_word = (diag_idx <= 6'd62)
+                         ? ecc_diag32_bitband_window(b_rev, diag_idx)
+                         : 32'b0;
 
                 if (rid[0])
                     words[rid >> 1][63:32] = row_word;
@@ -855,26 +833,20 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     function automatic logic [63:0] ecc_diag32_leaf_store_bitband(
         input logic [63:0] current_product,
         input logic [2:0]  group_idx,
-        input logic [2:0][LANE_NUM*2-1:0] parity_row
+        input logic [LANE_NUM*2-1:0] parity_row
     );
         logic [63:0] updated;
         begin
             updated = current_product;
             unique case (group_idx)
-                3'd0: begin
-                    updated[0 +: 8] = parity_row[2];
-                    updated[39 +: 8] = parity_row[0] ^ parity_row[2];
-                end
-                3'd1: begin
-                    updated[8 +: 8] = parity_row[1];
-                    updated[47 +: 8] = parity_row[0] ^ parity_row[1];
-                end
-                3'd2: begin
-                    updated[16 +: 8] = parity_row[0] ^ parity_row[2];
-                    updated[55 +: 8] = parity_row[2];
-                end
-                3'd3: updated[24 +: 8] = parity_row[0];
-                3'd4: updated[32 +: 7] = parity_row[0][6:0];
+                3'd0: updated[0 +: 8] = parity_row;
+                3'd1: updated[8 +: 8] = parity_row;
+                3'd2: updated[16 +: 8] = parity_row;
+                3'd3: updated[24 +: 8] = parity_row;
+                3'd4: updated[32 +: 8] = parity_row;
+                3'd5: updated[40 +: 8] = parity_row;
+                3'd6: updated[48 +: 8] = parity_row;
+                3'd7: updated[56 +: 7] = parity_row[6:0];
                 default: begin
                 end
             endcase
@@ -1089,7 +1061,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         .payload_product_i(hdc_pop_product_issue || ecc_diag_product_issue),
         .payload_pop_i(hdc_pop_capture),
         .payload_bitband_i(ecc_diag_product_issue),
-        .bitband_edge_hi_i(ecc_bitband_edge_hi),
         .payload_cnt_i(p2_lane_compute_q && uop_p2_use_counter),
         .payload_clip_i(p2_lane_compute_q && uop_p2_use_clip),
         .hperm_we_i(hperm_lane_we),
@@ -1546,7 +1517,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         S_ECC_DIAG_CAPTURE: begin
             ecc_leaf_prod_n = ecc_diag32_leaf_store_bitband(
                 ecc_leaf_prod_q, ecc_diag_group_q, ecc_bitband_parity_row);
-            if (ecc_diag_group_q == 3'd4) begin
+            if (ecc_diag_group_q == 3'd7) begin
                 ecc_diag_group_n = '0;
                 st_n=S_ECC_DIAG_WAIT;
             end else begin
