@@ -181,32 +181,29 @@ module hdec_lane_4x64
 
 endmodule
 
-// Common bit-matrix tile fabric.
+// Shared GF(2) contribution row tile.
 // The physical shape is eight 32-bit rows packed into the existing 4x64 payload.
 // HDC chunks and ECC diagonal windows both enter as paired rows; the operator
 // only sees row-wise bit pairs, not algorithm-specific lane control.
-module hdec_bitmatrix_tile_8x32
+module hdec_gf2_contribution_row_tile_8x32
     import hdec_pkg::*;
     import hdec_resource_pkg::*;
 (
     input  logic [LANE_NUM*2-1:0][31:0] matrix_src_a_i,
     input  logic [LANE_NUM*2-1:0][31:0] matrix_src_b_i,
     input  logic [LANE_NUM*2-1:0][31:0] matrix_product_q_i,
-    input  logic [LANE_NUM*2-1:0][31:0] xor1_fold_a_i,
-    input  logic [LANE_NUM*2-1:0][31:0] xor1_fold_b_i,
-    input  logic [LANE_NUM*2-1:0][31:0] xor1_fold_c_i,
 
     output logic [LANE_NUM*2-1:0][31:0] matrix_product_o,
     output logic [LANE_NUM*2-1:0][5:0]  matrix_count_o,
     output logic [LANE_NUM*2-1:0]       matrix_parity_o,
-    output logic [LANE_NUM*2-1:0][31:0] xor1_fold_o
+    output logic [LANE_NUM*2-1:0]       matrix_xor_parity_o
 );
 
     for (genvar rid = 0; rid < LANE_NUM*2; rid++) begin : gen_bitmatrix_row
         assign matrix_product_o[rid] = matrix_src_a_i[rid] & matrix_src_b_i[rid];
         assign matrix_count_o[rid] = 6'($countones(matrix_product_q_i[rid]));
         assign matrix_parity_o[rid] = matrix_count_o[rid][0];
-        assign xor1_fold_o[rid] = (xor1_fold_a_i[rid] ^ xor1_fold_b_i[rid]) ^ xor1_fold_c_i[rid];
+        assign matrix_xor_parity_o[rid] = ^matrix_product_q_i[rid];
     end
 
 endmodule
@@ -237,16 +234,11 @@ module hdec_vector_payload_4x64
     input  logic [LANE_NUM-1:0][LANE_WIDTH-1:0] bool_src_b_i,
     input  logic [31:0]                         bitband_src_a_i,
     input  logic [LANE_NUM-1:0][LANE_WIDTH-1:0] bitband_src_b_i,
-    input  logic [LANE_NUM-1:0][LANE_WIDTH-1:0] xor0_base_packet_i,
     input  logic [LANE_NUM-1:0][LANE_WIDTH-1:0] xor0_contribution_packet_i,
-    input  logic [LANE_NUM*2-1:0][31:0]         xor1_fold_a_matrix_i,
-    input  logic [LANE_NUM*2-1:0][31:0]         xor1_fold_b_matrix_i,
-    input  logic [LANE_NUM*2-1:0][31:0]         xor1_fold_c_matrix_i,
 
     output logic [LANE_NUM-1:0][LANE_WIDTH-1:0] payload_q_o,
     output logic [LANE_NUM-1:0][1:0][5:0]       payload_pop_q_o,
-    output logic [LANE_NUM-1:0][LANE_WIDTH-1:0] xor0_merged_packet_o,
-    output logic [LANE_NUM*2-1:0][31:0]         xor1_fold_matrix_o,
+    output logic [232:0]                        xor0_field_packet_o,
 
     input  logic [LANE_NUM-1:0][LANE_WIDTH-1:0] cnt_hv_word_i,
     input  logic [LANE_NUM-1:0][LANE_WIDTH-1:0] cnt_old_counter_i,
@@ -265,6 +257,7 @@ module hdec_vector_payload_4x64
     logic [LANE_NUM*2-1:0][31:0]         matrix_product;
     logic [LANE_NUM*2-1:0][5:0]          matrix_count;
     logic [LANE_NUM*2-1:0]               matrix_parity;
+    logic [LANE_NUM*2-1:0]               matrix_xor_parity;
     logic [LANE_NUM-1:0][1:0][5:0]       matrix_count_by_lane;
     logic [LANE_NUM-1:0][1:0][5:0]       popcount_part_q;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] cnt_new_counter;
@@ -273,13 +266,19 @@ module hdec_vector_payload_4x64
 
     assign payload_q_o = payload_q;
     assign payload_pop_q_o = popcount_part_q;
-    assign xor0_merged_packet_o = xor0_merged_packet;
+    assign xor0_field_packet_o = {xor0_merged_packet[3][40:0],
+                                  xor0_merged_packet[2],
+                                  xor0_merged_packet[1],
+                                  xor0_merged_packet[0]};
 
+    // XOR0 is the vector merge stage of the same GF(2) contribution operator.
+    // It deliberately stays at the payload boundary: moving it into the row tile
+    // makes Vivado keep extra packet ports and increases LUTs.
     generate
         if (ENABLE_ECC_REDUCE) begin : gen_xor0_external_packet
             for (genvar lid = 0; lid < LANE_NUM; lid++) begin : gen_xor0_slice
                 assign xor0_merged_packet[lid] =
-                    xor0_base_packet_i[lid] ^ xor0_contribution_packet_i[lid];
+                    bool_src_a_i[lid] ^ xor0_contribution_packet_i[lid];
             end
         end else begin : gen_xor0_hdc_packet
             for (genvar lid = 0; lid < LANE_NUM; lid++) begin : gen_xor0_slice
@@ -300,8 +299,14 @@ module hdec_vector_payload_4x64
         assign tile_product_word[lid] = {matrix_product[ROW_HI], matrix_product[ROW_LO]};
         assign matrix_count_by_lane[lid][0] = matrix_count[ROW_LO];
         assign matrix_count_by_lane[lid][1] = matrix_count[ROW_HI];
-        assign bitband_parity_o[ROW_LO] = matrix_parity[ROW_LO];
-        assign bitband_parity_o[ROW_HI] = matrix_parity[ROW_HI];
+        // ECC diagonal rows share the same bit-matrix AND plane.  Low rows use
+        // the HDC overlap counter LSB, while high rows use the row XOR parity
+        // path, giving polynomial multiplication both AND+popcount and AND+XOR
+        // routes without per-lane control.
+        assign bitband_parity_o[ROW_LO] = (ROW_LO < 4) ? matrix_parity[ROW_LO]
+                                                       : matrix_xor_parity[ROW_LO];
+        assign bitband_parity_o[ROW_HI] = (ROW_HI < 4) ? matrix_parity[ROW_HI]
+                                                       : matrix_xor_parity[ROW_HI];
 
         hdec_cnt_array i_cnt_array (
             .old_counter_i   (cnt_old_counter_i[lid]),
@@ -317,17 +322,14 @@ module hdec_vector_payload_4x64
 
     end
 
-    hdec_bitmatrix_tile_8x32 i_bitmatrix_tile (
+    hdec_gf2_contribution_row_tile_8x32 i_gf2_contribution_row_tile (
         .matrix_src_a_i      (matrix_src_a),
         .matrix_src_b_i      (matrix_src_b),
         .matrix_product_q_i  (matrix_product_q),
-        .xor1_fold_a_i       (xor1_fold_a_matrix_i),
-        .xor1_fold_b_i       (xor1_fold_b_matrix_i),
-        .xor1_fold_c_i       (xor1_fold_c_matrix_i),
         .matrix_product_o    (matrix_product),
         .matrix_count_o      (matrix_count),
         .matrix_parity_o     (matrix_parity),
-        .xor1_fold_o         (xor1_fold_matrix_o)
+        .matrix_xor_parity_o (matrix_xor_parity)
     );
 
     always_ff @(posedge clk_i or negedge rst_ni) begin

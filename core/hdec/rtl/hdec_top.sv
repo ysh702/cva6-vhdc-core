@@ -151,14 +151,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] lane_ecc_reduce_word;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] ecc_direct_reduce_word;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] ecc_square_reduce_word;
-    logic [LANE_NUM-1:0][LANE_WIDTH-1:0] xor0_base_packet;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] xor0_contribution_packet;
-    logic [LANE_NUM-1:0][LANE_WIDTH-1:0] xor0_merged_packet;
-    logic [LANE_NUM-1:0][LANE_WIDTH-1:0] xor1_fold_packet;
-    logic [LANE_NUM*2-1:0][31:0]         xor1_fold_a_matrix;
-    logic [LANE_NUM*2-1:0][31:0]         xor1_fold_b_matrix;
-    logic [LANE_NUM*2-1:0][31:0]         xor1_fold_c_matrix;
-    logic [LANE_NUM*2-1:0][31:0]         xor1_fold_matrix;
+    logic [232:0]                        xor0_field_packet;
     logic [127:0]         ecc_sub32_accum_xor1;
     logic [31:0]          ecc_leaf_a_lowxor_xor1;
     logic [31:0]          ecc_leaf_b_lowxor_xor1;
@@ -873,104 +867,50 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         end
     endfunction
 
-    function automatic logic [LANE_NUM*2-1:0][31:0] xor_pack_4x64_to_8x32(
-        input logic [LANE_NUM-1:0][LANE_WIDTH-1:0] packet
+    function automatic logic [127:0] ecc_kpd64_sub32_accum(
+        input logic [127:0] acc,
+        input logic [1:0]   sub_idx,
+        input logic [63:0]  sub_product
     );
-        for (int lid = 0; lid < LANE_NUM; lid++) begin
-            xor_pack_4x64_to_8x32[lid * 2]     = packet[lid][31:0];
-            xor_pack_4x64_to_8x32[lid * 2 + 1] = packet[lid][63:32];
-        end
-    endfunction
-
-    function automatic logic [LANE_NUM-1:0][LANE_WIDTH-1:0] xor_unpack_8x32_to_4x64(
-        input logic [LANE_NUM*2-1:0][31:0] matrix
-    );
-        for (int lid = 0; lid < LANE_NUM; lid++) begin
-            xor_unpack_8x32_to_4x64[lid] = {matrix[lid * 2 + 1], matrix[lid * 2]};
-        end
-    endfunction
-
-    assign xor1_fold_packet = xor_unpack_8x32_to_4x64(xor1_fold_matrix);
-    assign ecc_sub32_accum_xor1 = {xor1_fold_matrix[3], xor1_fold_matrix[2],
-                                   xor1_fold_matrix[1], xor1_fold_matrix[0]};
-    assign ecc_leaf_a_lowxor_xor1 = xor1_fold_matrix[4];
-    assign ecc_leaf_b_lowxor_xor1 = xor1_fold_matrix[5];
-
-    generate
-        if (ECC_DEBUG_FIELD_OPS) begin : gen_xor1_debug_drive
-            always_comb begin
-                xor1_fold_a_matrix = '0;
-                xor1_fold_b_matrix = '0;
-                xor1_fold_c_matrix = '0;
-
-                if (st_q == S_ECC_REDUCE_WRITE) begin
-                    xor1_fold_a_matrix = xor_pack_4x64_to_8x32(ecc_reduce_src1);
-                    xor1_fold_b_matrix = xor_pack_4x64_to_8x32(ecc_reduce_src2);
-                    xor1_fold_c_matrix = xor_pack_4x64_to_8x32(ecc_reduce_src3);
-                end else if (st_q == S_ECC_DIAG_WAIT) begin
-                    xor1_fold_a_matrix[0] = ecc_leaf128_prod_q[31:0];
-                    xor1_fold_a_matrix[1] = ecc_leaf128_prod_q[63:32];
-                    xor1_fold_a_matrix[2] = ecc_leaf128_prod_q[95:64];
-                    xor1_fold_a_matrix[3] = ecc_leaf128_prod_q[127:96];
-                    xor1_fold_a_matrix[4] = ecc_leaf_a_q;
-                    xor1_fold_b_matrix[4] = ecc_leaf_xor_a_q;
-                    xor1_fold_a_matrix[5] = ecc_leaf_b_q;
-                    xor1_fold_b_matrix[5] = ecc_leaf_xor_b_q;
-                    unique case (ecc_kpd64_sub_q)
-                        2'd0: begin
-                            xor1_fold_b_matrix[0] = ecc_leaf_prod_flush_value[31:0];
-                            xor1_fold_b_matrix[1] = ecc_leaf_prod_flush_value[63:32];
-                            xor1_fold_c_matrix[1] = ecc_leaf_prod_flush_value[31:0];
-                            xor1_fold_b_matrix[2] = ecc_leaf_prod_flush_value[63:32];
-                        end
-                        2'd1: begin
-                            xor1_fold_b_matrix[1] = ecc_leaf_prod_flush_value[31:0];
-                            xor1_fold_b_matrix[2] = ecc_leaf_prod_flush_value[63:32];
-                            xor1_fold_c_matrix[2] = ecc_leaf_prod_flush_value[31:0];
-                            xor1_fold_b_matrix[3] = ecc_leaf_prod_flush_value[63:32];
-                        end
-                        default: begin
-                            xor1_fold_b_matrix[1] = ecc_leaf_prod_flush_value[31:0];
-                            xor1_fold_b_matrix[2] = ecc_leaf_prod_flush_value[63:32];
-                        end
-                    endcase
-                end
-            end
-        end else begin : gen_xor1_pmul_drive
-            always_comb begin
-                xor1_fold_a_matrix = '0;
-                xor1_fold_b_matrix = '0;
-                xor1_fold_c_matrix = '0;
-
-            xor1_fold_a_matrix[0] = ecc_leaf128_prod_q[31:0];
-            xor1_fold_a_matrix[1] = ecc_leaf128_prod_q[63:32];
-            xor1_fold_a_matrix[2] = ecc_leaf128_prod_q[95:64];
-            xor1_fold_a_matrix[3] = ecc_leaf128_prod_q[127:96];
-            xor1_fold_a_matrix[4] = ecc_leaf_a_q;
-            xor1_fold_b_matrix[4] = ecc_leaf_xor_a_q;
-            xor1_fold_a_matrix[5] = ecc_leaf_b_q;
-            xor1_fold_b_matrix[5] = ecc_leaf_xor_b_q;
-            unique case (ecc_kpd64_sub_q)
+        logic [3:0][31:0] acc_row;
+        logic [31:0]      sub_lo;
+        logic [31:0]      sub_hi;
+        begin
+            acc_row[0] = acc[31:0];
+            acc_row[1] = acc[63:32];
+            acc_row[2] = acc[95:64];
+            acc_row[3] = acc[127:96];
+            sub_lo = sub_product[31:0];
+            sub_hi = sub_product[63:32];
+            unique case (sub_idx)
                 2'd0: begin
-                    xor1_fold_b_matrix[0] = ecc_leaf_prod_flush_value[31:0];
-                    xor1_fold_b_matrix[1] = ecc_leaf_prod_flush_value[63:32];
-                    xor1_fold_c_matrix[1] = ecc_leaf_prod_flush_value[31:0];
-                    xor1_fold_b_matrix[2] = ecc_leaf_prod_flush_value[63:32];
+                    acc_row[0] ^= sub_lo;
+                    acc_row[1] ^= (sub_hi ^ sub_lo);
+                    acc_row[2] ^= sub_hi;
                 end
                 2'd1: begin
-                    xor1_fold_b_matrix[1] = ecc_leaf_prod_flush_value[31:0];
-                    xor1_fold_b_matrix[2] = ecc_leaf_prod_flush_value[63:32];
-                    xor1_fold_c_matrix[2] = ecc_leaf_prod_flush_value[31:0];
-                    xor1_fold_b_matrix[3] = ecc_leaf_prod_flush_value[63:32];
+                    acc_row[1] ^= sub_lo;
+                    acc_row[2] ^= (sub_hi ^ sub_lo);
+                    acc_row[3] ^= sub_hi;
+                end
+                2'd2: begin
+                    acc_row[1] ^= sub_lo;
+                    acc_row[2] ^= sub_hi;
                 end
                 default: begin
-                    xor1_fold_b_matrix[1] = ecc_leaf_prod_flush_value[31:0];
-                    xor1_fold_b_matrix[2] = ecc_leaf_prod_flush_value[63:32];
                 end
             endcase
-            end
+            ecc_kpd64_sub32_accum = {acc_row[3], acc_row[2], acc_row[1], acc_row[0]};
         end
-    endgenerate
+    endfunction
+
+    assign ecc_sub32_accum_xor1 = ecc_kpd64_sub32_accum(
+        ecc_leaf128_prod_q,
+        ecc_kpd64_sub_q,
+        ecc_leaf_prod_flush_value
+    );
+    assign ecc_leaf_a_lowxor_xor1 = ecc_leaf_a_q ^ ecc_leaf_xor_a_q;
+    assign ecc_leaf_b_lowxor_xor1 = ecc_leaf_b_q ^ ecc_leaf_xor_b_q;
 
     // Direct reduction stays on the VV11 baseline accumulation boundary for
     // the XOR-only experiment: map the current folded product words into one
@@ -1009,52 +949,51 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         endcase
     end
 
+    always_comb begin
+        xor0_contribution_packet = 'x;
+        if (hdc_xor_issue) begin
+            xor0_contribution_packet = vrf_rd;
+        end else if (hdc_src0_acc_we) begin
+            xor0_contribution_packet = ecc_direct_reduce_word;
+        end
+    end
+
     generate
-        if (ECC_DEBUG_FIELD_OPS) begin : gen_xor_debug_packets
-            always_comb begin
-                xor0_base_packet = 'x;
-                xor0_contribution_packet = 'x;
-                if (hdc_xor_issue) begin
-                    xor0_base_packet = hdc_src0_q;
-                    xor0_contribution_packet = vrf_rd;
-                end else if (st_q == S_ECC_REDUCE_WRITE) begin
-                    xor0_base_packet = ecc_reduce_src0;
-                    xor0_contribution_packet = xor1_fold_packet;
-                end
-            end
+        if (ECC_DEBUG_FIELD_OPS) begin : gen_debug_reduce_sources
+            assign lane_ecc_reduce_word = (ecc_reduce_src0 ^ ecc_reduce_src1)
+                                        ^ (ecc_reduce_src2 ^ ecc_reduce_src3);
 
-            assign lane_ecc_reduce_word = xor0_merged_packet;
-        end else begin : gen_xor_pmul_packets
-            assign xor0_base_packet = '0;
-            assign xor0_contribution_packet = '0;
+            assign ecc_reduce_src0[0] = hdc_src0_q[0];
+            assign ecc_reduce_src1[0] = {vrf_rd[0][40:0], hdc_src0_q[3][63:41]};
+            assign ecc_reduce_src2[0] = {vrf_rd[3][7:0], vrf_rd[2][63:8]};
+            assign ecc_reduce_src3[0] = {18'b0, vrf_rd[3][63:18]};
 
+            assign ecc_reduce_src0[1] = hdc_src0_q[1];
+            assign ecc_reduce_src1[1] = {vrf_rd[1][40:0], vrf_rd[0][63:41]};
+            assign ecc_reduce_src2[1] = {vrf_rd[0][30:0], hdc_src0_q[3][63:41], 10'b0};
+            assign ecc_reduce_src3[1] = {vrf_rd[2][61:8], vrf_rd[3][17:8]};
+
+            assign ecc_reduce_src0[2] = hdc_src0_q[2];
+            assign ecc_reduce_src1[2] = {vrf_rd[2][40:0], vrf_rd[1][63:41]};
+            assign ecc_reduce_src2[2] = {vrf_rd[1][30:0], vrf_rd[0][63:31]};
+            assign ecc_reduce_src3[2] = {vrf_rd[3][61:0], vrf_rd[2][63:62]};
+
+            assign ecc_reduce_src0[3] = {23'b0, hdc_src0_q[3][40:0]};
+            assign ecc_reduce_src1[3] = {23'b0, vrf_rd[3][17:0], vrf_rd[2][63:41]};
+            assign ecc_reduce_src2[3] = {23'b0, vrf_rd[2][7:0], vrf_rd[1][63:31]};
+            assign ecc_reduce_src3[3] = {62'b0, vrf_rd[3][63:62]};
+        end else begin : gen_no_debug_reduce_sources
             assign lane_ecc_reduce_word = '0;
+            assign ecc_reduce_src0 = '0;
+            assign ecc_reduce_src1 = '0;
+            assign ecc_reduce_src2 = '0;
+            assign ecc_reduce_src3 = '0;
         end
     endgenerate
 
-    assign ecc_reduce_src0[0] = hdc_src0_q[0];
-    assign ecc_reduce_src1[0] = {vrf_rd[0][40:0], hdc_src0_q[3][63:41]};
-    assign ecc_reduce_src2[0] = {vrf_rd[3][7:0], vrf_rd[2][63:8]};
-    assign ecc_reduce_src3[0] = {18'b0, vrf_rd[3][63:18]};
-
-    assign ecc_reduce_src0[1] = hdc_src0_q[1];
-    assign ecc_reduce_src1[1] = {vrf_rd[1][40:0], vrf_rd[0][63:41]};
-    assign ecc_reduce_src2[1] = {vrf_rd[0][30:0], hdc_src0_q[3][63:41], 10'b0};
-    assign ecc_reduce_src3[1] = {vrf_rd[2][61:8], vrf_rd[3][17:8]};
-
-    assign ecc_reduce_src0[2] = hdc_src0_q[2];
-    assign ecc_reduce_src1[2] = {vrf_rd[2][40:0], vrf_rd[1][63:41]};
-    assign ecc_reduce_src2[2] = {vrf_rd[1][30:0], vrf_rd[0][63:31]};
-    assign ecc_reduce_src3[2] = {vrf_rd[3][61:0], vrf_rd[2][63:62]};
-
-    assign ecc_reduce_src0[3] = {23'b0, hdc_src0_q[3][40:0]};
-    assign ecc_reduce_src1[3] = {23'b0, vrf_rd[3][17:0], vrf_rd[2][63:41]};
-    assign ecc_reduce_src2[3] = {23'b0, vrf_rd[2][7:0], vrf_rd[1][63:31]};
-    assign ecc_reduce_src3[3] = {62'b0, vrf_rd[3][63:62]};
-
     // ── 4× Lane instances ───────────────────────────────────────────────────
     hdec_vector_payload_4x64 #(
-        .ENABLE_ECC_REDUCE(ECC_DEBUG_FIELD_OPS)
+        .ENABLE_ECC_REDUCE(1'b1)
     ) i_vec (
         .clk_i(clk_i), .rst_ni(rst_ni),
         .payload_xor_i(hdc_xor_issue),
@@ -1070,15 +1009,10 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         .bool_src_b_i(vrf_rd),
         .bitband_src_a_i(ecc_bitband_src_a),
         .bitband_src_b_i(ecc_bitband_src_b),
-        .xor0_base_packet_i(xor0_base_packet),
         .xor0_contribution_packet_i(xor0_contribution_packet),
-        .xor1_fold_a_matrix_i(xor1_fold_a_matrix),
-        .xor1_fold_b_matrix_i(xor1_fold_b_matrix),
-        .xor1_fold_c_matrix_i(xor1_fold_c_matrix),
         .payload_q_o(vec_payload_q),
         .payload_pop_q_o(vec_popcount_q),
-        .xor0_merged_packet_o(xor0_merged_packet),
-        .xor1_fold_matrix_o(xor1_fold_matrix),
+        .xor0_field_packet_o(xor0_field_packet),
         .cnt_hv_word_i(hdc_src0_q),
         .cnt_old_counter_i(vrf_rd),
         .cnt_subgroup_i(uop_p2_q.subgroup_idx),
@@ -2520,10 +2454,10 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             uop_p0_q<=uop_p0_n;uop_p2_q<=uop_p2_n;uop_p3_q<=uop_p3_n;
             p2_is_pop_q<=p2_is_pop_n;p2_is_hbind_q<=p2_is_hbind_n;
             if (hdc_src0_acc_we) begin
-                hdc_src0_q[0]<=hdc_src0_q[0] ^ ecc_direct_reduce_word[0];
-                hdc_src0_q[1]<=hdc_src0_q[1] ^ ecc_direct_reduce_word[1];
-                hdc_src0_q[2]<=hdc_src0_q[2] ^ ecc_direct_reduce_word[2];
-                hdc_src0_q[3]<={23'b0, hdc_src0_q[3][40:0] ^ ecc_direct_reduce_word[3][40:0]};
+                hdc_src0_q[0]<=xor0_field_packet[63:0];
+                hdc_src0_q[1]<=xor0_field_packet[127:64];
+                hdc_src0_q[2]<=xor0_field_packet[191:128];
+                hdc_src0_q[3]<={23'b0, xor0_field_packet[232:192]};
             end else if (hdc_src0_we) begin
                 hdc_src0_q<=hdc_src0_n;
             end
