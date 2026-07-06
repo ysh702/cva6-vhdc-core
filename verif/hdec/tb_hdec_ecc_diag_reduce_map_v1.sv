@@ -60,12 +60,16 @@ module tb_hdec_ecc_diag_reduce_map_v1;
                         if (group == 7)
                             parity_row[7] = 1'b0;
 
-                        got = dut.ecc_kpd64_diag_reduce_packet(
-                            paths[p],
-                            sub[1:0],
-                            group[2:0],
-                            parity_row
-                        );
+                        got = '0;
+                        for (int slot = 0; slot < 4; slot++) begin
+                            got ^= dut.ecc_kpd64_diag_reduce_packet(
+                                paths[p],
+                                sub[1:0],
+                                group[2:0],
+                                parity_row,
+                                slot[1:0]
+                            );
+                        end
                         group_product = dut.ecc_diag32_leaf_store_bitband('0, group[2:0], parity_row);
                         leaf_delta = dut.ecc_kpd64_sub32_accum('0, sub[1:0], group_product);
                         exp = dut.ecc_kpd64_leaf_reduce_packet(
