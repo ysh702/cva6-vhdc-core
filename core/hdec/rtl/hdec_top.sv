@@ -904,6 +904,66 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         end
     endfunction
 
+    function automatic logic [LANE_NUM-1:0][LANE_WIDTH-1:0] ecc_kpd64_fold_reduce_packet(
+        input logic [6:0]   mask,
+        input logic [1:0]   fold_word,
+        input logic [127:0] leaf_product
+    );
+        logic [63:0] even_contrib;
+        logic [63:0] odd_contrib;
+        logic [LANE_NUM-1:0][LANE_WIDTH-1:0] packet;
+        begin
+            packet = '0;
+            even_contrib = ecc_kpd64_fold_word_contrib(mask, {fold_word, 1'b0}, leaf_product);
+            odd_contrib  = ecc_kpd64_fold_word_contrib(mask, {fold_word, 1'b1}, leaf_product);
+            unique case (fold_word)
+                2'd0: begin
+                    packet[0] = even_contrib;
+                    packet[1] = odd_contrib;
+                end
+                2'd1: begin
+                    packet[0] = {41'b0, odd_contrib[63:41]};
+                    packet[1] = {31'b0, odd_contrib[63:41], 10'b0};
+                    packet[2] = even_contrib;
+                    packet[3] = {23'b0, odd_contrib[40:0]};
+                end
+                2'd2: begin
+                    packet[0] = {even_contrib[40:0], 23'b0};
+                    packet[1] = {odd_contrib[40:0], even_contrib[63:41]}
+                              ^ {even_contrib[30:0], 33'b0};
+                    packet[2] = {41'b0, odd_contrib[63:41]}
+                              ^ {odd_contrib[30:0], even_contrib[63:31]};
+                    packet[3] = {23'b0, 8'b0, odd_contrib[63:31]};
+                end
+                default: begin
+                    packet[0] = {odd_contrib[7:0], even_contrib[63:8]}
+                              ^ {18'b0, odd_contrib[63:18]};
+                    packet[1] = {even_contrib[61:8], odd_contrib[17:8]};
+                    packet[2] = {even_contrib[40:0], 23'b0}
+                              ^ {odd_contrib[61:0], even_contrib[63:62]};
+                    packet[3] = {23'b0, ({odd_contrib[17:0], even_contrib[63:41]}
+                                    ^ {even_contrib[7:0], 33'b0}
+                                    ^ {39'b0, odd_contrib[63:62]})};
+                end
+            endcase
+            ecc_kpd64_fold_reduce_packet = packet;
+        end
+    endfunction
+
+    function automatic logic [LANE_NUM-1:0][LANE_WIDTH-1:0] ecc_kpd64_leaf_reduce_packet(
+        input logic [6:0]   mask,
+        input logic [127:0] leaf_product
+    );
+        logic [LANE_NUM-1:0][LANE_WIDTH-1:0] packet;
+        begin
+            packet = ecc_kpd64_fold_reduce_packet(mask, 2'd0, leaf_product)
+                   ^ ecc_kpd64_fold_reduce_packet(mask, 2'd1, leaf_product)
+                   ^ ecc_kpd64_fold_reduce_packet(mask, 2'd2, leaf_product)
+                   ^ ecc_kpd64_fold_reduce_packet(mask, 2'd3, leaf_product);
+            ecc_kpd64_leaf_reduce_packet = packet;
+        end
+    endfunction
+
     assign ecc_sub32_accum_xor1 = ecc_kpd64_sub32_accum(
         ecc_leaf128_prod_q,
         ecc_kpd64_sub_q,
@@ -912,42 +972,10 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     assign ecc_leaf_a_lowxor_xor1 = ecc_leaf_a_q ^ ecc_leaf_xor_a_q;
     assign ecc_leaf_b_lowxor_xor1 = ecc_leaf_b_q ^ ecc_leaf_xor_b_q;
 
-    // Direct reduction stays on the VV11 baseline accumulation boundary for
-    // the XOR-only experiment: map the current folded product words into one
-    // 4x64 contribution packet, then accumulate it locally in hdc_src0_q.
-    always_comb begin
-        ecc_direct_reduce_word = '0;
-        unique case (ecc_fold_word_q)
-            2'd0: begin
-                ecc_direct_reduce_word[0] = ecc_product_even_contrib;
-                ecc_direct_reduce_word[1] = ecc_product_odd_contrib;
-            end
-            2'd1: begin
-                ecc_direct_reduce_word[0] = {41'b0, ecc_product_odd_contrib[63:41]};
-                ecc_direct_reduce_word[1] = {31'b0, ecc_product_odd_contrib[63:41], 10'b0};
-                ecc_direct_reduce_word[2] = ecc_product_even_contrib;
-                ecc_direct_reduce_word[3] = {23'b0, ecc_product_odd_contrib[40:0]};
-            end
-            2'd2: begin
-                ecc_direct_reduce_word[0] = {ecc_product_even_contrib[40:0], 23'b0};
-                ecc_direct_reduce_word[1] = {ecc_product_odd_contrib[40:0], ecc_product_even_contrib[63:41]}
-                                          ^ {ecc_product_even_contrib[30:0], 33'b0};
-                ecc_direct_reduce_word[2] = {41'b0, ecc_product_odd_contrib[63:41]}
-                                          ^ {ecc_product_odd_contrib[30:0], ecc_product_even_contrib[63:31]};
-                ecc_direct_reduce_word[3] = {23'b0, 8'b0, ecc_product_odd_contrib[63:31]};
-            end
-            default: begin
-                ecc_direct_reduce_word[0] = {ecc_product_odd_contrib[7:0], ecc_product_even_contrib[63:8]}
-                                          ^ {18'b0, ecc_product_odd_contrib[63:18]};
-                ecc_direct_reduce_word[1] = {ecc_product_even_contrib[61:8], ecc_product_odd_contrib[17:8]};
-                ecc_direct_reduce_word[2] = {ecc_product_even_contrib[40:0], 23'b0}
-                                          ^ {ecc_product_odd_contrib[61:0], ecc_product_even_contrib[63:62]};
-                ecc_direct_reduce_word[3] = {23'b0, ({ecc_product_odd_contrib[17:0], ecc_product_even_contrib[63:41]}
-                                                ^ {ecc_product_even_contrib[7:0], 33'b0}
-                                                ^ {39'b0, ecc_product_odd_contrib[63:62]})};
-            end
-        endcase
-    end
+    assign ecc_direct_reduce_word = ecc_kpd64_leaf_reduce_packet(
+        ecc_leaf64_offset_mask,
+        ecc_leaf128_prod_q
+    );
 
     always_comb begin
         xor0_contribution_packet = 'x;
@@ -1504,7 +1532,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                     end
                 endcase
             end
-            if (ecc_autoreduce_q) begin
+            if (ecc_autoreduce_q && (ecc_fold_word_q == 2'd3)) begin
                 hdc_src0_acc_we=1'b1;
             end
             if (ecc_fold_word_q == 2'd3) begin
