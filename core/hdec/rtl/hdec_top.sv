@@ -10,6 +10,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     input hdec_op_t operator_i, input logic [63:0] operand_a_i, operand_b_i,
     output logic valid_o, output logic [63:0] result_o
 );
+    localparam bit ECC_DIAG_GROUP_REDUCE = 1'b1;
+
     logic [VRF_IDX_W-1:0] vrf_ra, vrf_ra_q;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] vrf_rd;
     logic [LANE_NUM-1:0] vrf_we;
@@ -150,9 +152,9 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] ecc_reduce_src3;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] lane_ecc_reduce_word;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] ecc_direct_reduce_word;
+    logic [LANE_NUM-1:0][LANE_WIDTH-1:0] ecc_diag_reduce_word;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] ecc_square_reduce_word;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] xor0_contribution_packet;
-    logic [232:0]                        xor0_field_packet;
     logic [127:0]         ecc_sub32_accum_xor1;
     logic [31:0]          ecc_leaf_a_lowxor_xor1;
     logic [31:0]          ecc_leaf_b_lowxor_xor1;
@@ -230,6 +232,9 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     logic [15:0]        ecc_job_cycle_status;
     logic [3:0]         ecc_leaf_read_path;
     logic [63:0]        ecc_leaf_lowxor_rd;
+    logic               ecc_leaf_fast_prefetch;
+    logic               ecc_leaf_prefetch_a_capture;
+    logic               ecc_leaf_prefetch_b_capture;
     logic [3:0]         ecc_inv_step_q, ecc_inv_step_n;
     logic [VRF_IDX_W-1:0] ecc_job_src_q, ecc_job_src_n;
     logic [VRF_IDX_W-1:0] ecc_job_dst_q, ecc_job_dst_n;
@@ -268,7 +273,18 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     assign uop_p2_use_shift   = (uop_p2_q.op_type == UOP_HPERM_CHUNK);
     assign uop_p2_use_clip    = (uop_p2_q.op_type == UOP_HCNTCLIP_READ);
     assign ecc_next_leaf_path = {2'b00, ecc_kpd64_path_inc(ecc_leaf_path_q[3:0])};
-    assign ecc_leaf_read_path = (st_q == S_ECC_LEAF_FOLD) ? ecc_next_leaf_path[3:0] : ecc_leaf_path_q[3:0];
+    assign ecc_leaf_fast_prefetch = ECC_DIAG_GROUP_REDUCE && !ECC_DEBUG_FIELD_OPS
+                                 && !ecc_raw_product_q && (ecc_kpd64_sub_q == 2'd2)
+                                 && !ecc_leaf_last;
+    assign ecc_leaf_prefetch_a_capture = ecc_leaf_fast_prefetch
+                                      && (st_q == S_ECC_DIAG_CAPTURE)
+                                      && (ecc_diag_group_q == 3'd7);
+    assign ecc_leaf_prefetch_b_capture = ecc_leaf_fast_prefetch
+                                      && (st_q == S_ECC_DIAG_WAIT);
+    assign ecc_leaf_read_path = ((st_q == S_ECC_LEAF_FOLD)
+                              || ecc_leaf_prefetch_a_capture
+                              || ecc_leaf_prefetch_b_capture)
+                              ? ecc_next_leaf_path[3:0] : ecc_leaf_path_q[3:0];
     assign ecc_leaf_lowxor_rd = ecc_kpd64_leaf_lowxor_pack({vrf_rd[3], vrf_rd[2], vrf_rd[1], vrf_rd[0]}, ecc_leaf_read_path);
     assign ecc_leaf_first = (ecc_leaf_path_q[3:0] == 4'b00_00);
     assign ecc_leaf_last  = (ecc_leaf_path_q[3:0] == 4'b10_10);
@@ -964,6 +980,2274 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         end
     endfunction
 
+    function automatic logic [LANE_NUM-1:0][LANE_WIDTH-1:0] ecc_kpd64_diag_reduce_packet(
+        input logic [3:0]             path,
+        input logic [1:0]             sub_idx,
+        input logic [2:0]             group_idx,
+        input logic [LANE_NUM*2-1:0]  parity_row
+    );
+        logic [LANE_NUM-1:0][LANE_WIDTH-1:0] packet;
+        begin
+            packet = '0;
+            unique case ({path, sub_idx, group_idx})
+                9'b0000_00_000: begin
+                    packet[0] = {56'b0, parity_row[7:0]}
+                              ^ {24'b0, parity_row[7:0], 32'b0};
+                    packet[1] = {56'b0, parity_row[7:0]}
+                              ^ {24'b0, parity_row[7:0], 32'b0};
+                    packet[2] = {56'b0, parity_row[7:0]}
+                              ^ {24'b0, parity_row[7:0], 32'b0};
+                    packet[3] = {56'b0, parity_row[7:0]}
+                              ^ {24'b0, parity_row[7:0], 32'b0};
+                end
+                9'b0000_00_001: begin
+                    packet[0] = {57'b0, parity_row[7:1]}
+                              ^ {48'b0, parity_row[7:0], 8'b0}
+                              ^ {16'b0, parity_row[7:0], 40'b0};
+                    packet[1] = {48'b0, parity_row[7:0], 8'b0}
+                              ^ {47'b0, parity_row[7:1], 10'b0}
+                              ^ {16'b0, parity_row[7:0], 40'b0};
+                    packet[2] = {48'b0, parity_row[7:0], 8'b0}
+                              ^ {16'b0, parity_row[7:0], 40'b0};
+                    packet[3] = {48'b0, parity_row[7:0], 8'b0}
+                              ^ {23'b0, parity_row[0], 40'b0};
+                end
+                9'b0000_00_010: begin
+                    packet[0] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {40'b0, parity_row[7:0], 16'b0}
+                              ^ {8'b0, parity_row[7:0], 48'b0};
+                    packet[1] = {40'b0, parity_row[7:0], 16'b0}
+                              ^ {39'b0, parity_row[7:0], 17'b0}
+                              ^ {8'b0, parity_row[7:0], 48'b0};
+                    packet[2] = {40'b0, parity_row[7:0], 16'b0}
+                              ^ {8'b0, parity_row[7:0], 48'b0};
+                    packet[3] = {40'b0, parity_row[7:0], 16'b0};
+                end
+                9'b0000_00_011: begin
+                    packet[0] = {41'b0, parity_row[7:0], 15'b0}
+                              ^ {32'b0, parity_row[7:0], 24'b0}
+                              ^ {parity_row[7:0], 56'b0};
+                    packet[1] = {32'b0, parity_row[7:0], 24'b0}
+                              ^ {31'b0, parity_row[7:0], 25'b0}
+                              ^ {parity_row[7:0], 56'b0};
+                    packet[2] = {32'b0, parity_row[7:0], 24'b0}
+                              ^ {parity_row[7:0], 56'b0};
+                    packet[3] = {32'b0, parity_row[7:0], 24'b0};
+                end
+                9'b0000_00_100: begin
+                    packet[0] = {33'b0, parity_row[7:0], 23'b0}
+                              ^ {24'b0, parity_row[7:0], 32'b0};
+                    packet[1] = {56'b0, parity_row[7:0]}
+                              ^ {24'b0, parity_row[7:0], 32'b0}
+                              ^ {23'b0, parity_row[7:0], 33'b0};
+                    packet[2] = {56'b0, parity_row[7:0]}
+                              ^ {24'b0, parity_row[7:0], 32'b0};
+                    packet[3] = {56'b0, parity_row[7:0]}
+                              ^ {24'b0, parity_row[7:0], 32'b0};
+                end
+                9'b0000_00_101: begin
+                    packet[0] = {57'b0, parity_row[7:1]}
+                              ^ {25'b0, parity_row[7:0], 31'b0}
+                              ^ {16'b0, parity_row[7:0], 40'b0};
+                    packet[1] = {48'b0, parity_row[7:0], 8'b0}
+                              ^ {47'b0, parity_row[7:1], 10'b0}
+                              ^ {16'b0, parity_row[7:0], 40'b0}
+                              ^ {15'b0, parity_row[7:0], 41'b0};
+                    packet[2] = {48'b0, parity_row[7:0], 8'b0}
+                              ^ {16'b0, parity_row[7:0], 40'b0};
+                    packet[3] = {48'b0, parity_row[7:0], 8'b0}
+                              ^ {23'b0, parity_row[0], 40'b0};
+                end
+                9'b0000_00_110: begin
+                    packet[0] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0}
+                              ^ {8'b0, parity_row[7:0], 48'b0};
+                    packet[1] = {40'b0, parity_row[7:0], 16'b0}
+                              ^ {39'b0, parity_row[7:0], 17'b0}
+                              ^ {8'b0, parity_row[7:0], 48'b0}
+                              ^ {7'b0, parity_row[7:0], 49'b0};
+                    packet[2] = {40'b0, parity_row[7:0], 16'b0}
+                              ^ {8'b0, parity_row[7:0], 48'b0};
+                    packet[3] = {40'b0, parity_row[7:0], 16'b0};
+                end
+                9'b0000_00_111: begin
+                    packet[0] = {42'b0, parity_row[6:0], 15'b0}
+                              ^ {10'b0, parity_row[6:0], 47'b0}
+                              ^ {1'b0, parity_row[6:0], 56'b0};
+                    packet[1] = {33'b0, parity_row[6:0], 24'b0}
+                              ^ {32'b0, parity_row[6:0], 25'b0}
+                              ^ {1'b0, parity_row[6:0], 56'b0}
+                              ^ {parity_row[6:0], 57'b0};
+                    packet[2] = {33'b0, parity_row[6:0], 24'b0}
+                              ^ {1'b0, parity_row[6:0], 56'b0};
+                    packet[3] = {33'b0, parity_row[6:0], 24'b0};
+                end
+                9'b0000_01_000: begin
+                    packet[0] = {33'b0, parity_row[7:0], 23'b0}
+                              ^ {24'b0, parity_row[7:0], 32'b0};
+                    packet[1] = {56'b0, parity_row[7:0]}
+                              ^ {24'b0, parity_row[7:0], 32'b0}
+                              ^ {23'b0, parity_row[7:0], 33'b0};
+                    packet[2] = {56'b0, parity_row[7:0]}
+                              ^ {24'b0, parity_row[7:0], 32'b0};
+                    packet[3] = {56'b0, parity_row[7:0]}
+                              ^ {24'b0, parity_row[7:0], 32'b0};
+                end
+                9'b0000_01_001: begin
+                    packet[0] = {57'b0, parity_row[7:1]}
+                              ^ {25'b0, parity_row[7:0], 31'b0}
+                              ^ {16'b0, parity_row[7:0], 40'b0};
+                    packet[1] = {48'b0, parity_row[7:0], 8'b0}
+                              ^ {47'b0, parity_row[7:1], 10'b0}
+                              ^ {16'b0, parity_row[7:0], 40'b0}
+                              ^ {15'b0, parity_row[7:0], 41'b0};
+                    packet[2] = {48'b0, parity_row[7:0], 8'b0}
+                              ^ {16'b0, parity_row[7:0], 40'b0};
+                    packet[3] = {48'b0, parity_row[7:0], 8'b0}
+                              ^ {23'b0, parity_row[0], 40'b0};
+                end
+                9'b0000_01_010: begin
+                    packet[0] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0}
+                              ^ {8'b0, parity_row[7:0], 48'b0};
+                    packet[1] = {40'b0, parity_row[7:0], 16'b0}
+                              ^ {39'b0, parity_row[7:0], 17'b0}
+                              ^ {8'b0, parity_row[7:0], 48'b0}
+                              ^ {7'b0, parity_row[7:0], 49'b0};
+                    packet[2] = {40'b0, parity_row[7:0], 16'b0}
+                              ^ {8'b0, parity_row[7:0], 48'b0};
+                    packet[3] = {40'b0, parity_row[7:0], 16'b0};
+                end
+                9'b0000_01_011: begin
+                    packet[0] = {41'b0, parity_row[7:0], 15'b0}
+                              ^ {9'b0, parity_row[7:0], 47'b0}
+                              ^ {parity_row[7:0], 56'b0};
+                    packet[1] = {32'b0, parity_row[7:0], 24'b0}
+                              ^ {31'b0, parity_row[7:0], 25'b0}
+                              ^ {parity_row[7:0], 56'b0}
+                              ^ {parity_row[6:0], 57'b0};
+                    packet[2] = {63'b0, parity_row[7]}
+                              ^ {32'b0, parity_row[7:0], 24'b0}
+                              ^ {parity_row[7:0], 56'b0};
+                    packet[3] = {32'b0, parity_row[7:0], 24'b0};
+                end
+                9'b0000_01_100: begin
+                    packet[0] = {33'b0, parity_row[7:0], 23'b0}
+                              ^ {1'b0, parity_row[7:0], 55'b0};
+                    packet[1] = {56'b0, parity_row[7:0]}
+                              ^ {24'b0, parity_row[7:0], 32'b0}
+                              ^ {23'b0, parity_row[7:0], 33'b0};
+                    packet[2] = {56'b0, parity_row[7:0]}
+                              ^ {55'b0, parity_row[7:0], 1'b0}
+                              ^ {24'b0, parity_row[7:0], 32'b0};
+                    packet[3] = {56'b0, parity_row[7:0]}
+                              ^ {24'b0, parity_row[7:0], 32'b0};
+                end
+                9'b0000_01_101: begin
+                    packet[0] = {57'b0, parity_row[7:1]}
+                              ^ {25'b0, parity_row[7:0], 31'b0}
+                              ^ {parity_row[0], 63'b0};
+                    packet[1] = {57'b0, parity_row[7:1]}
+                              ^ {48'b0, parity_row[7:0], 8'b0}
+                              ^ {47'b0, parity_row[7:1], 10'b0}
+                              ^ {16'b0, parity_row[7:0], 40'b0}
+                              ^ {15'b0, parity_row[7:0], 41'b0};
+                    packet[2] = {48'b0, parity_row[7:0], 8'b0}
+                              ^ {47'b0, parity_row[7:0], 9'b0}
+                              ^ {16'b0, parity_row[7:0], 40'b0};
+                    packet[3] = {48'b0, parity_row[7:0], 8'b0}
+                              ^ {23'b0, parity_row[0], 40'b0};
+                end
+                9'b0000_01_110: begin
+                    packet[0] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0};
+                    packet[1] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {40'b0, parity_row[7:0], 16'b0}
+                              ^ {39'b0, parity_row[7:0], 17'b0}
+                              ^ {8'b0, parity_row[7:0], 48'b0}
+                              ^ {7'b0, parity_row[7:0], 49'b0};
+                    packet[2] = {40'b0, parity_row[7:0], 16'b0}
+                              ^ {39'b0, parity_row[7:0], 17'b0}
+                              ^ {8'b0, parity_row[7:0], 48'b0};
+                    packet[3] = {40'b0, parity_row[7:0], 16'b0};
+                end
+                9'b0000_01_111: begin
+                    packet[0] = {42'b0, parity_row[6:0], 15'b0}
+                              ^ {10'b0, parity_row[6:0], 47'b0};
+                    packet[1] = {42'b0, parity_row[6:0], 15'b0}
+                              ^ {33'b0, parity_row[6:0], 24'b0}
+                              ^ {32'b0, parity_row[6:0], 25'b0}
+                              ^ {1'b0, parity_row[6:0], 56'b0}
+                              ^ {parity_row[6:0], 57'b0};
+                    packet[2] = {33'b0, parity_row[6:0], 24'b0}
+                              ^ {32'b0, parity_row[6:0], 25'b0}
+                              ^ {1'b0, parity_row[6:0], 56'b0};
+                    packet[3] = {33'b0, parity_row[6:0], 24'b0};
+                end
+                9'b0000_10_000: begin
+                    packet[0] = {24'b0, parity_row[7:0], 32'b0};
+                    packet[1] = {24'b0, parity_row[7:0], 32'b0};
+                    packet[2] = {24'b0, parity_row[7:0], 32'b0};
+                    packet[3] = {24'b0, parity_row[7:0], 32'b0};
+                end
+                9'b0000_10_001: begin
+                    packet[0] = {57'b0, parity_row[7:1]}
+                              ^ {16'b0, parity_row[7:0], 40'b0};
+                    packet[1] = {47'b0, parity_row[7:1], 10'b0}
+                              ^ {16'b0, parity_row[7:0], 40'b0};
+                    packet[2] = {16'b0, parity_row[7:0], 40'b0};
+                    packet[3] = {23'b0, parity_row[0], 40'b0};
+                end
+                9'b0000_10_010: begin
+                    packet[0] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {8'b0, parity_row[7:0], 48'b0};
+                    packet[1] = {39'b0, parity_row[7:0], 17'b0}
+                              ^ {8'b0, parity_row[7:0], 48'b0};
+                    packet[2] = {8'b0, parity_row[7:0], 48'b0};
+                end
+                9'b0000_10_011: begin
+                    packet[0] = {41'b0, parity_row[7:0], 15'b0}
+                              ^ {parity_row[7:0], 56'b0};
+                    packet[1] = {31'b0, parity_row[7:0], 25'b0}
+                              ^ {parity_row[7:0], 56'b0};
+                    packet[2] = {parity_row[7:0], 56'b0};
+                end
+                9'b0000_10_100: begin
+                    packet[0] = {33'b0, parity_row[7:0], 23'b0};
+                    packet[1] = {56'b0, parity_row[7:0]}
+                              ^ {23'b0, parity_row[7:0], 33'b0};
+                    packet[2] = {56'b0, parity_row[7:0]};
+                    packet[3] = {56'b0, parity_row[7:0]};
+                end
+                9'b0000_10_101: begin
+                    packet[0] = {25'b0, parity_row[7:0], 31'b0};
+                    packet[1] = {48'b0, parity_row[7:0], 8'b0}
+                              ^ {15'b0, parity_row[7:0], 41'b0};
+                    packet[2] = {48'b0, parity_row[7:0], 8'b0};
+                    packet[3] = {48'b0, parity_row[7:0], 8'b0};
+                end
+                9'b0000_10_110: begin
+                    packet[0] = {17'b0, parity_row[7:0], 39'b0};
+                    packet[1] = {40'b0, parity_row[7:0], 16'b0}
+                              ^ {7'b0, parity_row[7:0], 49'b0};
+                    packet[2] = {40'b0, parity_row[7:0], 16'b0};
+                    packet[3] = {40'b0, parity_row[7:0], 16'b0};
+                end
+                9'b0000_10_111: begin
+                    packet[0] = {10'b0, parity_row[6:0], 47'b0};
+                    packet[1] = {33'b0, parity_row[6:0], 24'b0}
+                              ^ {parity_row[6:0], 57'b0};
+                    packet[2] = {33'b0, parity_row[6:0], 24'b0};
+                    packet[3] = {33'b0, parity_row[6:0], 24'b0};
+                end
+                9'b0001_00_000: begin
+                    packet[1] = {56'b0, parity_row[7:0]}
+                              ^ {24'b0, parity_row[7:0], 32'b0};
+                    packet[3] = {56'b0, parity_row[7:0]}
+                              ^ {24'b0, parity_row[7:0], 32'b0};
+                end
+                9'b0001_00_001: begin
+                    packet[0] = {57'b0, parity_row[7:1]};
+                    packet[1] = {48'b0, parity_row[7:0], 8'b0}
+                              ^ {47'b0, parity_row[7:1], 10'b0}
+                              ^ {16'b0, parity_row[7:0], 40'b0};
+                    packet[3] = {48'b0, parity_row[7:0], 8'b0}
+                              ^ {23'b0, parity_row[0], 40'b0};
+                end
+                9'b0001_00_010: begin
+                    packet[0] = {49'b0, parity_row[7:0], 7'b0};
+                    packet[1] = {40'b0, parity_row[7:0], 16'b0}
+                              ^ {39'b0, parity_row[7:0], 17'b0}
+                              ^ {8'b0, parity_row[7:0], 48'b0};
+                    packet[3] = {40'b0, parity_row[7:0], 16'b0};
+                end
+                9'b0001_00_011: begin
+                    packet[0] = {41'b0, parity_row[7:0], 15'b0};
+                    packet[1] = {32'b0, parity_row[7:0], 24'b0}
+                              ^ {31'b0, parity_row[7:0], 25'b0}
+                              ^ {parity_row[7:0], 56'b0};
+                    packet[3] = {32'b0, parity_row[7:0], 24'b0};
+                end
+                9'b0001_00_100: begin
+                    packet[0] = {33'b0, parity_row[7:0], 23'b0};
+                    packet[1] = {24'b0, parity_row[7:0], 32'b0}
+                              ^ {23'b0, parity_row[7:0], 33'b0};
+                    packet[2] = {56'b0, parity_row[7:0]};
+                    packet[3] = {24'b0, parity_row[7:0], 32'b0};
+                end
+                9'b0001_00_101: begin
+                    packet[0] = {57'b0, parity_row[7:1]}
+                              ^ {25'b0, parity_row[7:0], 31'b0};
+                    packet[1] = {47'b0, parity_row[7:1], 10'b0}
+                              ^ {16'b0, parity_row[7:0], 40'b0}
+                              ^ {15'b0, parity_row[7:0], 41'b0};
+                    packet[2] = {48'b0, parity_row[7:0], 8'b0};
+                    packet[3] = {23'b0, parity_row[0], 40'b0};
+                end
+                9'b0001_00_110: begin
+                    packet[0] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0};
+                    packet[1] = {39'b0, parity_row[7:0], 17'b0}
+                              ^ {8'b0, parity_row[7:0], 48'b0}
+                              ^ {7'b0, parity_row[7:0], 49'b0};
+                    packet[2] = {40'b0, parity_row[7:0], 16'b0};
+                end
+                9'b0001_00_111: begin
+                    packet[0] = {42'b0, parity_row[6:0], 15'b0}
+                              ^ {10'b0, parity_row[6:0], 47'b0};
+                    packet[1] = {32'b0, parity_row[6:0], 25'b0}
+                              ^ {1'b0, parity_row[6:0], 56'b0}
+                              ^ {parity_row[6:0], 57'b0};
+                    packet[2] = {33'b0, parity_row[6:0], 24'b0};
+                end
+                9'b0001_01_000: begin
+                    packet[0] = {33'b0, parity_row[7:0], 23'b0};
+                    packet[1] = {24'b0, parity_row[7:0], 32'b0}
+                              ^ {23'b0, parity_row[7:0], 33'b0};
+                    packet[2] = {56'b0, parity_row[7:0]};
+                    packet[3] = {24'b0, parity_row[7:0], 32'b0};
+                end
+                9'b0001_01_001: begin
+                    packet[0] = {57'b0, parity_row[7:1]}
+                              ^ {25'b0, parity_row[7:0], 31'b0};
+                    packet[1] = {47'b0, parity_row[7:1], 10'b0}
+                              ^ {16'b0, parity_row[7:0], 40'b0}
+                              ^ {15'b0, parity_row[7:0], 41'b0};
+                    packet[2] = {48'b0, parity_row[7:0], 8'b0};
+                    packet[3] = {23'b0, parity_row[0], 40'b0};
+                end
+                9'b0001_01_010: begin
+                    packet[0] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0};
+                    packet[1] = {39'b0, parity_row[7:0], 17'b0}
+                              ^ {8'b0, parity_row[7:0], 48'b0}
+                              ^ {7'b0, parity_row[7:0], 49'b0};
+                    packet[2] = {40'b0, parity_row[7:0], 16'b0};
+                end
+                9'b0001_01_011: begin
+                    packet[0] = {41'b0, parity_row[7:0], 15'b0}
+                              ^ {9'b0, parity_row[7:0], 47'b0};
+                    packet[1] = {31'b0, parity_row[7:0], 25'b0}
+                              ^ {parity_row[7:0], 56'b0}
+                              ^ {parity_row[6:0], 57'b0};
+                    packet[2] = {63'b0, parity_row[7]}
+                              ^ {32'b0, parity_row[7:0], 24'b0};
+                end
+                9'b0001_01_100: begin
+                    packet[0] = {33'b0, parity_row[7:0], 23'b0}
+                              ^ {1'b0, parity_row[7:0], 55'b0};
+                    packet[1] = {23'b0, parity_row[7:0], 33'b0};
+                    packet[2] = {56'b0, parity_row[7:0]}
+                              ^ {55'b0, parity_row[7:0], 1'b0}
+                              ^ {24'b0, parity_row[7:0], 32'b0};
+                end
+                9'b0001_01_101: begin
+                    packet[0] = {25'b0, parity_row[7:0], 31'b0}
+                              ^ {parity_row[0], 63'b0};
+                    packet[1] = {57'b0, parity_row[7:1]}
+                              ^ {15'b0, parity_row[7:0], 41'b0};
+                    packet[2] = {48'b0, parity_row[7:0], 8'b0}
+                              ^ {47'b0, parity_row[7:0], 9'b0}
+                              ^ {16'b0, parity_row[7:0], 40'b0};
+                end
+                9'b0001_01_110: begin
+                    packet[0] = {17'b0, parity_row[7:0], 39'b0};
+                    packet[1] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {7'b0, parity_row[7:0], 49'b0};
+                    packet[2] = {40'b0, parity_row[7:0], 16'b0}
+                              ^ {39'b0, parity_row[7:0], 17'b0}
+                              ^ {8'b0, parity_row[7:0], 48'b0};
+                end
+                9'b0001_01_111: begin
+                    packet[0] = {10'b0, parity_row[6:0], 47'b0};
+                    packet[1] = {42'b0, parity_row[6:0], 15'b0}
+                              ^ {parity_row[6:0], 57'b0};
+                    packet[2] = {33'b0, parity_row[6:0], 24'b0}
+                              ^ {32'b0, parity_row[6:0], 25'b0}
+                              ^ {1'b0, parity_row[6:0], 56'b0};
+                end
+                9'b0001_10_000: begin
+                    packet[1] = {24'b0, parity_row[7:0], 32'b0};
+                    packet[3] = {24'b0, parity_row[7:0], 32'b0};
+                end
+                9'b0001_10_001: begin
+                    packet[0] = {57'b0, parity_row[7:1]};
+                    packet[1] = {47'b0, parity_row[7:1], 10'b0}
+                              ^ {16'b0, parity_row[7:0], 40'b0};
+                    packet[3] = {23'b0, parity_row[0], 40'b0};
+                end
+                9'b0001_10_010: begin
+                    packet[0] = {49'b0, parity_row[7:0], 7'b0};
+                    packet[1] = {39'b0, parity_row[7:0], 17'b0}
+                              ^ {8'b0, parity_row[7:0], 48'b0};
+                end
+                9'b0001_10_011: begin
+                    packet[0] = {41'b0, parity_row[7:0], 15'b0};
+                    packet[1] = {31'b0, parity_row[7:0], 25'b0}
+                              ^ {parity_row[7:0], 56'b0};
+                end
+                9'b0001_10_100: begin
+                    packet[0] = {33'b0, parity_row[7:0], 23'b0};
+                    packet[1] = {23'b0, parity_row[7:0], 33'b0};
+                    packet[2] = {56'b0, parity_row[7:0]};
+                end
+                9'b0001_10_101: begin
+                    packet[0] = {25'b0, parity_row[7:0], 31'b0};
+                    packet[1] = {15'b0, parity_row[7:0], 41'b0};
+                    packet[2] = {48'b0, parity_row[7:0], 8'b0};
+                end
+                9'b0001_10_110: begin
+                    packet[0] = {17'b0, parity_row[7:0], 39'b0};
+                    packet[1] = {7'b0, parity_row[7:0], 49'b0};
+                    packet[2] = {40'b0, parity_row[7:0], 16'b0};
+                end
+                9'b0001_10_111: begin
+                    packet[0] = {10'b0, parity_row[6:0], 47'b0};
+                    packet[1] = {parity_row[6:0], 57'b0};
+                    packet[2] = {33'b0, parity_row[6:0], 24'b0};
+                end
+                9'b0010_00_000: begin
+                    packet[0] = {33'b0, parity_row[7:0], 23'b0}
+                              ^ {1'b0, parity_row[7:0], 55'b0};
+                    packet[1] = {56'b0, parity_row[7:0]}
+                              ^ {24'b0, parity_row[7:0], 32'b0}
+                              ^ {23'b0, parity_row[7:0], 33'b0};
+                    packet[2] = {56'b0, parity_row[7:0]}
+                              ^ {55'b0, parity_row[7:0], 1'b0}
+                              ^ {24'b0, parity_row[7:0], 32'b0};
+                    packet[3] = {56'b0, parity_row[7:0]}
+                              ^ {24'b0, parity_row[7:0], 32'b0};
+                end
+                9'b0010_00_001: begin
+                    packet[0] = {57'b0, parity_row[7:1]}
+                              ^ {25'b0, parity_row[7:0], 31'b0}
+                              ^ {parity_row[0], 63'b0};
+                    packet[1] = {57'b0, parity_row[7:1]}
+                              ^ {48'b0, parity_row[7:0], 8'b0}
+                              ^ {47'b0, parity_row[7:1], 10'b0}
+                              ^ {16'b0, parity_row[7:0], 40'b0}
+                              ^ {15'b0, parity_row[7:0], 41'b0};
+                    packet[2] = {48'b0, parity_row[7:0], 8'b0}
+                              ^ {47'b0, parity_row[7:0], 9'b0}
+                              ^ {16'b0, parity_row[7:0], 40'b0};
+                    packet[3] = {48'b0, parity_row[7:0], 8'b0}
+                              ^ {23'b0, parity_row[0], 40'b0};
+                end
+                9'b0010_00_010: begin
+                    packet[0] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0};
+                    packet[1] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {40'b0, parity_row[7:0], 16'b0}
+                              ^ {39'b0, parity_row[7:0], 17'b0}
+                              ^ {8'b0, parity_row[7:0], 48'b0}
+                              ^ {7'b0, parity_row[7:0], 49'b0};
+                    packet[2] = {40'b0, parity_row[7:0], 16'b0}
+                              ^ {39'b0, parity_row[7:0], 17'b0}
+                              ^ {8'b0, parity_row[7:0], 48'b0};
+                    packet[3] = {40'b0, parity_row[7:0], 16'b0};
+                end
+                9'b0010_00_011: begin
+                    packet[0] = {41'b0, parity_row[7:0], 15'b0}
+                              ^ {9'b0, parity_row[7:0], 47'b0};
+                    packet[1] = {41'b0, parity_row[7:0], 15'b0}
+                              ^ {32'b0, parity_row[7:0], 24'b0}
+                              ^ {31'b0, parity_row[7:0], 25'b0}
+                              ^ {parity_row[7:0], 56'b0}
+                              ^ {parity_row[6:0], 57'b0};
+                    packet[2] = {63'b0, parity_row[7]}
+                              ^ {32'b0, parity_row[7:0], 24'b0}
+                              ^ {31'b0, parity_row[7:0], 25'b0}
+                              ^ {parity_row[7:0], 56'b0};
+                    packet[3] = {32'b0, parity_row[7:0], 24'b0};
+                end
+                9'b0010_00_100: begin
+                    packet[0] = {33'b0, parity_row[7:0], 23'b0}
+                              ^ {1'b0, parity_row[7:0], 55'b0};
+                    packet[1] = {33'b0, parity_row[7:0], 23'b0}
+                              ^ {24'b0, parity_row[7:0], 32'b0}
+                              ^ {23'b0, parity_row[7:0], 33'b0};
+                    packet[2] = {56'b0, parity_row[7:0]}
+                              ^ {55'b0, parity_row[7:0], 1'b0}
+                              ^ {24'b0, parity_row[7:0], 32'b0}
+                              ^ {23'b0, parity_row[7:0], 33'b0};
+                    packet[3] = {56'b0, parity_row[7:0]}
+                              ^ {24'b0, parity_row[7:0], 32'b0};
+                end
+                9'b0010_00_101: begin
+                    packet[0] = {57'b0, parity_row[7:1]}
+                              ^ {25'b0, parity_row[7:0], 31'b0}
+                              ^ {parity_row[0], 63'b0};
+                    packet[1] = {57'b0, parity_row[7:1]}
+                              ^ {47'b0, parity_row[7:1], 10'b0}
+                              ^ {25'b0, parity_row[7:0], 31'b0}
+                              ^ {16'b0, parity_row[7:0], 40'b0}
+                              ^ {15'b0, parity_row[7:0], 41'b0};
+                    packet[2] = {48'b0, parity_row[7:0], 8'b0}
+                              ^ {47'b0, parity_row[7:0], 9'b0}
+                              ^ {16'b0, parity_row[7:0], 40'b0}
+                              ^ {15'b0, parity_row[7:0], 41'b0};
+                    packet[3] = {48'b0, parity_row[7:0], 8'b0}
+                              ^ {23'b0, parity_row[0], 40'b0};
+                end
+                9'b0010_00_110: begin
+                    packet[0] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0};
+                    packet[1] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {39'b0, parity_row[7:0], 17'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0}
+                              ^ {8'b0, parity_row[7:0], 48'b0}
+                              ^ {7'b0, parity_row[7:0], 49'b0};
+                    packet[2] = {40'b0, parity_row[7:0], 16'b0}
+                              ^ {39'b0, parity_row[7:0], 17'b0}
+                              ^ {8'b0, parity_row[7:0], 48'b0}
+                              ^ {7'b0, parity_row[7:0], 49'b0};
+                    packet[3] = {40'b0, parity_row[7:0], 16'b0};
+                end
+                9'b0010_00_111: begin
+                    packet[0] = {42'b0, parity_row[6:0], 15'b0}
+                              ^ {10'b0, parity_row[6:0], 47'b0};
+                    packet[1] = {42'b0, parity_row[6:0], 15'b0}
+                              ^ {32'b0, parity_row[6:0], 25'b0}
+                              ^ {10'b0, parity_row[6:0], 47'b0}
+                              ^ {1'b0, parity_row[6:0], 56'b0}
+                              ^ {parity_row[6:0], 57'b0};
+                    packet[2] = {33'b0, parity_row[6:0], 24'b0}
+                              ^ {32'b0, parity_row[6:0], 25'b0}
+                              ^ {1'b0, parity_row[6:0], 56'b0}
+                              ^ {parity_row[6:0], 57'b0};
+                    packet[3] = {33'b0, parity_row[6:0], 24'b0};
+                end
+                9'b0010_01_000: begin
+                    packet[0] = {33'b0, parity_row[7:0], 23'b0}
+                              ^ {1'b0, parity_row[7:0], 55'b0};
+                    packet[1] = {33'b0, parity_row[7:0], 23'b0}
+                              ^ {24'b0, parity_row[7:0], 32'b0}
+                              ^ {23'b0, parity_row[7:0], 33'b0};
+                    packet[2] = {56'b0, parity_row[7:0]}
+                              ^ {55'b0, parity_row[7:0], 1'b0}
+                              ^ {24'b0, parity_row[7:0], 32'b0}
+                              ^ {23'b0, parity_row[7:0], 33'b0};
+                    packet[3] = {56'b0, parity_row[7:0]}
+                              ^ {24'b0, parity_row[7:0], 32'b0};
+                end
+                9'b0010_01_001: begin
+                    packet[0] = {57'b0, parity_row[7:1]}
+                              ^ {25'b0, parity_row[7:0], 31'b0}
+                              ^ {parity_row[0], 63'b0};
+                    packet[1] = {57'b0, parity_row[7:1]}
+                              ^ {47'b0, parity_row[7:1], 10'b0}
+                              ^ {25'b0, parity_row[7:0], 31'b0}
+                              ^ {16'b0, parity_row[7:0], 40'b0}
+                              ^ {15'b0, parity_row[7:0], 41'b0};
+                    packet[2] = {48'b0, parity_row[7:0], 8'b0}
+                              ^ {47'b0, parity_row[7:0], 9'b0}
+                              ^ {16'b0, parity_row[7:0], 40'b0}
+                              ^ {15'b0, parity_row[7:0], 41'b0};
+                    packet[3] = {48'b0, parity_row[7:0], 8'b0}
+                              ^ {23'b0, parity_row[0], 40'b0};
+                end
+                9'b0010_01_010: begin
+                    packet[0] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0};
+                    packet[1] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {39'b0, parity_row[7:0], 17'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0}
+                              ^ {8'b0, parity_row[7:0], 48'b0}
+                              ^ {7'b0, parity_row[7:0], 49'b0};
+                    packet[2] = {40'b0, parity_row[7:0], 16'b0}
+                              ^ {39'b0, parity_row[7:0], 17'b0}
+                              ^ {8'b0, parity_row[7:0], 48'b0}
+                              ^ {7'b0, parity_row[7:0], 49'b0};
+                    packet[3] = {40'b0, parity_row[7:0], 16'b0};
+                end
+                9'b0010_01_011: begin
+                    packet[0] = {41'b0, parity_row[7:0], 15'b0}
+                              ^ {9'b0, parity_row[7:0], 47'b0};
+                    packet[1] = {41'b0, parity_row[7:0], 15'b0}
+                              ^ {31'b0, parity_row[7:0], 25'b0}
+                              ^ {9'b0, parity_row[7:0], 47'b0}
+                              ^ {parity_row[7:0], 56'b0}
+                              ^ {parity_row[6:0], 57'b0};
+                    packet[2] = {63'b0, parity_row[7]}
+                              ^ {32'b0, parity_row[7:0], 24'b0}
+                              ^ {31'b0, parity_row[7:0], 25'b0}
+                              ^ {parity_row[7:0], 56'b0}
+                              ^ {parity_row[6:0], 57'b0};
+                    packet[3] = {63'b0, parity_row[7]}
+                              ^ {32'b0, parity_row[7:0], 24'b0};
+                end
+                9'b0010_01_100: begin
+                    packet[0] = {33'b0, parity_row[7:0], 23'b0}
+                              ^ {1'b0, parity_row[7:0], 55'b0};
+                    packet[1] = {33'b0, parity_row[7:0], 23'b0}
+                              ^ {23'b0, parity_row[7:0], 33'b0}
+                              ^ {1'b0, parity_row[7:0], 55'b0};
+                    packet[2] = {56'b0, parity_row[7:0]}
+                              ^ {55'b0, parity_row[7:0], 1'b0}
+                              ^ {24'b0, parity_row[7:0], 32'b0}
+                              ^ {23'b0, parity_row[7:0], 33'b0};
+                    packet[3] = {56'b0, parity_row[7:0]}
+                              ^ {55'b0, parity_row[7:0], 1'b0}
+                              ^ {24'b0, parity_row[7:0], 32'b0};
+                end
+                9'b0010_01_101: begin
+                    packet[0] = {57'b0, parity_row[7:1]}
+                              ^ {25'b0, parity_row[7:0], 31'b0}
+                              ^ {parity_row[0], 63'b0};
+                    packet[1] = {57'b0, parity_row[7:1]}
+                              ^ {47'b0, parity_row[7:1], 10'b0}
+                              ^ {25'b0, parity_row[7:0], 31'b0}
+                              ^ {15'b0, parity_row[7:0], 41'b0}
+                              ^ {parity_row[0], 63'b0};
+                    packet[2] = {57'b0, parity_row[7:1]}
+                              ^ {48'b0, parity_row[7:0], 8'b0}
+                              ^ {47'b0, parity_row[7:0], 9'b0}
+                              ^ {16'b0, parity_row[7:0], 40'b0}
+                              ^ {15'b0, parity_row[7:0], 41'b0};
+                    packet[3] = {48'b0, parity_row[7:0], 8'b0}
+                              ^ {47'b0, parity_row[7:0], 9'b0}
+                              ^ {23'b0, parity_row[0], 40'b0};
+                end
+                9'b0010_01_110: begin
+                    packet[0] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0};
+                    packet[1] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {39'b0, parity_row[7:0], 17'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0}
+                              ^ {7'b0, parity_row[7:0], 49'b0};
+                    packet[2] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {40'b0, parity_row[7:0], 16'b0}
+                              ^ {39'b0, parity_row[7:0], 17'b0}
+                              ^ {8'b0, parity_row[7:0], 48'b0}
+                              ^ {7'b0, parity_row[7:0], 49'b0};
+                    packet[3] = {40'b0, parity_row[7:0], 16'b0}
+                              ^ {39'b0, parity_row[7:0], 17'b0};
+                end
+                9'b0010_01_111: begin
+                    packet[0] = {42'b0, parity_row[6:0], 15'b0}
+                              ^ {10'b0, parity_row[6:0], 47'b0};
+                    packet[1] = {42'b0, parity_row[6:0], 15'b0}
+                              ^ {32'b0, parity_row[6:0], 25'b0}
+                              ^ {10'b0, parity_row[6:0], 47'b0}
+                              ^ {parity_row[6:0], 57'b0};
+                    packet[2] = {42'b0, parity_row[6:0], 15'b0}
+                              ^ {33'b0, parity_row[6:0], 24'b0}
+                              ^ {32'b0, parity_row[6:0], 25'b0}
+                              ^ {1'b0, parity_row[6:0], 56'b0}
+                              ^ {parity_row[6:0], 57'b0};
+                    packet[3] = {33'b0, parity_row[6:0], 24'b0}
+                              ^ {32'b0, parity_row[6:0], 25'b0};
+                end
+                9'b0010_10_000: begin
+                    packet[0] = {1'b0, parity_row[7:0], 55'b0};
+                    packet[1] = {24'b0, parity_row[7:0], 32'b0};
+                    packet[2] = {55'b0, parity_row[7:0], 1'b0}
+                              ^ {24'b0, parity_row[7:0], 32'b0};
+                    packet[3] = {24'b0, parity_row[7:0], 32'b0};
+                end
+                9'b0010_10_001: begin
+                    packet[0] = {57'b0, parity_row[7:1]}
+                              ^ {parity_row[0], 63'b0};
+                    packet[1] = {57'b0, parity_row[7:1]}
+                              ^ {47'b0, parity_row[7:1], 10'b0}
+                              ^ {16'b0, parity_row[7:0], 40'b0};
+                    packet[2] = {47'b0, parity_row[7:0], 9'b0}
+                              ^ {16'b0, parity_row[7:0], 40'b0};
+                    packet[3] = {23'b0, parity_row[0], 40'b0};
+                end
+                9'b0010_10_010: begin
+                    packet[0] = {49'b0, parity_row[7:0], 7'b0};
+                    packet[1] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {39'b0, parity_row[7:0], 17'b0}
+                              ^ {8'b0, parity_row[7:0], 48'b0};
+                    packet[2] = {39'b0, parity_row[7:0], 17'b0}
+                              ^ {8'b0, parity_row[7:0], 48'b0};
+                end
+                9'b0010_10_011: begin
+                    packet[0] = {41'b0, parity_row[7:0], 15'b0};
+                    packet[1] = {41'b0, parity_row[7:0], 15'b0}
+                              ^ {31'b0, parity_row[7:0], 25'b0}
+                              ^ {parity_row[7:0], 56'b0};
+                    packet[2] = {31'b0, parity_row[7:0], 25'b0}
+                              ^ {parity_row[7:0], 56'b0};
+                end
+                9'b0010_10_100: begin
+                    packet[0] = {33'b0, parity_row[7:0], 23'b0};
+                    packet[1] = {33'b0, parity_row[7:0], 23'b0}
+                              ^ {23'b0, parity_row[7:0], 33'b0};
+                    packet[2] = {56'b0, parity_row[7:0]}
+                              ^ {23'b0, parity_row[7:0], 33'b0};
+                    packet[3] = {56'b0, parity_row[7:0]};
+                end
+                9'b0010_10_101: begin
+                    packet[0] = {25'b0, parity_row[7:0], 31'b0};
+                    packet[1] = {25'b0, parity_row[7:0], 31'b0}
+                              ^ {15'b0, parity_row[7:0], 41'b0};
+                    packet[2] = {48'b0, parity_row[7:0], 8'b0}
+                              ^ {15'b0, parity_row[7:0], 41'b0};
+                    packet[3] = {48'b0, parity_row[7:0], 8'b0};
+                end
+                9'b0010_10_110: begin
+                    packet[0] = {17'b0, parity_row[7:0], 39'b0};
+                    packet[1] = {17'b0, parity_row[7:0], 39'b0}
+                              ^ {7'b0, parity_row[7:0], 49'b0};
+                    packet[2] = {40'b0, parity_row[7:0], 16'b0}
+                              ^ {7'b0, parity_row[7:0], 49'b0};
+                    packet[3] = {40'b0, parity_row[7:0], 16'b0};
+                end
+                9'b0010_10_111: begin
+                    packet[0] = {10'b0, parity_row[6:0], 47'b0};
+                    packet[1] = {10'b0, parity_row[6:0], 47'b0}
+                              ^ {parity_row[6:0], 57'b0};
+                    packet[2] = {33'b0, parity_row[6:0], 24'b0}
+                              ^ {parity_row[6:0], 57'b0};
+                    packet[3] = {33'b0, parity_row[6:0], 24'b0};
+                end
+                9'b0100_00_000: begin
+                    packet[2] = {56'b0, parity_row[7:0]}
+                              ^ {24'b0, parity_row[7:0], 32'b0};
+                    packet[3] = {56'b0, parity_row[7:0]}
+                              ^ {24'b0, parity_row[7:0], 32'b0};
+                end
+                9'b0100_00_001: begin
+                    packet[0] = {57'b0, parity_row[7:1]};
+                    packet[1] = {47'b0, parity_row[7:1], 10'b0};
+                    packet[2] = {48'b0, parity_row[7:0], 8'b0}
+                              ^ {16'b0, parity_row[7:0], 40'b0};
+                    packet[3] = {48'b0, parity_row[7:0], 8'b0}
+                              ^ {23'b0, parity_row[0], 40'b0};
+                end
+                9'b0100_00_010: begin
+                    packet[0] = {49'b0, parity_row[7:0], 7'b0};
+                    packet[1] = {39'b0, parity_row[7:0], 17'b0};
+                    packet[2] = {40'b0, parity_row[7:0], 16'b0}
+                              ^ {8'b0, parity_row[7:0], 48'b0};
+                    packet[3] = {40'b0, parity_row[7:0], 16'b0};
+                end
+                9'b0100_00_011: begin
+                    packet[0] = {41'b0, parity_row[7:0], 15'b0};
+                    packet[1] = {31'b0, parity_row[7:0], 25'b0};
+                    packet[2] = {32'b0, parity_row[7:0], 24'b0}
+                              ^ {parity_row[7:0], 56'b0};
+                    packet[3] = {32'b0, parity_row[7:0], 24'b0};
+                end
+                9'b0100_00_100: begin
+                    packet[0] = {33'b0, parity_row[7:0], 23'b0};
+                    packet[1] = {23'b0, parity_row[7:0], 33'b0};
+                    packet[2] = {24'b0, parity_row[7:0], 32'b0};
+                    packet[3] = {56'b0, parity_row[7:0]}
+                              ^ {24'b0, parity_row[7:0], 32'b0};
+                end
+                9'b0100_00_101: begin
+                    packet[0] = {57'b0, parity_row[7:1]}
+                              ^ {25'b0, parity_row[7:0], 31'b0};
+                    packet[1] = {47'b0, parity_row[7:1], 10'b0}
+                              ^ {15'b0, parity_row[7:0], 41'b0};
+                    packet[2] = {16'b0, parity_row[7:0], 40'b0};
+                    packet[3] = {48'b0, parity_row[7:0], 8'b0}
+                              ^ {23'b0, parity_row[0], 40'b0};
+                end
+                9'b0100_00_110: begin
+                    packet[0] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0};
+                    packet[1] = {39'b0, parity_row[7:0], 17'b0}
+                              ^ {7'b0, parity_row[7:0], 49'b0};
+                    packet[2] = {8'b0, parity_row[7:0], 48'b0};
+                    packet[3] = {40'b0, parity_row[7:0], 16'b0};
+                end
+                9'b0100_00_111: begin
+                    packet[0] = {42'b0, parity_row[6:0], 15'b0}
+                              ^ {10'b0, parity_row[6:0], 47'b0};
+                    packet[1] = {32'b0, parity_row[6:0], 25'b0}
+                              ^ {parity_row[6:0], 57'b0};
+                    packet[2] = {1'b0, parity_row[6:0], 56'b0};
+                    packet[3] = {33'b0, parity_row[6:0], 24'b0};
+                end
+                9'b0100_01_000: begin
+                    packet[0] = {33'b0, parity_row[7:0], 23'b0};
+                    packet[1] = {23'b0, parity_row[7:0], 33'b0};
+                    packet[2] = {24'b0, parity_row[7:0], 32'b0};
+                    packet[3] = {56'b0, parity_row[7:0]}
+                              ^ {24'b0, parity_row[7:0], 32'b0};
+                end
+                9'b0100_01_001: begin
+                    packet[0] = {57'b0, parity_row[7:1]}
+                              ^ {25'b0, parity_row[7:0], 31'b0};
+                    packet[1] = {47'b0, parity_row[7:1], 10'b0}
+                              ^ {15'b0, parity_row[7:0], 41'b0};
+                    packet[2] = {16'b0, parity_row[7:0], 40'b0};
+                    packet[3] = {48'b0, parity_row[7:0], 8'b0}
+                              ^ {23'b0, parity_row[0], 40'b0};
+                end
+                9'b0100_01_010: begin
+                    packet[0] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0};
+                    packet[1] = {39'b0, parity_row[7:0], 17'b0}
+                              ^ {7'b0, parity_row[7:0], 49'b0};
+                    packet[2] = {8'b0, parity_row[7:0], 48'b0};
+                    packet[3] = {40'b0, parity_row[7:0], 16'b0};
+                end
+                9'b0100_01_011: begin
+                    packet[0] = {41'b0, parity_row[7:0], 15'b0}
+                              ^ {9'b0, parity_row[7:0], 47'b0};
+                    packet[1] = {31'b0, parity_row[7:0], 25'b0}
+                              ^ {parity_row[6:0], 57'b0};
+                    packet[2] = {63'b0, parity_row[7]}
+                              ^ {parity_row[7:0], 56'b0};
+                    packet[3] = {32'b0, parity_row[7:0], 24'b0};
+                end
+                9'b0100_01_100: begin
+                    packet[0] = {33'b0, parity_row[7:0], 23'b0}
+                              ^ {1'b0, parity_row[7:0], 55'b0};
+                    packet[1] = {23'b0, parity_row[7:0], 33'b0};
+                    packet[2] = {55'b0, parity_row[7:0], 1'b0};
+                    packet[3] = {56'b0, parity_row[7:0]}
+                              ^ {24'b0, parity_row[7:0], 32'b0};
+                end
+                9'b0100_01_101: begin
+                    packet[0] = {57'b0, parity_row[7:1]}
+                              ^ {25'b0, parity_row[7:0], 31'b0}
+                              ^ {parity_row[0], 63'b0};
+                    packet[1] = {57'b0, parity_row[7:1]}
+                              ^ {47'b0, parity_row[7:1], 10'b0}
+                              ^ {15'b0, parity_row[7:0], 41'b0};
+                    packet[2] = {47'b0, parity_row[7:0], 9'b0};
+                    packet[3] = {48'b0, parity_row[7:0], 8'b0}
+                              ^ {23'b0, parity_row[0], 40'b0};
+                end
+                9'b0100_01_110: begin
+                    packet[0] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0};
+                    packet[1] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {39'b0, parity_row[7:0], 17'b0}
+                              ^ {7'b0, parity_row[7:0], 49'b0};
+                    packet[2] = {39'b0, parity_row[7:0], 17'b0};
+                    packet[3] = {40'b0, parity_row[7:0], 16'b0};
+                end
+                9'b0100_01_111: begin
+                    packet[0] = {42'b0, parity_row[6:0], 15'b0}
+                              ^ {10'b0, parity_row[6:0], 47'b0};
+                    packet[1] = {42'b0, parity_row[6:0], 15'b0}
+                              ^ {32'b0, parity_row[6:0], 25'b0}
+                              ^ {parity_row[6:0], 57'b0};
+                    packet[2] = {32'b0, parity_row[6:0], 25'b0};
+                    packet[3] = {33'b0, parity_row[6:0], 24'b0};
+                end
+                9'b0100_10_000: begin
+                    packet[2] = {24'b0, parity_row[7:0], 32'b0};
+                    packet[3] = {24'b0, parity_row[7:0], 32'b0};
+                end
+                9'b0100_10_001: begin
+                    packet[0] = {57'b0, parity_row[7:1]};
+                    packet[1] = {47'b0, parity_row[7:1], 10'b0};
+                    packet[2] = {16'b0, parity_row[7:0], 40'b0};
+                    packet[3] = {23'b0, parity_row[0], 40'b0};
+                end
+                9'b0100_10_010: begin
+                    packet[0] = {49'b0, parity_row[7:0], 7'b0};
+                    packet[1] = {39'b0, parity_row[7:0], 17'b0};
+                    packet[2] = {8'b0, parity_row[7:0], 48'b0};
+                end
+                9'b0100_10_011: begin
+                    packet[0] = {41'b0, parity_row[7:0], 15'b0};
+                    packet[1] = {31'b0, parity_row[7:0], 25'b0};
+                    packet[2] = {parity_row[7:0], 56'b0};
+                end
+                9'b0100_10_100: begin
+                    packet[0] = {33'b0, parity_row[7:0], 23'b0};
+                    packet[1] = {23'b0, parity_row[7:0], 33'b0};
+                    packet[3] = {56'b0, parity_row[7:0]};
+                end
+                9'b0100_10_101: begin
+                    packet[0] = {25'b0, parity_row[7:0], 31'b0};
+                    packet[1] = {15'b0, parity_row[7:0], 41'b0};
+                    packet[3] = {48'b0, parity_row[7:0], 8'b0};
+                end
+                9'b0100_10_110: begin
+                    packet[0] = {17'b0, parity_row[7:0], 39'b0};
+                    packet[1] = {7'b0, parity_row[7:0], 49'b0};
+                    packet[3] = {40'b0, parity_row[7:0], 16'b0};
+                end
+                9'b0100_10_111: begin
+                    packet[0] = {10'b0, parity_row[6:0], 47'b0};
+                    packet[1] = {parity_row[6:0], 57'b0};
+                    packet[3] = {33'b0, parity_row[6:0], 24'b0};
+                end
+                9'b0101_00_000: begin
+                    packet[3] = {56'b0, parity_row[7:0]}
+                              ^ {24'b0, parity_row[7:0], 32'b0};
+                end
+                9'b0101_00_001: begin
+                    packet[0] = {57'b0, parity_row[7:1]};
+                    packet[1] = {47'b0, parity_row[7:1], 10'b0};
+                    packet[3] = {48'b0, parity_row[7:0], 8'b0}
+                              ^ {23'b0, parity_row[0], 40'b0};
+                end
+                9'b0101_00_010: begin
+                    packet[0] = {49'b0, parity_row[7:0], 7'b0};
+                    packet[1] = {39'b0, parity_row[7:0], 17'b0};
+                    packet[3] = {40'b0, parity_row[7:0], 16'b0};
+                end
+                9'b0101_00_011: begin
+                    packet[0] = {41'b0, parity_row[7:0], 15'b0};
+                    packet[1] = {31'b0, parity_row[7:0], 25'b0};
+                    packet[3] = {32'b0, parity_row[7:0], 24'b0};
+                end
+                9'b0101_00_100: begin
+                    packet[0] = {33'b0, parity_row[7:0], 23'b0};
+                    packet[1] = {23'b0, parity_row[7:0], 33'b0};
+                    packet[3] = {24'b0, parity_row[7:0], 32'b0};
+                end
+                9'b0101_00_101: begin
+                    packet[0] = {57'b0, parity_row[7:1]}
+                              ^ {25'b0, parity_row[7:0], 31'b0};
+                    packet[1] = {47'b0, parity_row[7:1], 10'b0}
+                              ^ {15'b0, parity_row[7:0], 41'b0};
+                    packet[3] = {23'b0, parity_row[0], 40'b0};
+                end
+                9'b0101_00_110: begin
+                    packet[0] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0};
+                    packet[1] = {39'b0, parity_row[7:0], 17'b0}
+                              ^ {7'b0, parity_row[7:0], 49'b0};
+                end
+                9'b0101_00_111: begin
+                    packet[0] = {42'b0, parity_row[6:0], 15'b0}
+                              ^ {10'b0, parity_row[6:0], 47'b0};
+                    packet[1] = {32'b0, parity_row[6:0], 25'b0}
+                              ^ {parity_row[6:0], 57'b0};
+                end
+                9'b0101_01_000: begin
+                    packet[0] = {33'b0, parity_row[7:0], 23'b0};
+                    packet[1] = {23'b0, parity_row[7:0], 33'b0};
+                    packet[3] = {24'b0, parity_row[7:0], 32'b0};
+                end
+                9'b0101_01_001: begin
+                    packet[0] = {57'b0, parity_row[7:1]}
+                              ^ {25'b0, parity_row[7:0], 31'b0};
+                    packet[1] = {47'b0, parity_row[7:1], 10'b0}
+                              ^ {15'b0, parity_row[7:0], 41'b0};
+                    packet[3] = {23'b0, parity_row[0], 40'b0};
+                end
+                9'b0101_01_010: begin
+                    packet[0] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0};
+                    packet[1] = {39'b0, parity_row[7:0], 17'b0}
+                              ^ {7'b0, parity_row[7:0], 49'b0};
+                end
+                9'b0101_01_011: begin
+                    packet[0] = {41'b0, parity_row[7:0], 15'b0}
+                              ^ {9'b0, parity_row[7:0], 47'b0};
+                    packet[1] = {31'b0, parity_row[7:0], 25'b0}
+                              ^ {parity_row[6:0], 57'b0};
+                    packet[2] = {63'b0, parity_row[7]};
+                end
+                9'b0101_01_100: begin
+                    packet[0] = {33'b0, parity_row[7:0], 23'b0}
+                              ^ {1'b0, parity_row[7:0], 55'b0};
+                    packet[1] = {23'b0, parity_row[7:0], 33'b0};
+                    packet[2] = {55'b0, parity_row[7:0], 1'b0};
+                end
+                9'b0101_01_101: begin
+                    packet[0] = {25'b0, parity_row[7:0], 31'b0}
+                              ^ {parity_row[0], 63'b0};
+                    packet[1] = {57'b0, parity_row[7:1]}
+                              ^ {15'b0, parity_row[7:0], 41'b0};
+                    packet[2] = {47'b0, parity_row[7:0], 9'b0};
+                end
+                9'b0101_01_110: begin
+                    packet[0] = {17'b0, parity_row[7:0], 39'b0};
+                    packet[1] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {7'b0, parity_row[7:0], 49'b0};
+                    packet[2] = {39'b0, parity_row[7:0], 17'b0};
+                end
+                9'b0101_01_111: begin
+                    packet[0] = {10'b0, parity_row[6:0], 47'b0};
+                    packet[1] = {42'b0, parity_row[6:0], 15'b0}
+                              ^ {parity_row[6:0], 57'b0};
+                    packet[2] = {32'b0, parity_row[6:0], 25'b0};
+                end
+                9'b0101_10_000: begin
+                    packet[3] = {24'b0, parity_row[7:0], 32'b0};
+                end
+                9'b0101_10_001: begin
+                    packet[0] = {57'b0, parity_row[7:1]};
+                    packet[1] = {47'b0, parity_row[7:1], 10'b0};
+                    packet[3] = {23'b0, parity_row[0], 40'b0};
+                end
+                9'b0101_10_010: begin
+                    packet[0] = {49'b0, parity_row[7:0], 7'b0};
+                    packet[1] = {39'b0, parity_row[7:0], 17'b0};
+                end
+                9'b0101_10_011: begin
+                    packet[0] = {41'b0, parity_row[7:0], 15'b0};
+                    packet[1] = {31'b0, parity_row[7:0], 25'b0};
+                end
+                9'b0101_10_100: begin
+                    packet[0] = {33'b0, parity_row[7:0], 23'b0};
+                    packet[1] = {23'b0, parity_row[7:0], 33'b0};
+                end
+                9'b0101_10_101: begin
+                    packet[0] = {25'b0, parity_row[7:0], 31'b0};
+                    packet[1] = {15'b0, parity_row[7:0], 41'b0};
+                end
+                9'b0101_10_110: begin
+                    packet[0] = {17'b0, parity_row[7:0], 39'b0};
+                    packet[1] = {7'b0, parity_row[7:0], 49'b0};
+                end
+                9'b0101_10_111: begin
+                    packet[0] = {10'b0, parity_row[6:0], 47'b0};
+                    packet[1] = {parity_row[6:0], 57'b0};
+                end
+                9'b0110_00_000: begin
+                    packet[0] = {33'b0, parity_row[7:0], 23'b0}
+                              ^ {1'b0, parity_row[7:0], 55'b0};
+                    packet[1] = {23'b0, parity_row[7:0], 33'b0};
+                    packet[2] = {55'b0, parity_row[7:0], 1'b0};
+                    packet[3] = {56'b0, parity_row[7:0]}
+                              ^ {24'b0, parity_row[7:0], 32'b0};
+                end
+                9'b0110_00_001: begin
+                    packet[0] = {57'b0, parity_row[7:1]}
+                              ^ {25'b0, parity_row[7:0], 31'b0}
+                              ^ {parity_row[0], 63'b0};
+                    packet[1] = {57'b0, parity_row[7:1]}
+                              ^ {47'b0, parity_row[7:1], 10'b0}
+                              ^ {15'b0, parity_row[7:0], 41'b0};
+                    packet[2] = {47'b0, parity_row[7:0], 9'b0};
+                    packet[3] = {48'b0, parity_row[7:0], 8'b0}
+                              ^ {23'b0, parity_row[0], 40'b0};
+                end
+                9'b0110_00_010: begin
+                    packet[0] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0};
+                    packet[1] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {39'b0, parity_row[7:0], 17'b0}
+                              ^ {7'b0, parity_row[7:0], 49'b0};
+                    packet[2] = {39'b0, parity_row[7:0], 17'b0};
+                    packet[3] = {40'b0, parity_row[7:0], 16'b0};
+                end
+                9'b0110_00_011: begin
+                    packet[0] = {41'b0, parity_row[7:0], 15'b0}
+                              ^ {9'b0, parity_row[7:0], 47'b0};
+                    packet[1] = {41'b0, parity_row[7:0], 15'b0}
+                              ^ {31'b0, parity_row[7:0], 25'b0}
+                              ^ {parity_row[6:0], 57'b0};
+                    packet[2] = {63'b0, parity_row[7]}
+                              ^ {31'b0, parity_row[7:0], 25'b0};
+                    packet[3] = {32'b0, parity_row[7:0], 24'b0};
+                end
+                9'b0110_00_100: begin
+                    packet[0] = {33'b0, parity_row[7:0], 23'b0}
+                              ^ {1'b0, parity_row[7:0], 55'b0};
+                    packet[1] = {33'b0, parity_row[7:0], 23'b0}
+                              ^ {23'b0, parity_row[7:0], 33'b0};
+                    packet[2] = {55'b0, parity_row[7:0], 1'b0}
+                              ^ {23'b0, parity_row[7:0], 33'b0};
+                    packet[3] = {24'b0, parity_row[7:0], 32'b0};
+                end
+                9'b0110_00_101: begin
+                    packet[0] = {57'b0, parity_row[7:1]}
+                              ^ {25'b0, parity_row[7:0], 31'b0}
+                              ^ {parity_row[0], 63'b0};
+                    packet[1] = {57'b0, parity_row[7:1]}
+                              ^ {47'b0, parity_row[7:1], 10'b0}
+                              ^ {25'b0, parity_row[7:0], 31'b0}
+                              ^ {15'b0, parity_row[7:0], 41'b0};
+                    packet[2] = {47'b0, parity_row[7:0], 9'b0}
+                              ^ {15'b0, parity_row[7:0], 41'b0};
+                    packet[3] = {23'b0, parity_row[0], 40'b0};
+                end
+                9'b0110_00_110: begin
+                    packet[0] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0};
+                    packet[1] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {39'b0, parity_row[7:0], 17'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0}
+                              ^ {7'b0, parity_row[7:0], 49'b0};
+                    packet[2] = {39'b0, parity_row[7:0], 17'b0}
+                              ^ {7'b0, parity_row[7:0], 49'b0};
+                end
+                9'b0110_00_111: begin
+                    packet[0] = {42'b0, parity_row[6:0], 15'b0}
+                              ^ {10'b0, parity_row[6:0], 47'b0};
+                    packet[1] = {42'b0, parity_row[6:0], 15'b0}
+                              ^ {32'b0, parity_row[6:0], 25'b0}
+                              ^ {10'b0, parity_row[6:0], 47'b0}
+                              ^ {parity_row[6:0], 57'b0};
+                    packet[2] = {32'b0, parity_row[6:0], 25'b0}
+                              ^ {parity_row[6:0], 57'b0};
+                end
+                9'b0110_01_000: begin
+                    packet[0] = {33'b0, parity_row[7:0], 23'b0}
+                              ^ {1'b0, parity_row[7:0], 55'b0};
+                    packet[1] = {33'b0, parity_row[7:0], 23'b0}
+                              ^ {23'b0, parity_row[7:0], 33'b0};
+                    packet[2] = {55'b0, parity_row[7:0], 1'b0}
+                              ^ {23'b0, parity_row[7:0], 33'b0};
+                    packet[3] = {24'b0, parity_row[7:0], 32'b0};
+                end
+                9'b0110_01_001: begin
+                    packet[0] = {57'b0, parity_row[7:1]}
+                              ^ {25'b0, parity_row[7:0], 31'b0}
+                              ^ {parity_row[0], 63'b0};
+                    packet[1] = {57'b0, parity_row[7:1]}
+                              ^ {47'b0, parity_row[7:1], 10'b0}
+                              ^ {25'b0, parity_row[7:0], 31'b0}
+                              ^ {15'b0, parity_row[7:0], 41'b0};
+                    packet[2] = {47'b0, parity_row[7:0], 9'b0}
+                              ^ {15'b0, parity_row[7:0], 41'b0};
+                    packet[3] = {23'b0, parity_row[0], 40'b0};
+                end
+                9'b0110_01_010: begin
+                    packet[0] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0};
+                    packet[1] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {39'b0, parity_row[7:0], 17'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0}
+                              ^ {7'b0, parity_row[7:0], 49'b0};
+                    packet[2] = {39'b0, parity_row[7:0], 17'b0}
+                              ^ {7'b0, parity_row[7:0], 49'b0};
+                end
+                9'b0110_01_011: begin
+                    packet[0] = {41'b0, parity_row[7:0], 15'b0}
+                              ^ {9'b0, parity_row[7:0], 47'b0};
+                    packet[1] = {41'b0, parity_row[7:0], 15'b0}
+                              ^ {31'b0, parity_row[7:0], 25'b0}
+                              ^ {9'b0, parity_row[7:0], 47'b0}
+                              ^ {parity_row[6:0], 57'b0};
+                    packet[2] = {63'b0, parity_row[7]}
+                              ^ {31'b0, parity_row[7:0], 25'b0}
+                              ^ {parity_row[6:0], 57'b0};
+                    packet[3] = {63'b0, parity_row[7]};
+                end
+                9'b0110_01_100: begin
+                    packet[0] = {33'b0, parity_row[7:0], 23'b0}
+                              ^ {1'b0, parity_row[7:0], 55'b0};
+                    packet[1] = {33'b0, parity_row[7:0], 23'b0}
+                              ^ {23'b0, parity_row[7:0], 33'b0}
+                              ^ {1'b0, parity_row[7:0], 55'b0};
+                    packet[2] = {55'b0, parity_row[7:0], 1'b0}
+                              ^ {23'b0, parity_row[7:0], 33'b0};
+                    packet[3] = {55'b0, parity_row[7:0], 1'b0};
+                end
+                9'b0110_01_101: begin
+                    packet[0] = {25'b0, parity_row[7:0], 31'b0}
+                              ^ {parity_row[0], 63'b0};
+                    packet[1] = {57'b0, parity_row[7:1]}
+                              ^ {25'b0, parity_row[7:0], 31'b0}
+                              ^ {15'b0, parity_row[7:0], 41'b0}
+                              ^ {parity_row[0], 63'b0};
+                    packet[2] = {57'b0, parity_row[7:1]}
+                              ^ {47'b0, parity_row[7:0], 9'b0}
+                              ^ {15'b0, parity_row[7:0], 41'b0};
+                    packet[3] = {47'b0, parity_row[7:0], 9'b0};
+                end
+                9'b0110_01_110: begin
+                    packet[0] = {17'b0, parity_row[7:0], 39'b0};
+                    packet[1] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0}
+                              ^ {7'b0, parity_row[7:0], 49'b0};
+                    packet[2] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {39'b0, parity_row[7:0], 17'b0}
+                              ^ {7'b0, parity_row[7:0], 49'b0};
+                    packet[3] = {39'b0, parity_row[7:0], 17'b0};
+                end
+                9'b0110_01_111: begin
+                    packet[0] = {10'b0, parity_row[6:0], 47'b0};
+                    packet[1] = {42'b0, parity_row[6:0], 15'b0}
+                              ^ {10'b0, parity_row[6:0], 47'b0}
+                              ^ {parity_row[6:0], 57'b0};
+                    packet[2] = {42'b0, parity_row[6:0], 15'b0}
+                              ^ {32'b0, parity_row[6:0], 25'b0}
+                              ^ {parity_row[6:0], 57'b0};
+                    packet[3] = {32'b0, parity_row[6:0], 25'b0};
+                end
+                9'b0110_10_000: begin
+                    packet[0] = {1'b0, parity_row[7:0], 55'b0};
+                    packet[2] = {55'b0, parity_row[7:0], 1'b0};
+                    packet[3] = {24'b0, parity_row[7:0], 32'b0};
+                end
+                9'b0110_10_001: begin
+                    packet[0] = {57'b0, parity_row[7:1]}
+                              ^ {parity_row[0], 63'b0};
+                    packet[1] = {57'b0, parity_row[7:1]}
+                              ^ {47'b0, parity_row[7:1], 10'b0};
+                    packet[2] = {47'b0, parity_row[7:0], 9'b0};
+                    packet[3] = {23'b0, parity_row[0], 40'b0};
+                end
+                9'b0110_10_010: begin
+                    packet[0] = {49'b0, parity_row[7:0], 7'b0};
+                    packet[1] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {39'b0, parity_row[7:0], 17'b0};
+                    packet[2] = {39'b0, parity_row[7:0], 17'b0};
+                end
+                9'b0110_10_011: begin
+                    packet[0] = {41'b0, parity_row[7:0], 15'b0};
+                    packet[1] = {41'b0, parity_row[7:0], 15'b0}
+                              ^ {31'b0, parity_row[7:0], 25'b0};
+                    packet[2] = {31'b0, parity_row[7:0], 25'b0};
+                end
+                9'b0110_10_100: begin
+                    packet[0] = {33'b0, parity_row[7:0], 23'b0};
+                    packet[1] = {33'b0, parity_row[7:0], 23'b0}
+                              ^ {23'b0, parity_row[7:0], 33'b0};
+                    packet[2] = {23'b0, parity_row[7:0], 33'b0};
+                end
+                9'b0110_10_101: begin
+                    packet[0] = {25'b0, parity_row[7:0], 31'b0};
+                    packet[1] = {25'b0, parity_row[7:0], 31'b0}
+                              ^ {15'b0, parity_row[7:0], 41'b0};
+                    packet[2] = {15'b0, parity_row[7:0], 41'b0};
+                end
+                9'b0110_10_110: begin
+                    packet[0] = {17'b0, parity_row[7:0], 39'b0};
+                    packet[1] = {17'b0, parity_row[7:0], 39'b0}
+                              ^ {7'b0, parity_row[7:0], 49'b0};
+                    packet[2] = {7'b0, parity_row[7:0], 49'b0};
+                end
+                9'b0110_10_111: begin
+                    packet[0] = {10'b0, parity_row[6:0], 47'b0};
+                    packet[1] = {10'b0, parity_row[6:0], 47'b0}
+                              ^ {parity_row[6:0], 57'b0};
+                    packet[2] = {parity_row[6:0], 57'b0};
+                end
+                9'b1000_00_000: begin
+                    packet[0] = {33'b0, parity_row[7:0], 23'b0}
+                              ^ {1'b0, parity_row[7:0], 55'b0};
+                    packet[1] = {33'b0, parity_row[7:0], 23'b0}
+                              ^ {23'b0, parity_row[7:0], 33'b0}
+                              ^ {1'b0, parity_row[7:0], 55'b0};
+                    packet[2] = {56'b0, parity_row[7:0]}
+                              ^ {55'b0, parity_row[7:0], 1'b0}
+                              ^ {24'b0, parity_row[7:0], 32'b0}
+                              ^ {23'b0, parity_row[7:0], 33'b0};
+                    packet[3] = {56'b0, parity_row[7:0]}
+                              ^ {55'b0, parity_row[7:0], 1'b0}
+                              ^ {24'b0, parity_row[7:0], 32'b0};
+                end
+                9'b1000_00_001: begin
+                    packet[0] = {57'b0, parity_row[7:1]}
+                              ^ {25'b0, parity_row[7:0], 31'b0}
+                              ^ {parity_row[0], 63'b0};
+                    packet[1] = {57'b0, parity_row[7:1]}
+                              ^ {47'b0, parity_row[7:1], 10'b0}
+                              ^ {25'b0, parity_row[7:0], 31'b0}
+                              ^ {15'b0, parity_row[7:0], 41'b0}
+                              ^ {parity_row[0], 63'b0};
+                    packet[2] = {57'b0, parity_row[7:1]}
+                              ^ {48'b0, parity_row[7:0], 8'b0}
+                              ^ {47'b0, parity_row[7:0], 9'b0}
+                              ^ {16'b0, parity_row[7:0], 40'b0}
+                              ^ {15'b0, parity_row[7:0], 41'b0};
+                    packet[3] = {48'b0, parity_row[7:0], 8'b0}
+                              ^ {47'b0, parity_row[7:0], 9'b0}
+                              ^ {23'b0, parity_row[0], 40'b0};
+                end
+                9'b1000_00_010: begin
+                    packet[0] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0};
+                    packet[1] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {39'b0, parity_row[7:0], 17'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0}
+                              ^ {7'b0, parity_row[7:0], 49'b0};
+                    packet[2] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {40'b0, parity_row[7:0], 16'b0}
+                              ^ {39'b0, parity_row[7:0], 17'b0}
+                              ^ {8'b0, parity_row[7:0], 48'b0}
+                              ^ {7'b0, parity_row[7:0], 49'b0};
+                    packet[3] = {40'b0, parity_row[7:0], 16'b0}
+                              ^ {39'b0, parity_row[7:0], 17'b0};
+                end
+                9'b1000_00_011: begin
+                    packet[0] = {41'b0, parity_row[7:0], 15'b0}
+                              ^ {9'b0, parity_row[7:0], 47'b0};
+                    packet[1] = {41'b0, parity_row[7:0], 15'b0}
+                              ^ {31'b0, parity_row[7:0], 25'b0}
+                              ^ {9'b0, parity_row[7:0], 47'b0}
+                              ^ {parity_row[6:0], 57'b0};
+                    packet[2] = {63'b0, parity_row[7]}
+                              ^ {41'b0, parity_row[7:0], 15'b0}
+                              ^ {32'b0, parity_row[7:0], 24'b0}
+                              ^ {31'b0, parity_row[7:0], 25'b0}
+                              ^ {parity_row[7:0], 56'b0}
+                              ^ {parity_row[6:0], 57'b0};
+                    packet[3] = {63'b0, parity_row[7]}
+                              ^ {32'b0, parity_row[7:0], 24'b0}
+                              ^ {31'b0, parity_row[7:0], 25'b0};
+                end
+                9'b1000_00_100: begin
+                    packet[0] = {33'b0, parity_row[7:0], 23'b0}
+                              ^ {1'b0, parity_row[7:0], 55'b0};
+                    packet[1] = {33'b0, parity_row[7:0], 23'b0}
+                              ^ {23'b0, parity_row[7:0], 33'b0}
+                              ^ {1'b0, parity_row[7:0], 55'b0};
+                    packet[2] = {55'b0, parity_row[7:0], 1'b0}
+                              ^ {33'b0, parity_row[7:0], 23'b0}
+                              ^ {24'b0, parity_row[7:0], 32'b0}
+                              ^ {23'b0, parity_row[7:0], 33'b0};
+                    packet[3] = {56'b0, parity_row[7:0]}
+                              ^ {55'b0, parity_row[7:0], 1'b0}
+                              ^ {24'b0, parity_row[7:0], 32'b0}
+                              ^ {23'b0, parity_row[7:0], 33'b0};
+                end
+                9'b1000_00_101: begin
+                    packet[0] = {57'b0, parity_row[7:1]}
+                              ^ {56'b0, parity_row[7:0]}
+                              ^ {25'b0, parity_row[7:0], 31'b0}
+                              ^ {parity_row[0], 63'b0};
+                    packet[1] = {57'b0, parity_row[7:1]}
+                              ^ {47'b0, parity_row[7:1], 10'b0}
+                              ^ {46'b0, parity_row[7:0], 10'b0}
+                              ^ {25'b0, parity_row[7:0], 31'b0}
+                              ^ {15'b0, parity_row[7:0], 41'b0}
+                              ^ {parity_row[0], 63'b0};
+                    packet[2] = {57'b0, parity_row[7:1]}
+                              ^ {47'b0, parity_row[7:0], 9'b0}
+                              ^ {25'b0, parity_row[7:0], 31'b0}
+                              ^ {16'b0, parity_row[7:0], 40'b0}
+                              ^ {15'b0, parity_row[7:0], 41'b0};
+                    packet[3] = {48'b0, parity_row[7:0], 8'b0}
+                              ^ {47'b0, parity_row[7:0], 9'b0}
+                              ^ {23'b0, parity_row[0], 40'b0};
+                end
+                9'b1000_00_110: begin
+                    packet[0] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {48'b0, parity_row[7:0], 8'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0};
+                    packet[1] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {39'b0, parity_row[7:0], 17'b0}
+                              ^ {38'b0, parity_row[7:0], 18'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0}
+                              ^ {7'b0, parity_row[7:0], 49'b0};
+                    packet[2] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {39'b0, parity_row[7:0], 17'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0}
+                              ^ {8'b0, parity_row[7:0], 48'b0}
+                              ^ {7'b0, parity_row[7:0], 49'b0};
+                    packet[3] = {40'b0, parity_row[7:0], 16'b0}
+                              ^ {39'b0, parity_row[7:0], 17'b0};
+                end
+                9'b1000_00_111: begin
+                    packet[0] = {42'b0, parity_row[6:0], 15'b0}
+                              ^ {41'b0, parity_row[6:0], 16'b0}
+                              ^ {10'b0, parity_row[6:0], 47'b0};
+                    packet[1] = {42'b0, parity_row[6:0], 15'b0}
+                              ^ {32'b0, parity_row[6:0], 25'b0}
+                              ^ {31'b0, parity_row[6:0], 26'b0}
+                              ^ {10'b0, parity_row[6:0], 47'b0}
+                              ^ {parity_row[6:0], 57'b0};
+                    packet[2] = {42'b0, parity_row[6:0], 15'b0}
+                              ^ {32'b0, parity_row[6:0], 25'b0}
+                              ^ {10'b0, parity_row[6:0], 47'b0}
+                              ^ {1'b0, parity_row[6:0], 56'b0}
+                              ^ {parity_row[6:0], 57'b0};
+                    packet[3] = {33'b0, parity_row[6:0], 24'b0}
+                              ^ {32'b0, parity_row[6:0], 25'b0};
+                end
+                9'b1000_01_000: begin
+                    packet[0] = {33'b0, parity_row[7:0], 23'b0}
+                              ^ {1'b0, parity_row[7:0], 55'b0};
+                    packet[1] = {33'b0, parity_row[7:0], 23'b0}
+                              ^ {23'b0, parity_row[7:0], 33'b0}
+                              ^ {1'b0, parity_row[7:0], 55'b0};
+                    packet[2] = {55'b0, parity_row[7:0], 1'b0}
+                              ^ {33'b0, parity_row[7:0], 23'b0}
+                              ^ {24'b0, parity_row[7:0], 32'b0}
+                              ^ {23'b0, parity_row[7:0], 33'b0};
+                    packet[3] = {56'b0, parity_row[7:0]}
+                              ^ {55'b0, parity_row[7:0], 1'b0}
+                              ^ {24'b0, parity_row[7:0], 32'b0}
+                              ^ {23'b0, parity_row[7:0], 33'b0};
+                end
+                9'b1000_01_001: begin
+                    packet[0] = {57'b0, parity_row[7:1]}
+                              ^ {56'b0, parity_row[7:0]}
+                              ^ {25'b0, parity_row[7:0], 31'b0}
+                              ^ {parity_row[0], 63'b0};
+                    packet[1] = {57'b0, parity_row[7:1]}
+                              ^ {47'b0, parity_row[7:1], 10'b0}
+                              ^ {46'b0, parity_row[7:0], 10'b0}
+                              ^ {25'b0, parity_row[7:0], 31'b0}
+                              ^ {15'b0, parity_row[7:0], 41'b0}
+                              ^ {parity_row[0], 63'b0};
+                    packet[2] = {57'b0, parity_row[7:1]}
+                              ^ {47'b0, parity_row[7:0], 9'b0}
+                              ^ {25'b0, parity_row[7:0], 31'b0}
+                              ^ {16'b0, parity_row[7:0], 40'b0}
+                              ^ {15'b0, parity_row[7:0], 41'b0};
+                    packet[3] = {48'b0, parity_row[7:0], 8'b0}
+                              ^ {47'b0, parity_row[7:0], 9'b0}
+                              ^ {23'b0, parity_row[0], 40'b0};
+                end
+                9'b1000_01_010: begin
+                    packet[0] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {48'b0, parity_row[7:0], 8'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0};
+                    packet[1] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {39'b0, parity_row[7:0], 17'b0}
+                              ^ {38'b0, parity_row[7:0], 18'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0}
+                              ^ {7'b0, parity_row[7:0], 49'b0};
+                    packet[2] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {39'b0, parity_row[7:0], 17'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0}
+                              ^ {8'b0, parity_row[7:0], 48'b0}
+                              ^ {7'b0, parity_row[7:0], 49'b0};
+                    packet[3] = {40'b0, parity_row[7:0], 16'b0}
+                              ^ {39'b0, parity_row[7:0], 17'b0};
+                end
+                9'b1000_01_011: begin
+                    packet[0] = {41'b0, parity_row[7:0], 15'b0}
+                              ^ {40'b0, parity_row[7:0], 16'b0}
+                              ^ {9'b0, parity_row[7:0], 47'b0};
+                    packet[1] = {41'b0, parity_row[7:0], 15'b0}
+                              ^ {31'b0, parity_row[7:0], 25'b0}
+                              ^ {30'b0, parity_row[7:0], 26'b0}
+                              ^ {9'b0, parity_row[7:0], 47'b0}
+                              ^ {parity_row[6:0], 57'b0};
+                    packet[2] = {63'b0, parity_row[7]}
+                              ^ {41'b0, parity_row[7:0], 15'b0}
+                              ^ {31'b0, parity_row[7:0], 25'b0}
+                              ^ {9'b0, parity_row[7:0], 47'b0}
+                              ^ {parity_row[7:0], 56'b0}
+                              ^ {parity_row[6:0], 57'b0};
+                    packet[3] = {63'b0, parity_row[7]}
+                              ^ {32'b0, parity_row[7:0], 24'b0}
+                              ^ {31'b0, parity_row[7:0], 25'b0};
+                end
+                9'b1000_01_100: begin
+                    packet[0] = {33'b0, parity_row[7:0], 23'b0}
+                              ^ {32'b0, parity_row[7:0], 24'b0}
+                              ^ {1'b0, parity_row[7:0], 55'b0};
+                    packet[1] = {33'b0, parity_row[7:0], 23'b0}
+                              ^ {23'b0, parity_row[7:0], 33'b0}
+                              ^ {22'b0, parity_row[7:0], 34'b0}
+                              ^ {1'b0, parity_row[7:0], 55'b0};
+                    packet[2] = {55'b0, parity_row[7:0], 1'b0}
+                              ^ {33'b0, parity_row[7:0], 23'b0}
+                              ^ {23'b0, parity_row[7:0], 33'b0}
+                              ^ {1'b0, parity_row[7:0], 55'b0};
+                    packet[3] = {56'b0, parity_row[7:0]}
+                              ^ {55'b0, parity_row[7:0], 1'b0}
+                              ^ {24'b0, parity_row[7:0], 32'b0}
+                              ^ {23'b0, parity_row[7:0], 33'b0};
+                end
+                9'b1000_01_101: begin
+                    packet[0] = {57'b0, parity_row[7:1]}
+                              ^ {56'b0, parity_row[7:0]}
+                              ^ {25'b0, parity_row[7:0], 31'b0}
+                              ^ {24'b0, parity_row[7:0], 32'b0}
+                              ^ {parity_row[0], 63'b0};
+                    packet[1] = {57'b0, parity_row[7:1]}
+                              ^ {47'b0, parity_row[7:1], 10'b0}
+                              ^ {46'b0, parity_row[7:0], 10'b0}
+                              ^ {25'b0, parity_row[7:0], 31'b0}
+                              ^ {15'b0, parity_row[7:0], 41'b0}
+                              ^ {14'b0, parity_row[7:0], 42'b0}
+                              ^ {parity_row[0], 63'b0};
+                    packet[2] = {57'b0, parity_row[7:1]}
+                              ^ {47'b0, parity_row[7:0], 9'b0}
+                              ^ {25'b0, parity_row[7:0], 31'b0}
+                              ^ {15'b0, parity_row[7:0], 41'b0}
+                              ^ {parity_row[0], 63'b0};
+                    packet[3] = {57'b0, parity_row[7:1]}
+                              ^ {48'b0, parity_row[7:0], 8'b0}
+                              ^ {47'b0, parity_row[7:0], 9'b0}
+                              ^ {23'b0, parity_row[0], 40'b0};
+                end
+                9'b1000_01_110: begin
+                    packet[0] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {48'b0, parity_row[7:0], 8'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0}
+                              ^ {16'b0, parity_row[7:0], 40'b0};
+                    packet[1] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {39'b0, parity_row[7:0], 17'b0}
+                              ^ {38'b0, parity_row[7:0], 18'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0}
+                              ^ {7'b0, parity_row[7:0], 49'b0}
+                              ^ {6'b0, parity_row[7:0], 50'b0};
+                    packet[2] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {39'b0, parity_row[7:0], 17'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0}
+                              ^ {7'b0, parity_row[7:0], 49'b0};
+                    packet[3] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {40'b0, parity_row[7:0], 16'b0}
+                              ^ {39'b0, parity_row[7:0], 17'b0};
+                end
+                9'b1000_01_111: begin
+                    packet[0] = {42'b0, parity_row[6:0], 15'b0}
+                              ^ {41'b0, parity_row[6:0], 16'b0}
+                              ^ {10'b0, parity_row[6:0], 47'b0}
+                              ^ {9'b0, parity_row[6:0], 48'b0};
+                    packet[1] = {42'b0, parity_row[6:0], 15'b0}
+                              ^ {32'b0, parity_row[6:0], 25'b0}
+                              ^ {31'b0, parity_row[6:0], 26'b0}
+                              ^ {10'b0, parity_row[6:0], 47'b0}
+                              ^ {parity_row[6:0], 57'b0}
+                              ^ {parity_row[5:0], 58'b0};
+                    packet[2] = {63'b0, parity_row[6]}
+                              ^ {42'b0, parity_row[6:0], 15'b0}
+                              ^ {32'b0, parity_row[6:0], 25'b0}
+                              ^ {10'b0, parity_row[6:0], 47'b0}
+                              ^ {parity_row[6:0], 57'b0};
+                    packet[3] = {42'b0, parity_row[6:0], 15'b0}
+                              ^ {33'b0, parity_row[6:0], 24'b0}
+                              ^ {32'b0, parity_row[6:0], 25'b0};
+                end
+                9'b1000_10_000: begin
+                    packet[0] = {1'b0, parity_row[7:0], 55'b0};
+                    packet[1] = {1'b0, parity_row[7:0], 55'b0};
+                    packet[2] = {55'b0, parity_row[7:0], 1'b0}
+                              ^ {24'b0, parity_row[7:0], 32'b0};
+                    packet[3] = {55'b0, parity_row[7:0], 1'b0}
+                              ^ {24'b0, parity_row[7:0], 32'b0};
+                end
+                9'b1000_10_001: begin
+                    packet[0] = {57'b0, parity_row[7:1]}
+                              ^ {parity_row[0], 63'b0};
+                    packet[1] = {57'b0, parity_row[7:1]}
+                              ^ {47'b0, parity_row[7:1], 10'b0}
+                              ^ {parity_row[0], 63'b0};
+                    packet[2] = {57'b0, parity_row[7:1]}
+                              ^ {47'b0, parity_row[7:0], 9'b0}
+                              ^ {16'b0, parity_row[7:0], 40'b0};
+                    packet[3] = {47'b0, parity_row[7:0], 9'b0}
+                              ^ {23'b0, parity_row[0], 40'b0};
+                end
+                9'b1000_10_010: begin
+                    packet[0] = {49'b0, parity_row[7:0], 7'b0};
+                    packet[1] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {39'b0, parity_row[7:0], 17'b0};
+                    packet[2] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {39'b0, parity_row[7:0], 17'b0}
+                              ^ {8'b0, parity_row[7:0], 48'b0};
+                    packet[3] = {39'b0, parity_row[7:0], 17'b0};
+                end
+                9'b1000_10_011: begin
+                    packet[0] = {41'b0, parity_row[7:0], 15'b0};
+                    packet[1] = {41'b0, parity_row[7:0], 15'b0}
+                              ^ {31'b0, parity_row[7:0], 25'b0};
+                    packet[2] = {41'b0, parity_row[7:0], 15'b0}
+                              ^ {31'b0, parity_row[7:0], 25'b0}
+                              ^ {parity_row[7:0], 56'b0};
+                    packet[3] = {31'b0, parity_row[7:0], 25'b0};
+                end
+                9'b1000_10_100: begin
+                    packet[0] = {33'b0, parity_row[7:0], 23'b0};
+                    packet[1] = {33'b0, parity_row[7:0], 23'b0}
+                              ^ {23'b0, parity_row[7:0], 33'b0};
+                    packet[2] = {33'b0, parity_row[7:0], 23'b0}
+                              ^ {23'b0, parity_row[7:0], 33'b0};
+                    packet[3] = {56'b0, parity_row[7:0]}
+                              ^ {23'b0, parity_row[7:0], 33'b0};
+                end
+                9'b1000_10_101: begin
+                    packet[0] = {56'b0, parity_row[7:0]}
+                              ^ {25'b0, parity_row[7:0], 31'b0};
+                    packet[1] = {46'b0, parity_row[7:0], 10'b0}
+                              ^ {25'b0, parity_row[7:0], 31'b0}
+                              ^ {15'b0, parity_row[7:0], 41'b0};
+                    packet[2] = {25'b0, parity_row[7:0], 31'b0}
+                              ^ {15'b0, parity_row[7:0], 41'b0};
+                    packet[3] = {48'b0, parity_row[7:0], 8'b0};
+                end
+                9'b1000_10_110: begin
+                    packet[0] = {48'b0, parity_row[7:0], 8'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0};
+                    packet[1] = {38'b0, parity_row[7:0], 18'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0}
+                              ^ {7'b0, parity_row[7:0], 49'b0};
+                    packet[2] = {17'b0, parity_row[7:0], 39'b0}
+                              ^ {7'b0, parity_row[7:0], 49'b0};
+                    packet[3] = {40'b0, parity_row[7:0], 16'b0};
+                end
+                9'b1000_10_111: begin
+                    packet[0] = {41'b0, parity_row[6:0], 16'b0}
+                              ^ {10'b0, parity_row[6:0], 47'b0};
+                    packet[1] = {31'b0, parity_row[6:0], 26'b0}
+                              ^ {10'b0, parity_row[6:0], 47'b0}
+                              ^ {parity_row[6:0], 57'b0};
+                    packet[2] = {10'b0, parity_row[6:0], 47'b0}
+                              ^ {parity_row[6:0], 57'b0};
+                    packet[3] = {33'b0, parity_row[6:0], 24'b0};
+                end
+                9'b1001_00_000: begin
+                    packet[1] = {33'b0, parity_row[7:0], 23'b0}
+                              ^ {1'b0, parity_row[7:0], 55'b0};
+                    packet[2] = {23'b0, parity_row[7:0], 33'b0};
+                    packet[3] = {56'b0, parity_row[7:0]}
+                              ^ {55'b0, parity_row[7:0], 1'b0}
+                              ^ {24'b0, parity_row[7:0], 32'b0};
+                end
+                9'b1001_00_001: begin
+                    packet[0] = {57'b0, parity_row[7:1]};
+                    packet[1] = {47'b0, parity_row[7:1], 10'b0}
+                              ^ {25'b0, parity_row[7:0], 31'b0}
+                              ^ {parity_row[0], 63'b0};
+                    packet[2] = {57'b0, parity_row[7:1]}
+                              ^ {15'b0, parity_row[7:0], 41'b0};
+                    packet[3] = {48'b0, parity_row[7:0], 8'b0}
+                              ^ {47'b0, parity_row[7:0], 9'b0}
+                              ^ {23'b0, parity_row[0], 40'b0};
+                end
+                9'b1001_00_010: begin
+                    packet[0] = {49'b0, parity_row[7:0], 7'b0};
+                    packet[1] = {39'b0, parity_row[7:0], 17'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0};
+                    packet[2] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {7'b0, parity_row[7:0], 49'b0};
+                    packet[3] = {40'b0, parity_row[7:0], 16'b0}
+                              ^ {39'b0, parity_row[7:0], 17'b0};
+                end
+                9'b1001_00_011: begin
+                    packet[0] = {41'b0, parity_row[7:0], 15'b0};
+                    packet[1] = {31'b0, parity_row[7:0], 25'b0}
+                              ^ {9'b0, parity_row[7:0], 47'b0};
+                    packet[2] = {41'b0, parity_row[7:0], 15'b0}
+                              ^ {parity_row[6:0], 57'b0};
+                    packet[3] = {63'b0, parity_row[7]}
+                              ^ {32'b0, parity_row[7:0], 24'b0}
+                              ^ {31'b0, parity_row[7:0], 25'b0};
+                end
+                9'b1001_00_100: begin
+                    packet[0] = {33'b0, parity_row[7:0], 23'b0};
+                    packet[1] = {23'b0, parity_row[7:0], 33'b0}
+                              ^ {1'b0, parity_row[7:0], 55'b0};
+                    packet[2] = {33'b0, parity_row[7:0], 23'b0};
+                    packet[3] = {55'b0, parity_row[7:0], 1'b0}
+                              ^ {24'b0, parity_row[7:0], 32'b0}
+                              ^ {23'b0, parity_row[7:0], 33'b0};
+                end
+                9'b1001_00_101: begin
+                    packet[0] = {57'b0, parity_row[7:1]}
+                              ^ {56'b0, parity_row[7:0]}
+                              ^ {25'b0, parity_row[7:0], 31'b0};
+                    packet[1] = {47'b0, parity_row[7:1], 10'b0}
+                              ^ {46'b0, parity_row[7:0], 10'b0}
+                              ^ {15'b0, parity_row[7:0], 41'b0}
+                              ^ {parity_row[0], 63'b0};
+                    packet[2] = {57'b0, parity_row[7:1]}
+                              ^ {25'b0, parity_row[7:0], 31'b0};
+                    packet[3] = {47'b0, parity_row[7:0], 9'b0}
+                              ^ {23'b0, parity_row[0], 40'b0};
+                end
+                9'b1001_00_110: begin
+                    packet[0] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {48'b0, parity_row[7:0], 8'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0};
+                    packet[1] = {39'b0, parity_row[7:0], 17'b0}
+                              ^ {38'b0, parity_row[7:0], 18'b0}
+                              ^ {7'b0, parity_row[7:0], 49'b0};
+                    packet[2] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0};
+                    packet[3] = {39'b0, parity_row[7:0], 17'b0};
+                end
+                9'b1001_00_111: begin
+                    packet[0] = {42'b0, parity_row[6:0], 15'b0}
+                              ^ {41'b0, parity_row[6:0], 16'b0}
+                              ^ {10'b0, parity_row[6:0], 47'b0};
+                    packet[1] = {32'b0, parity_row[6:0], 25'b0}
+                              ^ {31'b0, parity_row[6:0], 26'b0}
+                              ^ {parity_row[6:0], 57'b0};
+                    packet[2] = {42'b0, parity_row[6:0], 15'b0}
+                              ^ {10'b0, parity_row[6:0], 47'b0};
+                    packet[3] = {32'b0, parity_row[6:0], 25'b0};
+                end
+                9'b1001_01_000: begin
+                    packet[0] = {33'b0, parity_row[7:0], 23'b0};
+                    packet[1] = {23'b0, parity_row[7:0], 33'b0}
+                              ^ {1'b0, parity_row[7:0], 55'b0};
+                    packet[2] = {33'b0, parity_row[7:0], 23'b0};
+                    packet[3] = {55'b0, parity_row[7:0], 1'b0}
+                              ^ {24'b0, parity_row[7:0], 32'b0}
+                              ^ {23'b0, parity_row[7:0], 33'b0};
+                end
+                9'b1001_01_001: begin
+                    packet[0] = {57'b0, parity_row[7:1]}
+                              ^ {56'b0, parity_row[7:0]}
+                              ^ {25'b0, parity_row[7:0], 31'b0};
+                    packet[1] = {47'b0, parity_row[7:1], 10'b0}
+                              ^ {46'b0, parity_row[7:0], 10'b0}
+                              ^ {15'b0, parity_row[7:0], 41'b0}
+                              ^ {parity_row[0], 63'b0};
+                    packet[2] = {57'b0, parity_row[7:1]}
+                              ^ {25'b0, parity_row[7:0], 31'b0};
+                    packet[3] = {47'b0, parity_row[7:0], 9'b0}
+                              ^ {23'b0, parity_row[0], 40'b0};
+                end
+                9'b1001_01_010: begin
+                    packet[0] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {48'b0, parity_row[7:0], 8'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0};
+                    packet[1] = {39'b0, parity_row[7:0], 17'b0}
+                              ^ {38'b0, parity_row[7:0], 18'b0}
+                              ^ {7'b0, parity_row[7:0], 49'b0};
+                    packet[2] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0};
+                    packet[3] = {39'b0, parity_row[7:0], 17'b0};
+                end
+                9'b1001_01_011: begin
+                    packet[0] = {41'b0, parity_row[7:0], 15'b0}
+                              ^ {40'b0, parity_row[7:0], 16'b0}
+                              ^ {9'b0, parity_row[7:0], 47'b0};
+                    packet[1] = {31'b0, parity_row[7:0], 25'b0}
+                              ^ {30'b0, parity_row[7:0], 26'b0}
+                              ^ {parity_row[6:0], 57'b0};
+                    packet[2] = {63'b0, parity_row[7]}
+                              ^ {41'b0, parity_row[7:0], 15'b0}
+                              ^ {9'b0, parity_row[7:0], 47'b0};
+                    packet[3] = {31'b0, parity_row[7:0], 25'b0};
+                end
+                9'b1001_01_100: begin
+                    packet[0] = {33'b0, parity_row[7:0], 23'b0}
+                              ^ {32'b0, parity_row[7:0], 24'b0}
+                              ^ {1'b0, parity_row[7:0], 55'b0};
+                    packet[1] = {23'b0, parity_row[7:0], 33'b0}
+                              ^ {22'b0, parity_row[7:0], 34'b0};
+                    packet[2] = {55'b0, parity_row[7:0], 1'b0}
+                              ^ {33'b0, parity_row[7:0], 23'b0}
+                              ^ {1'b0, parity_row[7:0], 55'b0};
+                    packet[3] = {23'b0, parity_row[7:0], 33'b0};
+                end
+                9'b1001_01_101: begin
+                    packet[0] = {56'b0, parity_row[7:0]}
+                              ^ {25'b0, parity_row[7:0], 31'b0}
+                              ^ {24'b0, parity_row[7:0], 32'b0}
+                              ^ {parity_row[0], 63'b0};
+                    packet[1] = {57'b0, parity_row[7:1]}
+                              ^ {46'b0, parity_row[7:0], 10'b0}
+                              ^ {15'b0, parity_row[7:0], 41'b0}
+                              ^ {14'b0, parity_row[7:0], 42'b0};
+                    packet[2] = {47'b0, parity_row[7:0], 9'b0}
+                              ^ {25'b0, parity_row[7:0], 31'b0}
+                              ^ {parity_row[0], 63'b0};
+                    packet[3] = {57'b0, parity_row[7:1]};
+                end
+                9'b1001_01_110: begin
+                    packet[0] = {48'b0, parity_row[7:0], 8'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0}
+                              ^ {16'b0, parity_row[7:0], 40'b0};
+                    packet[1] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {38'b0, parity_row[7:0], 18'b0}
+                              ^ {7'b0, parity_row[7:0], 49'b0}
+                              ^ {6'b0, parity_row[7:0], 50'b0};
+                    packet[2] = {39'b0, parity_row[7:0], 17'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0};
+                    packet[3] = {49'b0, parity_row[7:0], 7'b0};
+                end
+                9'b1001_01_111: begin
+                    packet[0] = {41'b0, parity_row[6:0], 16'b0}
+                              ^ {10'b0, parity_row[6:0], 47'b0}
+                              ^ {9'b0, parity_row[6:0], 48'b0};
+                    packet[1] = {42'b0, parity_row[6:0], 15'b0}
+                              ^ {31'b0, parity_row[6:0], 26'b0}
+                              ^ {parity_row[6:0], 57'b0}
+                              ^ {parity_row[5:0], 58'b0};
+                    packet[2] = {63'b0, parity_row[6]}
+                              ^ {32'b0, parity_row[6:0], 25'b0}
+                              ^ {10'b0, parity_row[6:0], 47'b0};
+                    packet[3] = {42'b0, parity_row[6:0], 15'b0};
+                end
+                9'b1001_10_000: begin
+                    packet[1] = {1'b0, parity_row[7:0], 55'b0};
+                    packet[3] = {55'b0, parity_row[7:0], 1'b0}
+                              ^ {24'b0, parity_row[7:0], 32'b0};
+                end
+                9'b1001_10_001: begin
+                    packet[0] = {57'b0, parity_row[7:1]};
+                    packet[1] = {47'b0, parity_row[7:1], 10'b0}
+                              ^ {parity_row[0], 63'b0};
+                    packet[2] = {57'b0, parity_row[7:1]};
+                    packet[3] = {47'b0, parity_row[7:0], 9'b0}
+                              ^ {23'b0, parity_row[0], 40'b0};
+                end
+                9'b1001_10_010: begin
+                    packet[0] = {49'b0, parity_row[7:0], 7'b0};
+                    packet[1] = {39'b0, parity_row[7:0], 17'b0};
+                    packet[2] = {49'b0, parity_row[7:0], 7'b0};
+                    packet[3] = {39'b0, parity_row[7:0], 17'b0};
+                end
+                9'b1001_10_011: begin
+                    packet[0] = {41'b0, parity_row[7:0], 15'b0};
+                    packet[1] = {31'b0, parity_row[7:0], 25'b0};
+                    packet[2] = {41'b0, parity_row[7:0], 15'b0};
+                    packet[3] = {31'b0, parity_row[7:0], 25'b0};
+                end
+                9'b1001_10_100: begin
+                    packet[0] = {33'b0, parity_row[7:0], 23'b0};
+                    packet[1] = {23'b0, parity_row[7:0], 33'b0};
+                    packet[2] = {33'b0, parity_row[7:0], 23'b0};
+                    packet[3] = {23'b0, parity_row[7:0], 33'b0};
+                end
+                9'b1001_10_101: begin
+                    packet[0] = {56'b0, parity_row[7:0]}
+                              ^ {25'b0, parity_row[7:0], 31'b0};
+                    packet[1] = {46'b0, parity_row[7:0], 10'b0}
+                              ^ {15'b0, parity_row[7:0], 41'b0};
+                    packet[2] = {25'b0, parity_row[7:0], 31'b0};
+                end
+                9'b1001_10_110: begin
+                    packet[0] = {48'b0, parity_row[7:0], 8'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0};
+                    packet[1] = {38'b0, parity_row[7:0], 18'b0}
+                              ^ {7'b0, parity_row[7:0], 49'b0};
+                    packet[2] = {17'b0, parity_row[7:0], 39'b0};
+                end
+                9'b1001_10_111: begin
+                    packet[0] = {41'b0, parity_row[6:0], 16'b0}
+                              ^ {10'b0, parity_row[6:0], 47'b0};
+                    packet[1] = {31'b0, parity_row[6:0], 26'b0}
+                              ^ {parity_row[6:0], 57'b0};
+                    packet[2] = {10'b0, parity_row[6:0], 47'b0};
+                end
+                9'b1010_00_000: begin
+                    packet[0] = {33'b0, parity_row[7:0], 23'b0}
+                              ^ {32'b0, parity_row[7:0], 24'b0}
+                              ^ {1'b0, parity_row[7:0], 55'b0};
+                    packet[1] = {33'b0, parity_row[7:0], 23'b0}
+                              ^ {23'b0, parity_row[7:0], 33'b0}
+                              ^ {22'b0, parity_row[7:0], 34'b0}
+                              ^ {1'b0, parity_row[7:0], 55'b0};
+                    packet[2] = {55'b0, parity_row[7:0], 1'b0}
+                              ^ {33'b0, parity_row[7:0], 23'b0}
+                              ^ {23'b0, parity_row[7:0], 33'b0}
+                              ^ {1'b0, parity_row[7:0], 55'b0};
+                    packet[3] = {56'b0, parity_row[7:0]}
+                              ^ {55'b0, parity_row[7:0], 1'b0}
+                              ^ {24'b0, parity_row[7:0], 32'b0}
+                              ^ {23'b0, parity_row[7:0], 33'b0};
+                end
+                9'b1010_00_001: begin
+                    packet[0] = {57'b0, parity_row[7:1]}
+                              ^ {56'b0, parity_row[7:0]}
+                              ^ {25'b0, parity_row[7:0], 31'b0}
+                              ^ {24'b0, parity_row[7:0], 32'b0}
+                              ^ {parity_row[0], 63'b0};
+                    packet[1] = {57'b0, parity_row[7:1]}
+                              ^ {47'b0, parity_row[7:1], 10'b0}
+                              ^ {46'b0, parity_row[7:0], 10'b0}
+                              ^ {25'b0, parity_row[7:0], 31'b0}
+                              ^ {15'b0, parity_row[7:0], 41'b0}
+                              ^ {14'b0, parity_row[7:0], 42'b0}
+                              ^ {parity_row[0], 63'b0};
+                    packet[2] = {57'b0, parity_row[7:1]}
+                              ^ {47'b0, parity_row[7:0], 9'b0}
+                              ^ {25'b0, parity_row[7:0], 31'b0}
+                              ^ {15'b0, parity_row[7:0], 41'b0}
+                              ^ {parity_row[0], 63'b0};
+                    packet[3] = {57'b0, parity_row[7:1]}
+                              ^ {48'b0, parity_row[7:0], 8'b0}
+                              ^ {47'b0, parity_row[7:0], 9'b0}
+                              ^ {23'b0, parity_row[0], 40'b0};
+                end
+                9'b1010_00_010: begin
+                    packet[0] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {48'b0, parity_row[7:0], 8'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0}
+                              ^ {16'b0, parity_row[7:0], 40'b0};
+                    packet[1] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {39'b0, parity_row[7:0], 17'b0}
+                              ^ {38'b0, parity_row[7:0], 18'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0}
+                              ^ {7'b0, parity_row[7:0], 49'b0}
+                              ^ {6'b0, parity_row[7:0], 50'b0};
+                    packet[2] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {39'b0, parity_row[7:0], 17'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0}
+                              ^ {7'b0, parity_row[7:0], 49'b0};
+                    packet[3] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {40'b0, parity_row[7:0], 16'b0}
+                              ^ {39'b0, parity_row[7:0], 17'b0};
+                end
+                9'b1010_00_011: begin
+                    packet[0] = {41'b0, parity_row[7:0], 15'b0}
+                              ^ {40'b0, parity_row[7:0], 16'b0}
+                              ^ {9'b0, parity_row[7:0], 47'b0}
+                              ^ {8'b0, parity_row[7:0], 48'b0};
+                    packet[1] = {41'b0, parity_row[7:0], 15'b0}
+                              ^ {31'b0, parity_row[7:0], 25'b0}
+                              ^ {30'b0, parity_row[7:0], 26'b0}
+                              ^ {9'b0, parity_row[7:0], 47'b0}
+                              ^ {parity_row[6:0], 57'b0}
+                              ^ {parity_row[5:0], 58'b0};
+                    packet[2] = {63'b0, parity_row[7]}
+                              ^ {62'b0, parity_row[7:6]}
+                              ^ {41'b0, parity_row[7:0], 15'b0}
+                              ^ {31'b0, parity_row[7:0], 25'b0}
+                              ^ {9'b0, parity_row[7:0], 47'b0}
+                              ^ {parity_row[6:0], 57'b0};
+                    packet[3] = {63'b0, parity_row[7]}
+                              ^ {41'b0, parity_row[7:0], 15'b0}
+                              ^ {32'b0, parity_row[7:0], 24'b0}
+                              ^ {31'b0, parity_row[7:0], 25'b0};
+                end
+                9'b1010_00_100: begin
+                    packet[0] = {33'b0, parity_row[7:0], 23'b0}
+                              ^ {32'b0, parity_row[7:0], 24'b0}
+                              ^ {1'b0, parity_row[7:0], 55'b0}
+                              ^ {parity_row[7:0], 56'b0};
+                    packet[1] = {33'b0, parity_row[7:0], 23'b0}
+                              ^ {23'b0, parity_row[7:0], 33'b0}
+                              ^ {22'b0, parity_row[7:0], 34'b0}
+                              ^ {1'b0, parity_row[7:0], 55'b0};
+                    packet[2] = {55'b0, parity_row[7:0], 1'b0}
+                              ^ {54'b0, parity_row[7:0], 2'b0}
+                              ^ {33'b0, parity_row[7:0], 23'b0}
+                              ^ {23'b0, parity_row[7:0], 33'b0}
+                              ^ {1'b0, parity_row[7:0], 55'b0};
+                    packet[3] = {55'b0, parity_row[7:0], 1'b0}
+                              ^ {33'b0, parity_row[7:0], 23'b0}
+                              ^ {24'b0, parity_row[7:0], 32'b0}
+                              ^ {23'b0, parity_row[7:0], 33'b0};
+                end
+                9'b1010_00_101: begin
+                    packet[0] = {57'b0, parity_row[7:1]}
+                              ^ {56'b0, parity_row[7:0]}
+                              ^ {25'b0, parity_row[7:0], 31'b0}
+                              ^ {24'b0, parity_row[7:0], 32'b0}
+                              ^ {parity_row[0], 63'b0};
+                    packet[1] = {57'b0, parity_row[7:1]}
+                              ^ {56'b0, parity_row[7:0]}
+                              ^ {47'b0, parity_row[7:1], 10'b0}
+                              ^ {46'b0, parity_row[7:0], 10'b0}
+                              ^ {25'b0, parity_row[7:0], 31'b0}
+                              ^ {15'b0, parity_row[7:0], 41'b0}
+                              ^ {14'b0, parity_row[7:0], 42'b0}
+                              ^ {parity_row[0], 63'b0};
+                    packet[2] = {57'b0, parity_row[7:1]}
+                              ^ {47'b0, parity_row[7:0], 9'b0}
+                              ^ {46'b0, parity_row[7:0], 10'b0}
+                              ^ {25'b0, parity_row[7:0], 31'b0}
+                              ^ {15'b0, parity_row[7:0], 41'b0}
+                              ^ {parity_row[0], 63'b0};
+                    packet[3] = {57'b0, parity_row[7:1]}
+                              ^ {47'b0, parity_row[7:0], 9'b0}
+                              ^ {25'b0, parity_row[7:0], 31'b0}
+                              ^ {23'b0, parity_row[0], 40'b0};
+                end
+                9'b1010_00_110: begin
+                    packet[0] = {58'b0, parity_row[7:2]}
+                              ^ {49'b0, parity_row[7:0], 7'b0}
+                              ^ {48'b0, parity_row[7:0], 8'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0}
+                              ^ {16'b0, parity_row[7:0], 40'b0};
+                    packet[1] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {54'b0, parity_row[1:0], 8'b0}
+                              ^ {39'b0, parity_row[7:0], 17'b0}
+                              ^ {38'b0, parity_row[7:0], 18'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0}
+                              ^ {7'b0, parity_row[7:0], 49'b0}
+                              ^ {6'b0, parity_row[7:0], 50'b0};
+                    packet[2] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {39'b0, parity_row[7:0], 17'b0}
+                              ^ {38'b0, parity_row[7:0], 18'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0}
+                              ^ {7'b0, parity_row[7:0], 49'b0};
+                    packet[3] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {39'b0, parity_row[7:0], 17'b0}
+                              ^ {23'b0, parity_row[1:0], 39'b0};
+                end
+                9'b1010_00_111: begin
+                    packet[0] = {51'b0, parity_row[6:0], 6'b0}
+                              ^ {42'b0, parity_row[6:0], 15'b0}
+                              ^ {41'b0, parity_row[6:0], 16'b0}
+                              ^ {10'b0, parity_row[6:0], 47'b0}
+                              ^ {9'b0, parity_row[6:0], 48'b0};
+                    packet[1] = {42'b0, parity_row[6:0], 15'b0}
+                              ^ {32'b0, parity_row[6:0], 25'b0}
+                              ^ {31'b0, parity_row[6:0], 26'b0}
+                              ^ {10'b0, parity_row[6:0], 47'b0}
+                              ^ {parity_row[6:0], 57'b0}
+                              ^ {parity_row[5:0], 58'b0};
+                    packet[2] = {63'b0, parity_row[6]}
+                              ^ {42'b0, parity_row[6:0], 15'b0}
+                              ^ {32'b0, parity_row[6:0], 25'b0}
+                              ^ {31'b0, parity_row[6:0], 26'b0}
+                              ^ {10'b0, parity_row[6:0], 47'b0}
+                              ^ {parity_row[6:0], 57'b0};
+                    packet[3] = {42'b0, parity_row[6:0], 15'b0}
+                              ^ {32'b0, parity_row[6:0], 25'b0};
+                end
+                9'b1010_01_000: begin
+                    packet[0] = {33'b0, parity_row[7:0], 23'b0}
+                              ^ {32'b0, parity_row[7:0], 24'b0}
+                              ^ {1'b0, parity_row[7:0], 55'b0}
+                              ^ {parity_row[7:0], 56'b0};
+                    packet[1] = {33'b0, parity_row[7:0], 23'b0}
+                              ^ {23'b0, parity_row[7:0], 33'b0}
+                              ^ {22'b0, parity_row[7:0], 34'b0}
+                              ^ {1'b0, parity_row[7:0], 55'b0};
+                    packet[2] = {55'b0, parity_row[7:0], 1'b0}
+                              ^ {54'b0, parity_row[7:0], 2'b0}
+                              ^ {33'b0, parity_row[7:0], 23'b0}
+                              ^ {23'b0, parity_row[7:0], 33'b0}
+                              ^ {1'b0, parity_row[7:0], 55'b0};
+                    packet[3] = {55'b0, parity_row[7:0], 1'b0}
+                              ^ {33'b0, parity_row[7:0], 23'b0}
+                              ^ {24'b0, parity_row[7:0], 32'b0}
+                              ^ {23'b0, parity_row[7:0], 33'b0};
+                end
+                9'b1010_01_001: begin
+                    packet[0] = {57'b0, parity_row[7:1]}
+                              ^ {56'b0, parity_row[7:0]}
+                              ^ {25'b0, parity_row[7:0], 31'b0}
+                              ^ {24'b0, parity_row[7:0], 32'b0}
+                              ^ {parity_row[0], 63'b0};
+                    packet[1] = {57'b0, parity_row[7:1]}
+                              ^ {56'b0, parity_row[7:0]}
+                              ^ {47'b0, parity_row[7:1], 10'b0}
+                              ^ {46'b0, parity_row[7:0], 10'b0}
+                              ^ {25'b0, parity_row[7:0], 31'b0}
+                              ^ {15'b0, parity_row[7:0], 41'b0}
+                              ^ {14'b0, parity_row[7:0], 42'b0}
+                              ^ {parity_row[0], 63'b0};
+                    packet[2] = {57'b0, parity_row[7:1]}
+                              ^ {47'b0, parity_row[7:0], 9'b0}
+                              ^ {46'b0, parity_row[7:0], 10'b0}
+                              ^ {25'b0, parity_row[7:0], 31'b0}
+                              ^ {15'b0, parity_row[7:0], 41'b0}
+                              ^ {parity_row[0], 63'b0};
+                    packet[3] = {57'b0, parity_row[7:1]}
+                              ^ {47'b0, parity_row[7:0], 9'b0}
+                              ^ {25'b0, parity_row[7:0], 31'b0}
+                              ^ {23'b0, parity_row[0], 40'b0};
+                end
+                9'b1010_01_010: begin
+                    packet[0] = {58'b0, parity_row[7:2]}
+                              ^ {49'b0, parity_row[7:0], 7'b0}
+                              ^ {48'b0, parity_row[7:0], 8'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0}
+                              ^ {16'b0, parity_row[7:0], 40'b0};
+                    packet[1] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {54'b0, parity_row[1:0], 8'b0}
+                              ^ {39'b0, parity_row[7:0], 17'b0}
+                              ^ {38'b0, parity_row[7:0], 18'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0}
+                              ^ {7'b0, parity_row[7:0], 49'b0}
+                              ^ {6'b0, parity_row[7:0], 50'b0};
+                    packet[2] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {39'b0, parity_row[7:0], 17'b0}
+                              ^ {38'b0, parity_row[7:0], 18'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0}
+                              ^ {7'b0, parity_row[7:0], 49'b0};
+                    packet[3] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {39'b0, parity_row[7:0], 17'b0}
+                              ^ {23'b0, parity_row[1:0], 39'b0};
+                end
+                9'b1010_01_011: begin
+                    packet[0] = {50'b0, parity_row[7:0], 6'b0}
+                              ^ {41'b0, parity_row[7:0], 15'b0}
+                              ^ {40'b0, parity_row[7:0], 16'b0}
+                              ^ {9'b0, parity_row[7:0], 47'b0}
+                              ^ {8'b0, parity_row[7:0], 48'b0};
+                    packet[1] = {41'b0, parity_row[7:0], 15'b0}
+                              ^ {31'b0, parity_row[7:0], 25'b0}
+                              ^ {30'b0, parity_row[7:0], 26'b0}
+                              ^ {9'b0, parity_row[7:0], 47'b0}
+                              ^ {parity_row[6:0], 57'b0}
+                              ^ {parity_row[5:0], 58'b0};
+                    packet[2] = {63'b0, parity_row[7]}
+                              ^ {62'b0, parity_row[7:6]}
+                              ^ {41'b0, parity_row[7:0], 15'b0}
+                              ^ {31'b0, parity_row[7:0], 25'b0}
+                              ^ {30'b0, parity_row[7:0], 26'b0}
+                              ^ {9'b0, parity_row[7:0], 47'b0}
+                              ^ {parity_row[6:0], 57'b0};
+                    packet[3] = {63'b0, parity_row[7]}
+                              ^ {41'b0, parity_row[7:0], 15'b0}
+                              ^ {31'b0, parity_row[7:0], 25'b0};
+                end
+                9'b1010_01_100: begin
+                    packet[0] = {42'b0, parity_row[7:0], 14'b0}
+                              ^ {33'b0, parity_row[7:0], 23'b0}
+                              ^ {32'b0, parity_row[7:0], 24'b0}
+                              ^ {1'b0, parity_row[7:0], 55'b0}
+                              ^ {parity_row[7:0], 56'b0};
+                    packet[1] = {33'b0, parity_row[7:0], 23'b0}
+                              ^ {23'b0, parity_row[7:0], 33'b0}
+                              ^ {22'b0, parity_row[7:0], 34'b0}
+                              ^ {1'b0, parity_row[7:0], 55'b0};
+                    packet[2] = {55'b0, parity_row[7:0], 1'b0}
+                              ^ {54'b0, parity_row[7:0], 2'b0}
+                              ^ {33'b0, parity_row[7:0], 23'b0}
+                              ^ {23'b0, parity_row[7:0], 33'b0}
+                              ^ {22'b0, parity_row[7:0], 34'b0}
+                              ^ {1'b0, parity_row[7:0], 55'b0};
+                    packet[3] = {55'b0, parity_row[7:0], 1'b0}
+                              ^ {33'b0, parity_row[7:0], 23'b0}
+                              ^ {23'b0, parity_row[7:0], 33'b0};
+                end
+                9'b1010_01_101: begin
+                    packet[0] = {56'b0, parity_row[7:0]}
+                              ^ {34'b0, parity_row[7:0], 22'b0}
+                              ^ {25'b0, parity_row[7:0], 31'b0}
+                              ^ {24'b0, parity_row[7:0], 32'b0}
+                              ^ {parity_row[0], 63'b0};
+                    packet[1] = {57'b0, parity_row[7:1]}
+                              ^ {56'b0, parity_row[7:0]}
+                              ^ {46'b0, parity_row[7:0], 10'b0}
+                              ^ {25'b0, parity_row[7:0], 31'b0}
+                              ^ {15'b0, parity_row[7:0], 41'b0}
+                              ^ {14'b0, parity_row[7:0], 42'b0}
+                              ^ {parity_row[0], 63'b0};
+                    packet[2] = {57'b0, parity_row[7:1]}
+                              ^ {47'b0, parity_row[7:0], 9'b0}
+                              ^ {46'b0, parity_row[7:0], 10'b0}
+                              ^ {25'b0, parity_row[7:0], 31'b0}
+                              ^ {15'b0, parity_row[7:0], 41'b0}
+                              ^ {14'b0, parity_row[7:0], 42'b0}
+                              ^ {parity_row[0], 63'b0};
+                    packet[3] = {57'b0, parity_row[7:1]}
+                              ^ {47'b0, parity_row[7:0], 9'b0}
+                              ^ {25'b0, parity_row[7:0], 31'b0};
+                end
+                9'b1010_01_110: begin
+                    packet[0] = {58'b0, parity_row[7:2]}
+                              ^ {48'b0, parity_row[7:0], 8'b0}
+                              ^ {26'b0, parity_row[7:0], 30'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0}
+                              ^ {16'b0, parity_row[7:0], 40'b0};
+                    packet[1] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {54'b0, parity_row[1:0], 8'b0}
+                              ^ {38'b0, parity_row[7:0], 18'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0}
+                              ^ {7'b0, parity_row[7:0], 49'b0}
+                              ^ {6'b0, parity_row[7:0], 50'b0};
+                    packet[2] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {39'b0, parity_row[7:0], 17'b0}
+                              ^ {38'b0, parity_row[7:0], 18'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0}
+                              ^ {7'b0, parity_row[7:0], 49'b0}
+                              ^ {6'b0, parity_row[7:0], 50'b0};
+                    packet[3] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {39'b0, parity_row[7:0], 17'b0}
+                              ^ {23'b0, parity_row[1:0], 39'b0};
+                end
+                9'b1010_01_111: begin
+                    packet[0] = {51'b0, parity_row[6:0], 6'b0}
+                              ^ {41'b0, parity_row[6:0], 16'b0}
+                              ^ {19'b0, parity_row[6:0], 38'b0}
+                              ^ {10'b0, parity_row[6:0], 47'b0}
+                              ^ {9'b0, parity_row[6:0], 48'b0};
+                    packet[1] = {42'b0, parity_row[6:0], 15'b0}
+                              ^ {31'b0, parity_row[6:0], 26'b0}
+                              ^ {10'b0, parity_row[6:0], 47'b0}
+                              ^ {parity_row[6:0], 57'b0}
+                              ^ {parity_row[5:0], 58'b0};
+                    packet[2] = {63'b0, parity_row[6]}
+                              ^ {42'b0, parity_row[6:0], 15'b0}
+                              ^ {32'b0, parity_row[6:0], 25'b0}
+                              ^ {31'b0, parity_row[6:0], 26'b0}
+                              ^ {10'b0, parity_row[6:0], 47'b0}
+                              ^ {parity_row[6:0], 57'b0}
+                              ^ {parity_row[5:0], 58'b0};
+                    packet[3] = {63'b0, parity_row[6]}
+                              ^ {42'b0, parity_row[6:0], 15'b0}
+                              ^ {32'b0, parity_row[6:0], 25'b0};
+                end
+                9'b1010_10_000: begin
+                    packet[0] = {32'b0, parity_row[7:0], 24'b0}
+                              ^ {1'b0, parity_row[7:0], 55'b0};
+                    packet[1] = {22'b0, parity_row[7:0], 34'b0}
+                              ^ {1'b0, parity_row[7:0], 55'b0};
+                    packet[2] = {55'b0, parity_row[7:0], 1'b0}
+                              ^ {1'b0, parity_row[7:0], 55'b0};
+                    packet[3] = {55'b0, parity_row[7:0], 1'b0}
+                              ^ {24'b0, parity_row[7:0], 32'b0};
+                end
+                9'b1010_10_001: begin
+                    packet[0] = {57'b0, parity_row[7:1]}
+                              ^ {24'b0, parity_row[7:0], 32'b0}
+                              ^ {parity_row[0], 63'b0};
+                    packet[1] = {57'b0, parity_row[7:1]}
+                              ^ {47'b0, parity_row[7:1], 10'b0}
+                              ^ {14'b0, parity_row[7:0], 42'b0}
+                              ^ {parity_row[0], 63'b0};
+                    packet[2] = {57'b0, parity_row[7:1]}
+                              ^ {47'b0, parity_row[7:0], 9'b0}
+                              ^ {parity_row[0], 63'b0};
+                    packet[3] = {57'b0, parity_row[7:1]}
+                              ^ {47'b0, parity_row[7:0], 9'b0}
+                              ^ {23'b0, parity_row[0], 40'b0};
+                end
+                9'b1010_10_010: begin
+                    packet[0] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {16'b0, parity_row[7:0], 40'b0};
+                    packet[1] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {39'b0, parity_row[7:0], 17'b0}
+                              ^ {6'b0, parity_row[7:0], 50'b0};
+                    packet[2] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {39'b0, parity_row[7:0], 17'b0};
+                    packet[3] = {49'b0, parity_row[7:0], 7'b0}
+                              ^ {39'b0, parity_row[7:0], 17'b0};
+                end
+                9'b1010_10_011: begin
+                    packet[0] = {41'b0, parity_row[7:0], 15'b0}
+                              ^ {8'b0, parity_row[7:0], 48'b0};
+                    packet[1] = {41'b0, parity_row[7:0], 15'b0}
+                              ^ {31'b0, parity_row[7:0], 25'b0}
+                              ^ {parity_row[5:0], 58'b0};
+                    packet[2] = {62'b0, parity_row[7:6]}
+                              ^ {41'b0, parity_row[7:0], 15'b0}
+                              ^ {31'b0, parity_row[7:0], 25'b0};
+                    packet[3] = {41'b0, parity_row[7:0], 15'b0}
+                              ^ {31'b0, parity_row[7:0], 25'b0};
+                end
+                9'b1010_10_100: begin
+                    packet[0] = {33'b0, parity_row[7:0], 23'b0}
+                              ^ {parity_row[7:0], 56'b0};
+                    packet[1] = {33'b0, parity_row[7:0], 23'b0}
+                              ^ {23'b0, parity_row[7:0], 33'b0};
+                    packet[2] = {54'b0, parity_row[7:0], 2'b0}
+                              ^ {33'b0, parity_row[7:0], 23'b0}
+                              ^ {23'b0, parity_row[7:0], 33'b0};
+                    packet[3] = {33'b0, parity_row[7:0], 23'b0}
+                              ^ {23'b0, parity_row[7:0], 33'b0};
+                end
+                9'b1010_10_101: begin
+                    packet[0] = {56'b0, parity_row[7:0]}
+                              ^ {25'b0, parity_row[7:0], 31'b0};
+                    packet[1] = {56'b0, parity_row[7:0]}
+                              ^ {46'b0, parity_row[7:0], 10'b0}
+                              ^ {25'b0, parity_row[7:0], 31'b0}
+                              ^ {15'b0, parity_row[7:0], 41'b0};
+                    packet[2] = {46'b0, parity_row[7:0], 10'b0}
+                              ^ {25'b0, parity_row[7:0], 31'b0}
+                              ^ {15'b0, parity_row[7:0], 41'b0};
+                    packet[3] = {25'b0, parity_row[7:0], 31'b0};
+                end
+                9'b1010_10_110: begin
+                    packet[0] = {58'b0, parity_row[7:2]}
+                              ^ {48'b0, parity_row[7:0], 8'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0};
+                    packet[1] = {54'b0, parity_row[1:0], 8'b0}
+                              ^ {38'b0, parity_row[7:0], 18'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0}
+                              ^ {7'b0, parity_row[7:0], 49'b0};
+                    packet[2] = {38'b0, parity_row[7:0], 18'b0}
+                              ^ {17'b0, parity_row[7:0], 39'b0}
+                              ^ {7'b0, parity_row[7:0], 49'b0};
+                    packet[3] = {23'b0, parity_row[1:0], 39'b0};
+                end
+                9'b1010_10_111: begin
+                    packet[0] = {51'b0, parity_row[6:0], 6'b0}
+                              ^ {41'b0, parity_row[6:0], 16'b0}
+                              ^ {10'b0, parity_row[6:0], 47'b0};
+                    packet[1] = {31'b0, parity_row[6:0], 26'b0}
+                              ^ {10'b0, parity_row[6:0], 47'b0}
+                              ^ {parity_row[6:0], 57'b0};
+                    packet[2] = {31'b0, parity_row[6:0], 26'b0}
+                              ^ {10'b0, parity_row[6:0], 47'b0}
+                              ^ {parity_row[6:0], 57'b0};
+                end
+                default: begin
+                end
+            endcase
+            ecc_kpd64_diag_reduce_packet = packet;
+        end
+    endfunction
+
     assign ecc_sub32_accum_xor1 = ecc_kpd64_sub32_accum(
         ecc_leaf128_prod_q,
         ecc_kpd64_sub_q,
@@ -972,16 +3256,29 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     assign ecc_leaf_a_lowxor_xor1 = ecc_leaf_a_q ^ ecc_leaf_xor_a_q;
     assign ecc_leaf_b_lowxor_xor1 = ecc_leaf_b_q ^ ecc_leaf_xor_b_q;
 
-    assign ecc_direct_reduce_word = ecc_kpd64_leaf_reduce_packet(
-        ecc_leaf64_offset_mask,
-        ecc_leaf128_prod_q
+    generate
+        if (ECC_DIAG_GROUP_REDUCE) begin : gen_disable_leaf_end_reduce
+            assign ecc_direct_reduce_word = '0;
+        end else begin : gen_leaf_end_reduce
+            assign ecc_direct_reduce_word = ecc_kpd64_leaf_reduce_packet(
+                ecc_leaf64_offset_mask,
+                ecc_leaf128_prod_q
+            );
+        end
+    endgenerate
+
+    assign ecc_diag_reduce_word = ecc_kpd64_diag_reduce_packet(
+        ecc_leaf_path_q[3:0],
+        ecc_kpd64_sub_q,
+        ecc_diag_group_q,
+        ecc_bitband_parity_row
     );
 
     always_comb begin
-        xor0_contribution_packet = 'x;
-        if (hdc_xor_issue) begin
-            xor0_contribution_packet = vrf_rd;
-        end else if (hdc_src0_acc_we) begin
+        xor0_contribution_packet = '0;
+        if (ECC_DIAG_GROUP_REDUCE) begin
+            xor0_contribution_packet = ecc_diag_reduce_word;
+        end else begin
             xor0_contribution_packet = ecc_direct_reduce_word;
         end
     end
@@ -1037,10 +3334,10 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         .bool_src_b_i(vrf_rd),
         .bitband_src_a_i(ecc_bitband_src_a),
         .bitband_src_b_i(ecc_bitband_src_b),
-        .xor0_contribution_packet_i(xor0_contribution_packet),
+        .xor0_contribution_packet_i(vrf_rd),
         .payload_q_o(vec_payload_q),
         .payload_pop_q_o(vec_popcount_q),
-        .xor0_field_packet_o(xor0_field_packet),
+        .xor0_field_packet_o(),
         .cnt_hv_word_i(hdc_src0_q),
         .cnt_old_counter_i(vrf_rd),
         .cnt_subgroup_i(uop_p2_q.subgroup_idx),
@@ -1479,6 +3776,25 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         S_ECC_DIAG_CAPTURE: begin
             ecc_leaf_prod_n = ecc_diag32_leaf_store_bitband(
                 ecc_leaf_prod_q, ecc_diag_group_q, ecc_bitband_parity_row);
+            if (ECC_DIAG_GROUP_REDUCE && ecc_autoreduce_q) begin
+                hdc_src0_acc_we=1'b1;
+            end
+            if (ecc_leaf_fast_prefetch) begin
+                unique case (ecc_diag_group_q)
+                    3'd4: begin
+                        vrf_req.ra=ecc_src_a_q;
+                    end
+                    3'd5: begin
+                        vrf_req.ra=ecc_src_b_q;
+                    end
+                    3'd7: begin
+                        ecc_leaf_a_n = ecc_leaf_lowxor_rd[31:0];
+                        ecc_leaf_xor_a_n = ecc_leaf_lowxor_rd[63:32];
+                    end
+                    default: begin
+                    end
+                endcase
+            end
             if (ecc_diag_group_q == 3'd7) begin
                 ecc_diag_group_n = '0;
                 st_n=S_ECC_DIAG_WAIT;
@@ -1507,9 +3823,18 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                 ecc_kpd64_sub_n = 2'd3;
                 ecc_leaf_prod_n = '0;
                 ecc_diag_group_n = '0;
-                if (!ecc_leaf_last)
-                    vrf_req.ra=ecc_src_a_q;
-                st_n=S_ECC_LEAF_FOLD;
+                if (ecc_leaf_fast_prefetch) begin
+                    ecc_leaf_b_n = ecc_bitrev32_top(ecc_leaf_lowxor_rd[31:0]);
+                    ecc_leaf_xor_b_n = ecc_bitrev32_top(ecc_leaf_lowxor_rd[63:32]);
+                    ecc_leaf_path_n = ecc_next_leaf_path;
+                    ecc_leaf128_prod_n = '0;
+                    ecc_kpd64_sub_n = 2'd0;
+                    st_n=S_ECC_DIAG_ISSUE;
+                end else begin
+                    if (!ecc_leaf_last)
+                        vrf_req.ra=ecc_src_a_q;
+                    st_n=S_ECC_LEAF_FOLD;
+                end
             end
         end
 
@@ -1532,7 +3857,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                     end
                 endcase
             end
-            if (ecc_autoreduce_q && (ecc_fold_word_q == 2'd3)) begin
+            if (!ECC_DIAG_GROUP_REDUCE && ecc_autoreduce_q && (ecc_fold_word_q == 2'd3)) begin
                 hdc_src0_acc_we=1'b1;
             end
             if (ecc_fold_word_q == 2'd3) begin
@@ -2482,10 +4807,10 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             uop_p0_q<=uop_p0_n;uop_p2_q<=uop_p2_n;uop_p3_q<=uop_p3_n;
             p2_is_pop_q<=p2_is_pop_n;p2_is_hbind_q<=p2_is_hbind_n;
             if (hdc_src0_acc_we) begin
-                hdc_src0_q[0]<=xor0_field_packet[63:0];
-                hdc_src0_q[1]<=xor0_field_packet[127:64];
-                hdc_src0_q[2]<=xor0_field_packet[191:128];
-                hdc_src0_q[3]<={23'b0, xor0_field_packet[232:192]};
+                hdc_src0_q[0]<=hdc_src0_q[0] ^ xor0_contribution_packet[0];
+                hdc_src0_q[1]<=hdc_src0_q[1] ^ xor0_contribution_packet[1];
+                hdc_src0_q[2]<=hdc_src0_q[2] ^ xor0_contribution_packet[2];
+                hdc_src0_q[3]<={23'b0, hdc_src0_q[3][40:0] ^ xor0_contribution_packet[3][40:0]};
             end else if (hdc_src0_we) begin
                 hdc_src0_q<=hdc_src0_n;
             end
