@@ -10,8 +10,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     input hdec_op_t operator_i, input logic [63:0] operand_a_i, operand_b_i,
     output logic valid_o, output logic [63:0] result_o
 );
-    localparam bit ECC_DIAG_GROUP_REDUCE = 1'b1;
-
     logic [VRF_IDX_W-1:0] vrf_ra, vrf_ra_q;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] vrf_rd;
     logic [LANE_NUM-1:0] vrf_we;
@@ -36,7 +34,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         S_UOP_P2_LANE, S_UOP_P3_GLOBAL, S_UOP_P3_POP_CAPTURE, S_UOP_P3_VRF_WAIT, S_UOP_P3_ACCUM, S_UOP_P4_RESP,
         S_UOP_CLIP_WRITE,
         S_ECC_LOAD_A_WAIT, S_ECC_LOAD_A, S_ECC_LOAD_B_WAIT, S_ECC_LOAD_B,
-        S_ECC_DIAG_ISSUE, S_ECC_DIAG_CAPTURE, S_ECC_DIAG_REDUCE, S_ECC_DIAG_WAIT,
+        S_ECC_DIAG_ISSUE, S_ECC_DIAG_CAPTURE, S_ECC_DIAG_WAIT,
         S_ECC_LEAF_FOLD,
         S_ECC_WRITE_PAIR, S_ECC_WRITE_DRAIN,
         S_ECC_REDUCE_LOAD_LO_WAIT, S_ECC_REDUCE_LOAD_LO, S_ECC_REDUCE_LOAD_HI_WAIT, S_ECC_REDUCE_WRITE,
@@ -152,21 +150,13 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] ecc_reduce_src3;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] lane_ecc_reduce_word;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] ecc_direct_reduce_word;
-    logic [LANE_NUM-1:0][LANE_WIDTH-1:0] ecc_diag_reduce_word;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] ecc_square_reduce_word;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] xor0_contribution_packet;
-    logic [LANE_NUM*2-1:0]               ecc_diag_reduce_parity;
-    logic [2:0]                          ecc_diag_reduce_group;
-    logic [1:0]                          ecc_diag_reduce_slot;
-    logic                                ecc_diag_reduce_active_slot;
-    logic                                ecc_diag_reduce_last_slot;
+    logic [232:0]                        xor0_field_packet;
     logic [127:0]         ecc_sub32_accum_xor1;
     logic [31:0]          ecc_leaf_a_lowxor_xor1;
     logic [31:0]          ecc_leaf_b_lowxor_xor1;
     logic [2:0]           ecc_diag_group_q, ecc_diag_group_n;
-    logic [LANE_NUM*2-1:0] ecc_reduce_parity_q, ecc_reduce_parity_n;
-    logic [2:0]           ecc_reduce_group_q, ecc_reduce_group_n;
-    logic [1:0]           ecc_reduce_slot_q, ecc_reduce_slot_n;
     logic [2:0]           ecc_diag_issue_group;
     logic                 ecc_diag_product_issue;
     logic [31:0]          ecc_leaf_b_matrix_rev;
@@ -240,9 +230,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     logic [15:0]        ecc_job_cycle_status;
     logic [3:0]         ecc_leaf_read_path;
     logic [63:0]        ecc_leaf_lowxor_rd;
-    logic               ecc_leaf_fast_prefetch;
-    logic               ecc_leaf_prefetch_a_capture;
-    logic               ecc_leaf_prefetch_b_capture;
     logic [3:0]         ecc_inv_step_q, ecc_inv_step_n;
     logic [VRF_IDX_W-1:0] ecc_job_src_q, ecc_job_src_n;
     logic [VRF_IDX_W-1:0] ecc_job_dst_q, ecc_job_dst_n;
@@ -281,18 +268,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     assign uop_p2_use_shift   = (uop_p2_q.op_type == UOP_HPERM_CHUNK);
     assign uop_p2_use_clip    = (uop_p2_q.op_type == UOP_HCNTCLIP_READ);
     assign ecc_next_leaf_path = {2'b00, ecc_kpd64_path_inc(ecc_leaf_path_q[3:0])};
-    assign ecc_leaf_fast_prefetch = 1'b0 && ECC_DIAG_GROUP_REDUCE && !ECC_DEBUG_FIELD_OPS
-                                 && !ecc_raw_product_q && (ecc_kpd64_sub_q == 2'd2)
-                                 && !ecc_leaf_last;
-    assign ecc_leaf_prefetch_a_capture = ecc_leaf_fast_prefetch
-                                      && (st_q == S_ECC_DIAG_CAPTURE)
-                                      && (ecc_diag_group_q == 3'd7);
-    assign ecc_leaf_prefetch_b_capture = ecc_leaf_fast_prefetch
-                                      && (st_q == S_ECC_DIAG_WAIT);
-    assign ecc_leaf_read_path = ((st_q == S_ECC_LEAF_FOLD)
-                              || ecc_leaf_prefetch_a_capture
-                              || ecc_leaf_prefetch_b_capture)
-                              ? ecc_next_leaf_path[3:0] : ecc_leaf_path_q[3:0];
+    assign ecc_leaf_read_path = (st_q == S_ECC_LEAF_FOLD) ? ecc_next_leaf_path[3:0] : ecc_leaf_path_q[3:0];
     assign ecc_leaf_lowxor_rd = ecc_kpd64_leaf_lowxor_pack({vrf_rd[3], vrf_rd[2], vrf_rd[1], vrf_rd[0]}, ecc_leaf_read_path);
     assign ecc_leaf_first = (ecc_leaf_path_q[3:0] == 4'b00_00);
     assign ecc_leaf_last  = (ecc_leaf_path_q[3:0] == 4'b10_10);
@@ -799,36 +775,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         endcase
     endfunction
 
-    function automatic logic [2:0] ecc_kpd64_leaf_mask_count(input logic [6:0] mask);
-        ecc_kpd64_leaf_mask_count = 3'($countones(mask));
-    endfunction
-
-    function automatic logic ecc_kpd64_leaf_mask_slot_valid(
-        input logic [6:0] mask,
-        input logic [1:0] slot
-    );
-        ecc_kpd64_leaf_mask_slot_valid = ({1'b0, slot} < ecc_kpd64_leaf_mask_count(mask));
-    endfunction
-
-    function automatic logic [2:0] ecc_kpd64_leaf_mask_slot_mid(
-        input logic [6:0] mask,
-        input logic [1:0] slot
-    );
-        logic [2:0] seen;
-        begin
-            seen = '0;
-            ecc_kpd64_leaf_mask_slot_mid = '0;
-            for (int mid = 0; mid < 7; mid++) begin
-                if (mask[mid]) begin
-                    if (seen[1:0] == slot) begin
-                        ecc_kpd64_leaf_mask_slot_mid = 3'(mid);
-                    end
-                    seen = seen + 3'd1;
-                end
-            end
-        end
-    endfunction
-
     function automatic logic [31:0] ecc_bitrev32_top(input logic [31:0] word);
         ecc_bitrev32_top = {word[0],  word[1],  word[2],  word[3],
                             word[4],  word[5],  word[6],  word[7],
@@ -1018,109 +964,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         end
     endfunction
 
-    function automatic logic [LANE_NUM-1:0][LANE_WIDTH-1:0] ecc_field233_bit_packet(
-        input logic [8:0] bit_idx
-    );
-        logic [LANE_NUM-1:0][LANE_WIDTH-1:0] packet;
-        logic [5:0] bit_off;
-        begin
-            packet = '0;
-            bit_off = bit_idx[5:0];
-            if (bit_idx < 9'd233) begin
-                unique case (bit_idx[7:6])
-                    2'd0: packet[0] = 64'h1 << bit_off;
-                    2'd1: packet[1] = 64'h1 << bit_off;
-                    2'd2: packet[2] = 64'h1 << bit_off;
-                    default: packet[3] = 64'h1 << bit_off;
-                endcase
-            end
-            ecc_field233_bit_packet = packet;
-        end
-    endfunction
-
-    function automatic logic [LANE_NUM-1:0][LANE_WIDTH-1:0] ecc_mod233_exp_packet(
-        input logic [8:0] exp_idx
-    );
-        logic [LANE_NUM-1:0][LANE_WIDTH-1:0] packet;
-        logic [8:0] red0;
-        logic [8:0] red1;
-        begin
-            packet = '0;
-            if (exp_idx < 9'd233) begin
-                packet ^= ecc_field233_bit_packet(exp_idx);
-            end else begin
-                red0 = exp_idx - 9'd233;
-                red1 = exp_idx - 9'd159;
-
-                if (red0 < 9'd233) begin
-                    packet ^= ecc_field233_bit_packet(red0);
-                end else begin
-                    packet ^= ecc_field233_bit_packet(red0 - 9'd233);
-                    packet ^= ecc_field233_bit_packet(red0 - 9'd159);
-                end
-
-                if (red1 < 9'd233) begin
-                    packet ^= ecc_field233_bit_packet(red1);
-                end else begin
-                    packet ^= ecc_field233_bit_packet(red1 - 9'd233);
-                    packet ^= ecc_field233_bit_packet(red1 - 9'd159);
-                end
-            end
-            ecc_mod233_exp_packet = packet;
-        end
-    endfunction
-
-    function automatic logic [LANE_NUM-1:0][LANE_WIDTH-1:0] ecc_kpd64_diag_reduce_packet(
-        input logic [3:0]             path,
-        input logic [1:0]             sub_idx,
-        input logic [2:0]             group_idx,
-        input logic [LANE_NUM*2-1:0]  parity_row,
-        input logic [1:0]             slot_idx
-    );
-        logic [LANE_NUM-1:0][LANE_WIDTH-1:0] packet;
-        logic [6:0] mask;
-        logic [2:0] mid_sel;
-        logic [5:0] coeff_idx;
-        logic [8:0] word_base;
-        logic [8:0] exp_idx;
-        begin
-            packet = '0;
-            mask = ecc_kpd64_leaf_offset_mask(path);
-            mid_sel = ecc_kpd64_leaf_mask_slot_mid(mask, slot_idx);
-            word_base = {mid_sel, 6'b000000};
-
-            if (ecc_kpd64_leaf_mask_slot_valid(mask, slot_idx)) begin
-                for (int rid = 0; rid < LANE_NUM*2; rid++) begin
-                    if (!((group_idx == 3'd7) && (rid == 7)) && parity_row[rid]) begin
-                        coeff_idx = {group_idx, 3'b000} + 6'(rid);
-                        unique case (sub_idx)
-                            2'd0: begin
-                                exp_idx = word_base + {3'b000, coeff_idx};
-                                packet ^= ecc_mod233_exp_packet(exp_idx);
-                                exp_idx = word_base + {3'b000, coeff_idx} + 9'd32;
-                                packet ^= ecc_mod233_exp_packet(exp_idx);
-                            end
-                            2'd1: begin
-                                exp_idx = word_base + {3'b000, coeff_idx} + 9'd32;
-                                packet ^= ecc_mod233_exp_packet(exp_idx);
-                                exp_idx = word_base + {3'b000, coeff_idx} + 9'd64;
-                                packet ^= ecc_mod233_exp_packet(exp_idx);
-                            end
-                            2'd2: begin
-                                exp_idx = word_base + {3'b000, coeff_idx} + 9'd32;
-                                packet ^= ecc_mod233_exp_packet(exp_idx);
-                            end
-                            default: begin
-                            end
-                        endcase
-                    end
-                end
-            end
-            ecc_kpd64_diag_reduce_packet = packet;
-        end
-    endfunction
-
-
     assign ecc_sub32_accum_xor1 = ecc_kpd64_sub32_accum(
         ecc_leaf128_prod_q,
         ecc_kpd64_sub_q,
@@ -1129,46 +972,16 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     assign ecc_leaf_a_lowxor_xor1 = ecc_leaf_a_q ^ ecc_leaf_xor_a_q;
     assign ecc_leaf_b_lowxor_xor1 = ecc_leaf_b_q ^ ecc_leaf_xor_b_q;
 
-    generate
-        if (ECC_DIAG_GROUP_REDUCE) begin : gen_disable_leaf_end_reduce
-            assign ecc_direct_reduce_word = '0;
-        end else begin : gen_leaf_end_reduce
-            assign ecc_direct_reduce_word = ecc_kpd64_leaf_reduce_packet(
-                ecc_leaf64_offset_mask,
-                ecc_leaf128_prod_q
-            );
-        end
-    endgenerate
-
-    assign ecc_diag_reduce_parity = (st_q == S_ECC_DIAG_REDUCE)
-                                  ? ecc_reduce_parity_q
-                                  : ecc_bitband_parity_row;
-    assign ecc_diag_reduce_group = (st_q == S_ECC_DIAG_REDUCE)
-                                 ? ecc_reduce_group_q
-                                 : ecc_diag_group_q;
-    assign ecc_diag_reduce_slot = (st_q == S_ECC_DIAG_REDUCE)
-                                ? ecc_reduce_slot_q
-                                : 2'd0;
-    assign ecc_diag_reduce_active_slot = ecc_kpd64_leaf_mask_slot_valid(
+    assign ecc_direct_reduce_word = ecc_kpd64_leaf_reduce_packet(
         ecc_leaf64_offset_mask,
-        ecc_diag_reduce_slot
-    );
-    assign ecc_diag_reduce_last_slot =
-        ({1'b0, ecc_diag_reduce_slot} + 3'd1) >= ecc_kpd64_leaf_mask_count(ecc_leaf64_offset_mask);
-
-    assign ecc_diag_reduce_word = ecc_kpd64_diag_reduce_packet(
-        ecc_leaf_path_q[3:0],
-        ecc_kpd64_sub_q,
-        ecc_diag_reduce_group,
-        ecc_diag_reduce_parity,
-        ecc_diag_reduce_slot
+        ecc_leaf128_prod_q
     );
 
     always_comb begin
-        xor0_contribution_packet = '0;
-        if (ECC_DIAG_GROUP_REDUCE) begin
-            xor0_contribution_packet = ecc_diag_reduce_word;
-        end else begin
+        xor0_contribution_packet = 'x;
+        if (hdc_xor_issue) begin
+            xor0_contribution_packet = vrf_rd;
+        end else if (hdc_src0_acc_we) begin
             xor0_contribution_packet = ecc_direct_reduce_word;
         end
     end
@@ -1224,10 +1037,10 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         .bool_src_b_i(vrf_rd),
         .bitband_src_a_i(ecc_bitband_src_a),
         .bitband_src_b_i(ecc_bitband_src_b),
-        .xor0_contribution_packet_i(vrf_rd),
+        .xor0_contribution_packet_i(xor0_contribution_packet),
         .payload_q_o(vec_payload_q),
         .payload_pop_q_o(vec_popcount_q),
-        .xor0_field_packet_o(),
+        .xor0_field_packet_o(xor0_field_packet),
         .cnt_hv_word_i(hdc_src0_q),
         .cnt_old_counter_i(vrf_rd),
         .cnt_subgroup_i(uop_p2_q.subgroup_idx),
@@ -1276,9 +1089,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         ecc_leaf_path_n=ecc_leaf_path_q;
         ecc_fold_word_n=ecc_fold_word_q;
         ecc_diag_group_n=ecc_diag_group_q;
-        ecc_reduce_parity_n=ecc_reduce_parity_q;
-        ecc_reduce_group_n=ecc_reduce_group_q;
-        ecc_reduce_slot_n=ecc_reduce_slot_q;
         ecc_product_we=1'b0;
         ecc_autoreduce_n=ecc_autoreduce_q; ecc_raw_product_n=ecc_raw_product_q;
         ecc_mac_n=ecc_mac_q; ecc_sqr_repeat_n=ecc_sqr_repeat_q;
@@ -1669,56 +1479,12 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         S_ECC_DIAG_CAPTURE: begin
             ecc_leaf_prod_n = ecc_diag32_leaf_store_bitband(
                 ecc_leaf_prod_q, ecc_diag_group_q, ecc_bitband_parity_row);
-            if (ECC_DIAG_GROUP_REDUCE && ecc_autoreduce_q) begin
-                hdc_src0_acc_we=ecc_diag_reduce_active_slot;
-                ecc_reduce_parity_n=ecc_bitband_parity_row;
-                ecc_reduce_group_n=ecc_diag_group_q;
-                ecc_reduce_slot_n=2'd1;
-            end
-            if (ecc_leaf_fast_prefetch) begin
-                unique case (ecc_diag_group_q)
-                    3'd4: begin
-                        vrf_req.ra=ecc_src_a_q;
-                    end
-                    3'd5: begin
-                        vrf_req.ra=ecc_src_b_q;
-                    end
-                    3'd7: begin
-                        ecc_leaf_a_n = ecc_leaf_lowxor_rd[31:0];
-                        ecc_leaf_xor_a_n = ecc_leaf_lowxor_rd[63:32];
-                    end
-                    default: begin
-                    end
-                endcase
-            end
             if (ecc_diag_group_q == 3'd7) begin
                 ecc_diag_group_n = '0;
-                if (ECC_DIAG_GROUP_REDUCE && ecc_autoreduce_q && !ecc_diag_reduce_last_slot)
-                    st_n=S_ECC_DIAG_REDUCE;
-                else
-                    st_n=S_ECC_DIAG_WAIT;
+                st_n=S_ECC_DIAG_WAIT;
             end else begin
                 ecc_diag_group_n = ecc_diag_group_q + 3'd1;
-                if (ECC_DIAG_GROUP_REDUCE && ecc_autoreduce_q && !ecc_diag_reduce_last_slot)
-                    st_n=S_ECC_DIAG_REDUCE;
-                else
-                    st_n=S_ECC_DIAG_CAPTURE;
-            end
-        end
-
-        S_ECC_DIAG_REDUCE: begin
-            if (ECC_DIAG_GROUP_REDUCE && ecc_autoreduce_q) begin
-                hdc_src0_acc_we=ecc_diag_reduce_active_slot;
-            end
-            if (ecc_diag_reduce_last_slot) begin
-                ecc_reduce_slot_n='0;
-                if (ecc_reduce_group_q == 3'd7)
-                    st_n=S_ECC_DIAG_WAIT;
-                else
-                    st_n=S_ECC_DIAG_CAPTURE;
-            end else begin
-                ecc_reduce_slot_n=ecc_reduce_slot_q + 2'd1;
-                st_n=S_ECC_DIAG_REDUCE;
+                st_n=S_ECC_DIAG_CAPTURE;
             end
         end
 
@@ -1741,18 +1507,9 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                 ecc_kpd64_sub_n = 2'd3;
                 ecc_leaf_prod_n = '0;
                 ecc_diag_group_n = '0;
-                if (ecc_leaf_fast_prefetch) begin
-                    ecc_leaf_b_n = ecc_bitrev32_top(ecc_leaf_lowxor_rd[31:0]);
-                    ecc_leaf_xor_b_n = ecc_bitrev32_top(ecc_leaf_lowxor_rd[63:32]);
-                    ecc_leaf_path_n = ecc_next_leaf_path;
-                    ecc_leaf128_prod_n = '0;
-                    ecc_kpd64_sub_n = 2'd0;
-                    st_n=S_ECC_DIAG_ISSUE;
-                end else begin
-                    if (!ecc_leaf_last)
-                        vrf_req.ra=ecc_src_a_q;
-                    st_n=S_ECC_LEAF_FOLD;
-                end
+                if (!ecc_leaf_last)
+                    vrf_req.ra=ecc_src_a_q;
+                st_n=S_ECC_LEAF_FOLD;
             end
         end
 
@@ -1775,7 +1532,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                     end
                 endcase
             end
-            if (!ECC_DIAG_GROUP_REDUCE && ecc_autoreduce_q && (ecc_fold_word_q == 2'd3)) begin
+            if (ecc_autoreduce_q && (ecc_fold_word_q == 2'd3)) begin
                 hdc_src0_acc_we=1'b1;
             end
             if (ecc_fold_word_q == 2'd3) begin
@@ -2706,7 +2463,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             ecc_src_a_q<='0;ecc_src_b_q<='0;ecc_dst_q<='0;ecc_acc_dst_q<='0;
             ecc_leaf_a_q<='0;ecc_leaf_b_q<='0;ecc_leaf_prod_q<='0;ecc_leaf_path_q<='0;ecc_fold_word_q<='0;
             ecc_diag_group_q<='0;
-            ecc_reduce_parity_q<='0;ecc_reduce_group_q<='0;ecc_reduce_slot_q<='0;
             ecc_leaf_xor_a_q<='0;ecc_leaf_xor_b_q<='0;ecc_leaf128_prod_q<='0;ecc_kpd64_sub_q<='0;
             ecc_autoreduce_q<=1'b0;ecc_raw_product_q<=1'b0;ecc_mac_q<=1'b0;ecc_sqr_repeat_q<='0;
             ecc_job_kind_q<=ECC_JOB_NONE;ecc_job_phase_q<=ECC_PHASE_NONE;ecc_job_active_q<=1'b0;ecc_job_done_q<=1'b0;ecc_job_bg_q<=1'b0;ecc_job_cycle_q<='0;ecc_inv_step_q<='0;ecc_job_src_q<='0;ecc_job_dst_q<='0;
@@ -2726,10 +2482,10 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             uop_p0_q<=uop_p0_n;uop_p2_q<=uop_p2_n;uop_p3_q<=uop_p3_n;
             p2_is_pop_q<=p2_is_pop_n;p2_is_hbind_q<=p2_is_hbind_n;
             if (hdc_src0_acc_we) begin
-                hdc_src0_q[0]<=hdc_src0_q[0] ^ xor0_contribution_packet[0];
-                hdc_src0_q[1]<=hdc_src0_q[1] ^ xor0_contribution_packet[1];
-                hdc_src0_q[2]<=hdc_src0_q[2] ^ xor0_contribution_packet[2];
-                hdc_src0_q[3]<={23'b0, hdc_src0_q[3][40:0] ^ xor0_contribution_packet[3][40:0]};
+                hdc_src0_q[0]<=xor0_field_packet[63:0];
+                hdc_src0_q[1]<=xor0_field_packet[127:64];
+                hdc_src0_q[2]<=xor0_field_packet[191:128];
+                hdc_src0_q[3]<={23'b0, xor0_field_packet[232:192]};
             end else if (hdc_src0_we) begin
                 hdc_src0_q<=hdc_src0_n;
             end
@@ -2737,7 +2493,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             ecc_src_a_q<=ecc_src_a_n;ecc_src_b_q<=ecc_src_b_n;ecc_dst_q<=ecc_dst_n;ecc_acc_dst_q<=ecc_acc_dst_n;
             ecc_leaf_a_q<=ecc_leaf_a_n;ecc_leaf_b_q<=ecc_leaf_b_n;ecc_leaf_prod_q<=ecc_leaf_prod_n;ecc_leaf_path_q<=ecc_leaf_path_n;ecc_fold_word_q<=ecc_fold_word_n;
             ecc_diag_group_q<=ecc_diag_group_n;
-            ecc_reduce_parity_q<=ecc_reduce_parity_n;ecc_reduce_group_q<=ecc_reduce_group_n;ecc_reduce_slot_q<=ecc_reduce_slot_n;
             ecc_leaf_xor_a_q<=ecc_leaf_xor_a_n;ecc_leaf_xor_b_q<=ecc_leaf_xor_b_n;ecc_leaf128_prod_q<=ecc_leaf128_prod_n;ecc_kpd64_sub_q<=ecc_kpd64_sub_n;
             ecc_autoreduce_q<=ecc_autoreduce_n;ecc_raw_product_q<=ecc_raw_product_n;
             ecc_mac_q<=ecc_mac_n;ecc_sqr_repeat_q<=ecc_sqr_repeat_n;
