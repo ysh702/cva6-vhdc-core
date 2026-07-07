@@ -160,6 +160,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     logic [2:0]           ecc_diag_group_q, ecc_diag_group_n;
     logic [2:0]           ecc_diag_issue_group;
     logic                 ecc_diag_product_issue;
+    logic                 ecc_diag_group7_lookahead_issue;
     logic [31:0]          ecc_leaf_b_matrix_rev;
     logic [31:0]          ecc_bitband_src_a;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] ecc_bitband_src_b;
@@ -291,11 +292,18 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     assign ecc_pmul_const_one_from_dst = (ecc_dst_q == ECC_PMUL_R0X)
                                       || (ecc_dst_q == ECC_PMUL_R1Z)
                                       || (ecc_dst_q == ECC_PMUL_T9);
+    assign ecc_diag_group7_lookahead_issue = (st_q == S_ECC_DIAG_CAPTURE)
+                                          && (ecc_diag_group_q == 3'd7)
+                                          && (ecc_kpd64_sub_q < 2'd2);
     assign ecc_diag_product_issue = (st_q == S_ECC_DIAG_ISSUE)
-                                 || ((st_q == S_ECC_DIAG_CAPTURE) && (ecc_diag_group_q != 3'd7));
-    assign ecc_diag_issue_group = (st_q == S_ECC_DIAG_CAPTURE)
-                                ? (ecc_diag_group_q + 3'd1)
-                                : ecc_diag_group_q;
+                                 || ((st_q == S_ECC_DIAG_CAPTURE)
+                                     && ((ecc_diag_group_q != 3'd7)
+                                         || ecc_diag_group7_lookahead_issue));
+    assign ecc_diag_issue_group = ((st_q == S_ECC_DIAG_CAPTURE) && (ecc_diag_group_q == 3'd7))
+                                ? 3'd0
+                                : ((st_q == S_ECC_DIAG_CAPTURE)
+                                   ? (ecc_diag_group_q + 3'd1)
+                                   : ecc_diag_group_q);
     assign ecc_leaf_b_matrix_rev = ecc_leaf_b_q;
     assign ecc_bitband_src_a = ecc_leaf_a_q;
     assign ecc_bitband_src_b = ecc_diag32_bitband_b_words(ecc_leaf_b_matrix_rev, ecc_diag_issue_group);
@@ -1489,16 +1497,9 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                 if (ecc_kpd64_sub_q < 2'd2) begin
                     ecc_leaf128_prod_n = ecc_sub32_capture_accum_xor1;
                     ecc_kpd64_sub_n = ecc_kpd64_sub_q + 2'd1;
-                    if (ecc_kpd64_sub_q == 2'd0) begin
-                        ecc_leaf_a_n = ecc_leaf_a_lowxor_xor1;
-                        ecc_leaf_b_n = ecc_leaf_b_lowxor_xor1;
-                    end else begin
-                        ecc_leaf_a_n = ecc_leaf_xor_a_q;
-                        ecc_leaf_b_n = ecc_leaf_xor_b_q;
-                    end
                     ecc_leaf_prod_n = '0;
                     ecc_diag_group_n = '0;
-                    st_n=S_ECC_DIAG_ISSUE;
+                    st_n=S_ECC_DIAG_CAPTURE;
                 end else begin
                     ecc_leaf128_prod_n = ecc_sub32_capture_accum_xor1;
                     ecc_kpd64_sub_n = 2'd3;
@@ -1509,6 +1510,15 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                     st_n=S_ECC_LEAF_FOLD;
                 end
             end else begin
+                if (ecc_diag_group_q == 3'd6) begin
+                    if (ecc_kpd64_sub_q == 2'd0) begin
+                        ecc_leaf_a_n = ecc_leaf_a_lowxor_xor1;
+                        ecc_leaf_b_n = ecc_leaf_b_lowxor_xor1;
+                    end else if (ecc_kpd64_sub_q == 2'd1) begin
+                        ecc_leaf_a_n = ecc_leaf_xor_a_q;
+                        ecc_leaf_b_n = ecc_leaf_xor_b_q;
+                    end
+                end
                 ecc_diag_group_n = ecc_diag_group_q + 3'd1;
                 st_n=S_ECC_DIAG_CAPTURE;
             end
@@ -2399,8 +2409,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         default: st_n=S_IDLE;
         endcase
 
-        // ECC diagonal products are accumulated in S_ECC_DIAG_ISSUE through the
-        // shared bit-band AND/popcount view of i_vec.
+        // ECC diagonal products use the shared payload register as the matrix
+        // cut; group7 captures the old payload while preissuing the next group0.
 
         unique case (st_q)
         S_EXEC: begin
