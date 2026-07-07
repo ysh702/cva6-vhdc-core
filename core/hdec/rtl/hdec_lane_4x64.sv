@@ -199,9 +199,29 @@ module hdec_gf2_contribution_row_tile_8x32
     output logic [LANE_NUM*2-1:0]       matrix_xor_parity_o
 );
 
+    function automatic logic [3:0] hdec_popcount8_fixed(input logic [7:0] bits);
+        hdec_popcount8_fixed =
+            4'(bits[0]) + 4'(bits[1]) + 4'(bits[2]) + 4'(bits[3]) +
+            4'(bits[4]) + 4'(bits[5]) + 4'(bits[6]) + 4'(bits[7]);
+    endfunction
+
+    function automatic logic [5:0] hdec_popcount32_fixed(input logic [31:0] bits);
+        logic [3:0] c0;
+        logic [3:0] c1;
+        logic [3:0] c2;
+        logic [3:0] c3;
+        begin
+            c0 = hdec_popcount8_fixed(bits[7:0]);
+            c1 = hdec_popcount8_fixed(bits[15:8]);
+            c2 = hdec_popcount8_fixed(bits[23:16]);
+            c3 = hdec_popcount8_fixed(bits[31:24]);
+            hdec_popcount32_fixed = 6'(c0) + 6'(c1) + 6'(c2) + 6'(c3);
+        end
+    endfunction
+
     for (genvar rid = 0; rid < LANE_NUM*2; rid++) begin : gen_bitmatrix_row
         assign matrix_product_o[rid] = matrix_src_a_i[rid] & matrix_src_b_i[rid];
-        assign matrix_count_o[rid] = 6'($countones(matrix_product_q_i[rid]));
+        assign matrix_count_o[rid] = hdec_popcount32_fixed(matrix_product_q_i[rid]);
         assign matrix_parity_o[rid] = matrix_count_o[rid][0];
         assign matrix_xor_parity_o[rid] = ^matrix_product_q_i[rid];
     end
