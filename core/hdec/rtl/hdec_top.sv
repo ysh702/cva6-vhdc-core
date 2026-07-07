@@ -247,6 +247,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     logic [VRF_IDX_W-1:0] ecc_pmul_add_out_z;
     logic [VRF_IDX_W-1:0] ecc_pmul_dbl_x;
     logic [VRF_IDX_W-1:0] ecc_pmul_dbl_z;
+    logic                 ecc_pmul_scalar_bit_w;
 
     // ── Combinational helpers ───────────────────────────────────────────────
     assign interleave_active = ecc_job_bg_q;
@@ -292,6 +293,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     assign ecc_pmul_const_one_from_dst = (ecc_dst_q == ECC_PMUL_R0X)
                                       || (ecc_dst_q == ECC_PMUL_R1Z)
                                       || (ecc_dst_q == ECC_PMUL_T9);
+    assign ecc_pmul_scalar_bit_w = ecc_scalar_bit_from_row(vrf_rd, ecc_pmul_bit_q);
     assign ecc_diag_group7_lookahead_issue = (st_q == S_ECC_DIAG_CAPTURE)
                                           && (ecc_diag_group_q == 3'd7)
                                           && (ecc_kpd64_sub_q < 2'd2);
@@ -353,12 +355,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
 
     function automatic logic ecc_scalar_bit_from_row(input logic [3:0][63:0] row,
                                                      input logic [7:0] bit_idx);
-        unique case (bit_idx[7:6])
-            2'd0: ecc_scalar_bit_from_row = row[0][bit_idx[5:0]];
-            2'd1: ecc_scalar_bit_from_row = row[1][bit_idx[5:0]];
-            2'd2: ecc_scalar_bit_from_row = row[2][bit_idx[5:0]];
-            default: ecc_scalar_bit_from_row = row[3][bit_idx[5:0]];
-        endcase
+        ecc_scalar_bit_from_row = row[bit_idx[7:6]][bit_idx[5:0]];
     endfunction
 
     function automatic logic [63:0] hperm_pick_word(input logic [2:0] sel, input logic [3:0][63:0] blk_a, input logic [3:0][63:0] blk_b);
@@ -1782,12 +1779,25 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         end
 
         S_ECC_PMUL_READ_SCALAR: begin
-            ecc_pmul_scalar_bit_n=ecc_scalar_bit_from_row(vrf_rd, ecc_pmul_bit_q);
             ecc_pmul_step_n='0;
-            if (ecc_scalar_bit_from_row(vrf_rd, ecc_pmul_bit_q))
-                ecc_pmul_r0_inf_n=1'b0;
-            ecc_pmul_subop_n=ECC_PMUL_SUB_ADD;
-            st_n=S_ECC_PMUL_STEP;
+            if (ecc_pmul_r0_inf_q
+             && !ecc_pmul_scalar_bit_w
+             && (|ecc_pmul_bit_q)) begin
+                ecc_pmul_bit_n=ecc_pmul_bit_q - 8'd1;
+                vrf_req.ra=ecc_job_src_q;
+                st_n=S_ECC_PMUL_READ_SCALAR_WAIT;
+            end else begin
+                ecc_pmul_scalar_bit_n=ecc_pmul_scalar_bit_w;
+                if (ecc_pmul_scalar_bit_w) begin
+                    ecc_pmul_r0_inf_n=1'b0;
+                    ecc_pmul_subop_n=ECC_PMUL_SUB_ADD;
+                end else if (ecc_pmul_r0_inf_q) begin
+                    ecc_pmul_subop_n=ECC_PMUL_SUB_ZERO_OUT;
+                end else begin
+                    ecc_pmul_subop_n=ECC_PMUL_SUB_ADD;
+                end
+                st_n=S_ECC_PMUL_STEP;
+            end
         end
 
         S_ECC_PMUL_STEP: begin
