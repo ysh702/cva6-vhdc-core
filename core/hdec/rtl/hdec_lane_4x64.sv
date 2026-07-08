@@ -195,8 +195,7 @@ module hdec_gf2_contribution_row_tile_8x32
 
     output logic [LANE_NUM*2-1:0][31:0] matrix_product_o,
     output logic [LANE_NUM*2-1:0][5:0]  matrix_count_o,
-    output logic [LANE_NUM*2-1:0]       matrix_parity_o,
-    output logic [LANE_NUM*2-1:0]       matrix_xor_parity_o
+    output logic [LANE_NUM*2-1:0]       matrix_parity_o
 );
 
     function automatic logic [3:0] hdec_popcount8_fixed(input logic [7:0] bits);
@@ -206,24 +205,13 @@ module hdec_gf2_contribution_row_tile_8x32
     endfunction
 
     function automatic logic [5:0] hdec_popcount32_fixed(input logic [31:0] bits);
-        logic [3:0] c0;
-        logic [3:0] c1;
-        logic [3:0] c2;
-        logic [3:0] c3;
-        begin
-            c0 = hdec_popcount8_fixed(bits[7:0]);
-            c1 = hdec_popcount8_fixed(bits[15:8]);
-            c2 = hdec_popcount8_fixed(bits[23:16]);
-            c3 = hdec_popcount8_fixed(bits[31:24]);
-            hdec_popcount32_fixed = 6'(c0) + 6'(c1) + 6'(c2) + 6'(c3);
-        end
+        hdec_popcount32_fixed = 6'($countones(bits));
     endfunction
 
     for (genvar rid = 0; rid < LANE_NUM*2; rid++) begin : gen_bitmatrix_row
         assign matrix_product_o[rid] = matrix_src_a_i[rid] & matrix_src_b_i[rid];
         assign matrix_count_o[rid] = hdec_popcount32_fixed(matrix_product_q_i[rid]);
         assign matrix_parity_o[rid] = matrix_count_o[rid][0];
-        assign matrix_xor_parity_o[rid] = ^matrix_product_q_i[rid];
     end
 
 endmodule
@@ -282,7 +270,6 @@ module hdec_vector_payload_4x64
     logic [LANE_NUM*2-1:0]               bitband_pair_parity_q;
     logic [LANE_NUM*2-1:0][5:0]          matrix_count;
     logic [LANE_NUM*2-1:0]               matrix_parity;
-    logic [LANE_NUM*2-1:0]               matrix_xor_parity;
     logic [LANE_NUM-1:0][1:0][5:0]       matrix_count_by_lane;
     logic [LANE_NUM-1:0][1:0][5:0]       popcount_part_q;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] cnt_new_counter;
@@ -329,14 +316,10 @@ module hdec_vector_payload_4x64
         assign tile_product_word[lid] = {matrix_product[ROW_HI], matrix_product[ROW_LO]};
         assign matrix_count_by_lane[lid][0] = matrix_count[ROW_LO];
         assign matrix_count_by_lane[lid][1] = matrix_count[ROW_HI];
-        // ECC diagonal rows share the same bit-matrix AND plane.  Low rows use
-        // the HDC overlap counter LSB, while high rows use the row XOR parity
-        // path, giving polynomial multiplication both AND+popcount and AND+XOR
-        // routes without per-lane control.
-        assign bitband_parity_o[ROW_LO] = (ROW_LO < 4) ? matrix_parity[ROW_LO]
-                                                       : matrix_xor_parity[ROW_LO];
-        assign bitband_parity_o[ROW_HI] = (ROW_HI < 4) ? matrix_parity[ROW_HI]
-                                                       : matrix_xor_parity[ROW_HI];
+        // In GF(2), popcount(row)[0] is the same parity as XOR-reducing row.
+        // HDC counts and ECC diagonal parity therefore share one bit-matrix row result.
+        assign bitband_parity_o[ROW_LO] = matrix_parity[ROW_LO];
+        assign bitband_parity_o[ROW_HI] = matrix_parity[ROW_HI];
 
         hdec_cnt_array i_cnt_array (
             .old_counter_i   (cnt_old_counter_i[lid]),
@@ -358,8 +341,7 @@ module hdec_vector_payload_4x64
         .matrix_product_q_i  (matrix_product_q),
         .matrix_product_o    (matrix_product),
         .matrix_count_o      (matrix_count),
-        .matrix_parity_o     (matrix_parity),
-        .matrix_xor_parity_o (matrix_xor_parity)
+        .matrix_parity_o     (matrix_parity)
     );
 
     always_ff @(posedge clk_i or negedge rst_ni) begin
