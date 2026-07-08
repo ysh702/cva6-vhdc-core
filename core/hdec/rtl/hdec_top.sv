@@ -170,7 +170,10 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     logic                 ecc_diag_pair_mode;
     logic                 ecc_diag_pair_sub_done;
     logic                 ecc_diag_sub_shadow_mode;
+    logic                 ecc_diag_delayed_reduce_mode;
     logic                 ecc_diag_sub_shadow_acc_cycle;
+    logic                 ecc_pair_token_fold_mode;
+    logic                 ecc_pair_token_acc_cycle;
     logic                 ecc_diag_next_leaf_a_capture;
     logic                 ecc_diag_next_leaf_b_capture;
     logic [31:0]          ecc_leaf_b_matrix_rev;
@@ -179,6 +182,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] ecc_bitband_pair_src_b;
     logic [LANE_NUM*2-1:0]               ecc_bitband_parity_row;
     logic [LANE_NUM*2-1:0]               ecc_bitband_pair_parity_row;
+    logic [63:0]                         ecc_pair_prod_token_w;
+    logic [127:0]                        ecc_pair_delta_w;
     logic                                ecc_autoreduce_fast;
     logic [5:0]           ecc_leaf_path_q, ecc_leaf_path_n;
     logic [5:0]           ecc_next_leaf_path;
@@ -327,11 +332,13 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                                           && ((ecc_kpd64_sub_q < 2'd2)
                                            || (ecc_diag_sub_shadow_mode && !ecc_leaf_last));
     assign ecc_autoreduce_fast = ecc_autoreduce_q && !ECC_DEBUG_FIELD_OPS;
+    assign ecc_pair_token_fold_mode = !ECC_DEBUG_FIELD_OPS;
     assign ecc_diag_pair_mode = ECC_DEBUG_FIELD_OPS ? ecc_autoreduce_fast : 1'b1;
     assign ecc_diag_pair_sub_done = ecc_diag_pair_mode && (ecc_diag_group_q == 3'd6);
     assign ecc_diag_sub_shadow_mode = ecc_autoreduce_fast;
+    assign ecc_diag_delayed_reduce_mode = ecc_diag_sub_shadow_mode && !ecc_pair_token_fold_mode;
     assign ecc_diag_sub_shadow_acc_cycle =
-        ecc_diag_sub_shadow_mode
+        ecc_diag_delayed_reduce_mode
         && (ecc_diag_pair_mode
             ? (((st_q == S_ECC_DIAG_ISSUE) && (ecc_kpd64_sub_q != 2'd0))
                || (st_q == S_ECC_LEAF_FOLD))
@@ -342,6 +349,13 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                     && (ecc_diag_group_q == 3'd0)
                     && (ecc_kpd64_sub_q == 2'd3))
                 || (st_q == S_ECC_LEAF_FOLD))));
+    assign ecc_pair_token_acc_cycle =
+        ecc_pair_token_fold_mode
+        && ecc_autoreduce_q
+        && ecc_diag_pair_mode
+        && (((st_q == S_ECC_DIAG_CAPTURE) && (ecc_diag_group_q != 3'd0))
+            || ((st_q == S_ECC_DIAG_ISSUE) && (ecc_kpd64_sub_q != 2'd0))
+            || (st_q == S_ECC_LEAF_FOLD));
     assign ecc_diag_product_issue =
         ecc_diag_pair_mode
         ? ((st_q == S_ECC_DIAG_ISSUE)
@@ -1070,6 +1084,30 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         end
     endfunction
 
+    function automatic logic [LANE_NUM-1:0][LANE_WIDTH-1:0] ecc_kpd64_diag_pair_reduce_packet(
+        input logic [3:0]   path,
+        input logic [1:0]   sub_idx,
+        input logic [2:0]   group_idx,
+        input logic [LANE_NUM*2-1:0] even_parity_row,
+        input logic [LANE_NUM*2-1:0] odd_parity_row
+    );
+        logic [63:0]  pair_product;
+        logic [127:0] pair_delta;
+        begin
+            pair_product = ecc_diag32_leaf_store_pair_bitband(
+                '0,
+                group_idx,
+                even_parity_row,
+                odd_parity_row
+            );
+            pair_delta = ecc_kpd64_sub32_delta(sub_idx, pair_product);
+            ecc_kpd64_diag_pair_reduce_packet = ecc_kpd64_leaf_reduce_packet(
+                ecc_kpd64_leaf_offset_mask(path),
+                pair_delta
+            );
+        end
+    endfunction
+
     // synthesis translate_off
     function automatic logic [127:0] ecc_kpd64_diag_group_leaf_delta(
         input logic [1:0]   sub_idx,
@@ -1117,6 +1155,66 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             );
         end
     endfunction
+
+    logic [LANE_NUM-1:0][LANE_WIDTH-1:0] ecc_pair_reduce_shadow_q;
+    logic [LANE_NUM-1:0][LANE_WIDTH-1:0] ecc_pair_reduce_shadow_next;
+    logic [LANE_NUM-1:0][LANE_WIDTH-1:0] ecc_pair_reduce_packet_w;
+    logic [LANE_NUM-1:0][LANE_WIDTH-1:0] ecc_pair_reduce_reference_w;
+    logic [63:0]                         ecc_pair_product_shadow_q;
+    logic [63:0]                         ecc_pair_product_shadow_next;
+
+    assign ecc_pair_reduce_packet_w = ecc_kpd64_diag_pair_reduce_packet(
+        ecc_leaf_path_q[3:0],
+        ecc_kpd64_sub_q,
+        ecc_diag_group_q,
+        ecc_bitband_parity_row,
+        ecc_bitband_pair_parity_row
+    );
+
+    assign ecc_pair_product_shadow_next = ecc_diag32_leaf_store_pair_bitband(
+        ecc_pair_product_shadow_q,
+        ecc_diag_group_q,
+        ecc_bitband_parity_row,
+        ecc_bitband_pair_parity_row
+    );
+
+    assign ecc_pair_reduce_reference_w = ecc_kpd64_leaf_reduce_packet(
+        ecc_kpd64_leaf_offset_mask(ecc_leaf_path_q[3:0]),
+        ecc_kpd64_sub32_delta(ecc_kpd64_sub_q, ecc_pair_product_shadow_next)
+    );
+
+    assign ecc_pair_reduce_shadow_next =
+        ecc_pair_reduce_shadow_q ^ ecc_pair_reduce_packet_w;
+
+    always_ff @(posedge clk_i or negedge rst_ni) begin
+        if (!rst_ni) begin
+            ecc_pair_reduce_shadow_q <= '0;
+            ecc_pair_product_shadow_q <= '0;
+        end else begin
+            if (st_q == S_ECC_LOAD_B) begin
+                ecc_pair_reduce_shadow_q <= '0;
+                ecc_pair_product_shadow_q <= '0;
+            end else if (ecc_autoreduce_q
+                      && ecc_diag_pair_mode
+                      && (st_q == S_ECC_DIAG_CAPTURE)) begin
+                if (ecc_diag_pair_sub_done) begin
+                    if (ecc_pair_reduce_shadow_next !== ecc_pair_reduce_reference_w) begin
+                        $error("VV20 pair-token reduce mismatch path=%0d sub=%0d group=%0d shadow=%h reference=%h",
+                               ecc_leaf_path_q[3:0],
+                               ecc_kpd64_sub_q,
+                               ecc_diag_group_q,
+                               ecc_pair_reduce_shadow_next,
+                               ecc_pair_reduce_reference_w);
+                    end
+                    ecc_pair_reduce_shadow_q <= '0;
+                    ecc_pair_product_shadow_q <= '0;
+                end else begin
+                    ecc_pair_reduce_shadow_q <= ecc_pair_reduce_shadow_next;
+                    ecc_pair_product_shadow_q <= ecc_pair_product_shadow_next;
+                end
+            end
+        end
+    end
     // synthesis translate_on
 
     assign ecc_leaf_prod_store_w = ecc_diag32_leaf_store_bitband(
@@ -1147,6 +1245,16 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     assign ecc_direct_reduce_word = ecc_kpd64_leaf_reduce_packet(
         ecc_leaf64_offset_mask,
         ecc_leaf128_prod_q
+    );
+    assign ecc_pair_prod_token_w = ecc_diag32_leaf_store_pair_bitband(
+        '0,
+        ecc_diag_group_q,
+        ecc_bitband_parity_row,
+        ecc_bitband_pair_parity_row
+    );
+    assign ecc_pair_delta_w = ecc_kpd64_sub32_delta(
+        ecc_kpd64_sub_q,
+        ecc_pair_prod_token_w
     );
     always_comb begin
         xor0_contribution_packet = 'x;
@@ -1648,7 +1756,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         end
 
         S_ECC_DIAG_ISSUE: begin
-            if (ecc_diag_sub_shadow_acc_cycle) begin
+            if (ecc_pair_token_acc_cycle || ecc_diag_sub_shadow_acc_cycle) begin
                 hdc_src0_acc_we=1'b1;
             end
             if (ecc_diag_pair_mode && !ecc_leaf_last && (ecc_kpd64_sub_q == 2'd2)) begin
@@ -1662,13 +1770,15 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         end
 
         S_ECC_DIAG_CAPTURE: begin
-            if (ecc_diag_sub_shadow_acc_cycle) begin
+            if (ecc_pair_token_acc_cycle || ecc_diag_sub_shadow_acc_cycle) begin
                 hdc_src0_acc_we=1'b1;
             end
-            ecc_leaf_prod_n = ecc_diag_pair_mode
-                            ? ecc_leaf_prod_pair_w
-                            : ((ecc_diag_group_q == 3'd7) ? ecc_leaf_prod_group7_w
-                                                          : ecc_leaf_prod_store_w);
+            ecc_leaf_prod_n = ecc_pair_token_fold_mode
+                            ? '0
+                            : (ecc_diag_pair_mode
+                               ? ecc_leaf_prod_pair_w
+                               : ((ecc_diag_group_q == 3'd7) ? ecc_leaf_prod_group7_w
+                                                             : ecc_leaf_prod_store_w));
             if (ecc_diag_pair_sub_done) begin
                 if (ecc_kpd64_sub_q == 2'd0) begin
                     ecc_leaf_a_n = ecc_leaf_a_lowxor_xor1;
@@ -1683,7 +1793,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                     ecc_leaf_xor_b_n = ecc_bitrev32_top(ecc_leaf_lowxor_rd[63:32]);
                 end
 
-                ecc_leaf128_prod_n = ecc_diag_sub_delta_w;
+                ecc_leaf128_prod_n = ecc_pair_token_fold_mode ? ecc_pair_delta_w
+                                                              : ecc_diag_sub_delta_w;
                 ecc_leaf_prod_n = '0;
                 ecc_diag_group_n = '0;
                 if (ecc_kpd64_sub_q < 2'd2) begin
@@ -1763,6 +1874,9 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                     ecc_kpd64_sub_n = 2'd0;
                     ecc_leaf_path_n = ecc_next_leaf_path;
                     ecc_leaf128_prod_n = '0;
+                end
+                if (ecc_pair_token_fold_mode) begin
+                    ecc_leaf128_prod_n = ecc_pair_delta_w;
                 end
                 ecc_diag_group_n = ecc_diag_group_q + (ecc_diag_pair_mode ? 3'd2 : 3'd1);
                 st_n=S_ECC_DIAG_CAPTURE;
