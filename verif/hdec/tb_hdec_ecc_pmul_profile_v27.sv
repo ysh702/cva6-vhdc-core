@@ -3,20 +3,21 @@ module tb_hdec_ecc_pmul_profile_v27;
 
     localparam int ST_RD_WAIT                 = 3;
     localparam int ST_UOP_P1_RD0              = 10;
-    localparam int ST_ECC_LOAD_A_WAIT         = 21;
-    localparam int ST_ECC_LOAD_A              = 22;
-    localparam int ST_ECC_LOAD_B_WAIT         = 23;
-    localparam int ST_ECC_LOAD_B              = 24;
-    localparam int ST_ECC_DIAG_ISSUE          = 25;
-    localparam int ST_ECC_DIAG_WAIT           = 26;
-    localparam int ST_ECC_LEAF_FOLD           = 27;
-    localparam int ST_ECC_WRITE_PAIR          = 28;
-    localparam int ST_ECC_WRITE_DRAIN         = 29;
-    localparam int ST_ECC_REDUCE_LOAD_LO_WAIT = 30;
-    localparam int ST_ECC_REDUCE_LOAD_LO      = 31;
-    localparam int ST_ECC_REDUCE_LOAD_HI_WAIT = 32;
-    localparam int ST_ECC_REDUCE_WRITE        = 33;
-    localparam int ST_ECC_INV_INIT            = 34;
+    localparam int ST_UOP_CLIP_WRITE          = 21;
+    localparam int ST_ECC_LOAD_A_WAIT         = 22;
+    localparam int ST_ECC_LOAD_A              = 23;
+    localparam int ST_ECC_LOAD_B_WAIT         = 24;
+    localparam int ST_ECC_LOAD_B              = 25;
+    localparam int ST_ECC_DIAG_ISSUE          = 26;
+    localparam int ST_ECC_DIAG_CAPTURE        = 27;
+    localparam int ST_ECC_LEAF_FOLD           = 28;
+    localparam int ST_ECC_WRITE_PAIR          = 29;
+    localparam int ST_ECC_WRITE_DRAIN         = 30;
+    localparam int ST_ECC_REDUCE_LOAD_LO_WAIT = 31;
+    localparam int ST_ECC_REDUCE_LOAD_LO      = 32;
+    localparam int ST_ECC_REDUCE_LOAD_HI_WAIT = 33;
+    localparam int ST_ECC_REDUCE_WRITE        = 34;
+    localparam int ST_ECC_INV_INIT            = 35;
 
     localparam int PH_INV_SQR                 = 1;
     localparam int PH_INV_MUL                 = 2;
@@ -207,7 +208,7 @@ module tb_hdec_ecc_pmul_profile_v27;
                 ST_ECC_LOAD_B:
                     st_ecc_load_cycles++;
                 ST_ECC_DIAG_ISSUE,
-                ST_ECC_DIAG_WAIT:
+                ST_ECC_DIAG_CAPTURE:
                     st_ecc_diag_cycles++;
                 ST_ECC_LEAF_FOLD:
                     st_ecc_leaf_fold_cycles++;

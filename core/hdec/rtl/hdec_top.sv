@@ -157,10 +157,14 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     logic [63:0]          ecc_leaf_prod_store_w;
     logic [63:0]          ecc_leaf_prod_group7_w;
     logic [127:0]         ecc_sub32_capture_accum_xor1;
+    logic [127:0]         ecc_diag_sub_delta_w;
     logic [2:0]           ecc_diag_group_q, ecc_diag_group_n;
     logic [2:0]           ecc_diag_issue_group;
     logic                 ecc_diag_product_issue;
     logic                 ecc_diag_group7_lookahead_issue;
+    logic                 ecc_diag_sub_shadow_mode;
+    logic                 ecc_diag_sub_shadow_acc_cycle;
+    logic                 ecc_diag_next_leaf_a_capture;
     logic [31:0]          ecc_leaf_b_matrix_rev;
     logic [31:0]          ecc_bitband_src_a;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] ecc_bitband_src_b;
@@ -271,7 +275,13 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     assign uop_p2_use_shift   = (uop_p2_q.op_type == UOP_HPERM_CHUNK);
     assign uop_p2_use_clip    = (uop_p2_q.op_type == UOP_HCNTCLIP_READ);
     assign ecc_next_leaf_path = {2'b00, ecc_kpd64_path_inc(ecc_leaf_path_q[3:0])};
-    assign ecc_leaf_read_path = (st_q == S_ECC_LEAF_FOLD) ? ecc_next_leaf_path[3:0] : ecc_leaf_path_q[3:0];
+    assign ecc_diag_next_leaf_a_capture = ecc_diag_sub_shadow_mode
+                                       && (st_q == S_ECC_DIAG_CAPTURE)
+                                       && (ecc_diag_group_q == 3'd7)
+                                       && (ecc_kpd64_sub_q == 2'd2)
+                                       && !ecc_leaf_last;
+    assign ecc_leaf_read_path = ((st_q == S_ECC_LEAF_FOLD) || ecc_diag_next_leaf_a_capture)
+                              ? ecc_next_leaf_path[3:0] : ecc_leaf_path_q[3:0];
     assign ecc_leaf_lowxor_rd = ecc_kpd64_leaf_lowxor_pack({vrf_rd[3], vrf_rd[2], vrf_rd[1], vrf_rd[0]}, ecc_leaf_read_path);
     assign ecc_leaf_first = (ecc_leaf_path_q[3:0] == 4'b00_00);
     assign ecc_leaf_last  = (ecc_leaf_path_q[3:0] == 4'b10_10);
@@ -297,10 +307,17 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                                           && (ecc_diag_group_q == 3'd7)
                                           && (ecc_kpd64_sub_q < 2'd2);
     assign ecc_autoreduce_fast = ecc_autoreduce_q && !ECC_DEBUG_FIELD_OPS;
+    assign ecc_diag_sub_shadow_mode = ecc_autoreduce_fast;
+    assign ecc_diag_sub_shadow_acc_cycle =
+        ecc_diag_sub_shadow_mode
+        && (((st_q == S_ECC_DIAG_CAPTURE)
+             && (ecc_diag_group_q == 3'd7)
+             && (ecc_kpd64_sub_q != 2'd0))
+            || (st_q == S_ECC_LEAF_FOLD));
     assign ecc_diag_product_issue = (st_q == S_ECC_DIAG_ISSUE)
                                  || ((st_q == S_ECC_DIAG_CAPTURE)
                                      && ((ecc_diag_group_q != 3'd7)
-                                         || ecc_diag_group7_lookahead_issue));
+                                          || ecc_diag_group7_lookahead_issue));
     assign ecc_diag_issue_group = ((st_q == S_ECC_DIAG_CAPTURE) && (ecc_diag_group_q == 3'd7))
                                 ? 3'd0
                                 : ((st_q == S_ECC_DIAG_CAPTURE)
@@ -914,6 +931,24 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         end
     endfunction
 
+    function automatic logic [127:0] ecc_kpd64_sub32_delta(
+        input logic [1:0]   sub_idx,
+        input logic [63:0]  sub_product
+    );
+        logic [31:0] sub_lo;
+        logic [31:0] sub_hi;
+        begin
+            sub_lo = sub_product[31:0];
+            sub_hi = sub_product[63:32];
+            unique case (sub_idx)
+                2'd0: ecc_kpd64_sub32_delta = {32'b0, sub_hi, sub_hi ^ sub_lo, sub_lo};
+                2'd1: ecc_kpd64_sub32_delta = {sub_hi, sub_hi ^ sub_lo, sub_lo, 32'b0};
+                2'd2: ecc_kpd64_sub32_delta = {32'b0, sub_hi, sub_lo, 32'b0};
+                default: ecc_kpd64_sub32_delta = '0;
+            endcase
+        end
+    endfunction
+
     function automatic logic [LANE_NUM-1:0][LANE_WIDTH-1:0] ecc_kpd64_fold_reduce_packet(
         input logic [6:0]   mask,
         input logic [1:0]   fold_word,
@@ -974,6 +1009,55 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         end
     endfunction
 
+    // synthesis translate_off
+    function automatic logic [127:0] ecc_kpd64_diag_group_leaf_delta(
+        input logic [1:0]   sub_idx,
+        input logic [2:0]   group_idx,
+        input logic [LANE_NUM*2-1:0] parity_row
+    );
+        logic [63:0] group_product;
+        begin
+            group_product = ecc_diag32_leaf_store_bitband('0, group_idx, parity_row);
+            ecc_kpd64_diag_group_leaf_delta =
+                ecc_kpd64_sub32_delta(sub_idx, group_product);
+        end
+    endfunction
+
+    function automatic logic [LANE_NUM-1:0][LANE_WIDTH-1:0] ecc_kpd64_diag_reduce_packet(
+        input logic [3:0]   path,
+        input logic [1:0]   sub_idx,
+        input logic [2:0]   group_idx,
+        input logic [LANE_NUM*2-1:0] parity_row,
+        input logic [1:0]   fold_word
+    );
+        logic [127:0] leaf_delta;
+        begin
+            leaf_delta = ecc_kpd64_diag_group_leaf_delta(sub_idx, group_idx, parity_row);
+            ecc_kpd64_diag_reduce_packet = ecc_kpd64_fold_reduce_packet(
+                ecc_kpd64_leaf_offset_mask(path),
+                fold_word,
+                leaf_delta
+            );
+        end
+    endfunction
+
+    function automatic logic [LANE_NUM-1:0][LANE_WIDTH-1:0] ecc_kpd64_diag_group_reduce_packet(
+        input logic [3:0]   path,
+        input logic [1:0]   sub_idx,
+        input logic [2:0]   group_idx,
+        input logic [LANE_NUM*2-1:0] parity_row
+    );
+        logic [127:0] leaf_delta;
+        begin
+            leaf_delta = ecc_kpd64_diag_group_leaf_delta(sub_idx, group_idx, parity_row);
+            ecc_kpd64_diag_group_reduce_packet = ecc_kpd64_leaf_reduce_packet(
+                ecc_kpd64_leaf_offset_mask(path),
+                leaf_delta
+            );
+        end
+    endfunction
+    // synthesis translate_on
+
     assign ecc_leaf_prod_store_w = ecc_diag32_leaf_store_bitband(
         ecc_leaf_prod_q,
         ecc_diag_group_q,
@@ -985,6 +1069,10 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         ecc_kpd64_sub_q,
         ecc_leaf_prod_group7_w
     );
+    assign ecc_diag_sub_delta_w = ecc_kpd64_sub32_delta(
+        ecc_kpd64_sub_q,
+        ecc_leaf_prod_group7_w
+    );
     assign ecc_leaf_a_lowxor_xor1 = ecc_leaf_a_q ^ ecc_leaf_xor_a_q;
     assign ecc_leaf_b_lowxor_xor1 = ecc_leaf_b_q ^ ecc_leaf_xor_b_q;
 
@@ -992,7 +1080,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         ecc_leaf64_offset_mask,
         ecc_leaf128_prod_q
     );
-
     always_comb begin
         xor0_contribution_packet = 'x;
         if (hdc_xor_issue) begin
@@ -1493,30 +1580,47 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         end
 
         S_ECC_DIAG_CAPTURE: begin
+            if (ecc_diag_sub_shadow_acc_cycle) begin
+                hdc_src0_acc_we=1'b1;
+            end
             ecc_leaf_prod_n = (ecc_diag_group_q == 3'd7) ? ecc_leaf_prod_group7_w
                                                          : ecc_leaf_prod_store_w;
             if (ecc_diag_group_q == 3'd7) begin
                 if (ecc_kpd64_sub_q < 2'd2) begin
-                    ecc_leaf128_prod_n = ecc_sub32_capture_accum_xor1;
+                    if (ECC_DEBUG_FIELD_OPS && !ecc_diag_sub_shadow_mode)
+                        ecc_leaf128_prod_n = ecc_sub32_capture_accum_xor1;
+                    else
+                        ecc_leaf128_prod_n = ecc_diag_sub_delta_w;
                     ecc_kpd64_sub_n = ecc_kpd64_sub_q + 2'd1;
                     ecc_leaf_prod_n = '0;
                     ecc_diag_group_n = '0;
                     st_n=S_ECC_DIAG_CAPTURE;
                 end else begin
-                    ecc_leaf128_prod_n = ecc_sub32_capture_accum_xor1;
+                    if (ECC_DEBUG_FIELD_OPS && !ecc_diag_sub_shadow_mode)
+                        ecc_leaf128_prod_n = ecc_sub32_capture_accum_xor1;
+                    else
+                        ecc_leaf128_prod_n = ecc_diag_sub_delta_w;
                     ecc_kpd64_sub_n = 2'd3;
                     ecc_leaf_prod_n = '0;
                     ecc_diag_group_n = '0;
-                    if (!ecc_leaf_last)
+                    if (ecc_diag_next_leaf_a_capture) begin
+                        ecc_leaf_a_n = ecc_leaf_lowxor_rd[31:0];
+                        ecc_leaf_xor_a_n = ecc_leaf_lowxor_rd[63:32];
+                    end else if (!ecc_leaf_last) begin
                         vrf_req.ra=ecc_src_a_q;
+                    end
                     st_n=S_ECC_LEAF_FOLD;
                 end
             end else begin
-                if (ecc_autoreduce_fast
-                    && !ecc_leaf_last && (ecc_kpd64_sub_q == 2'd2)) begin
-                    if (ecc_diag_group_q == 3'd5)
+                if (ecc_autoreduce_fast && !ecc_leaf_last
+                    && (ecc_kpd64_sub_q == 2'd2)) begin
+                    if (ecc_diag_sub_shadow_mode && (ecc_diag_group_q == 3'd4))
                         vrf_req.ra=ecc_src_a_q;
-                    else if (ecc_diag_group_q == 3'd6)
+                    else if (ecc_diag_sub_shadow_mode && (ecc_diag_group_q == 3'd5))
+                        vrf_req.ra=ecc_src_b_q;
+                    else if (!ecc_diag_sub_shadow_mode && (ecc_diag_group_q == 3'd5))
+                        vrf_req.ra=ecc_src_a_q;
+                    else if (!ecc_diag_sub_shadow_mode && (ecc_diag_group_q == 3'd6))
                         vrf_req.ra=ecc_src_b_q;
                 end
                 if (ecc_diag_group_q == 3'd6) begin
@@ -1535,7 +1639,21 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
 
         S_ECC_LEAF_FOLD: begin
             ecc_product_we = ECC_DEBUG_FIELD_OPS && ecc_raw_product_q;
-            if (ecc_autoreduce_fast) begin
+            if (ecc_diag_sub_shadow_mode) begin
+                hdc_src0_acc_we=1'b1;
+                if (ecc_leaf_last) begin
+                    ecc_fold_word_n = 2'd0;
+                    st_n=S_ECC_WRITE_PAIR;
+                end else begin
+                    ecc_leaf_b_n = ecc_bitrev32_top(ecc_leaf_lowxor_rd[31:0]);
+                    ecc_leaf_xor_b_n = ecc_bitrev32_top(ecc_leaf_lowxor_rd[63:32]);
+                    ecc_fold_word_n = 2'd0;
+                    ecc_leaf_path_n = ecc_next_leaf_path;
+                    ecc_leaf128_prod_n = '0;
+                    ecc_kpd64_sub_n = 2'd0;
+                    st_n=S_ECC_DIAG_ISSUE;
+                end
+            end else if (ecc_autoreduce_fast) begin
                 if (ecc_leaf_last) begin
                     hdc_src0_acc_we=1'b1;
                     ecc_fold_word_n = 2'd0;
