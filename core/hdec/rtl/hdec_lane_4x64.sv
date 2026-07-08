@@ -254,6 +254,7 @@ module hdec_vector_payload_4x64
     input  logic [LANE_NUM-1:0][LANE_WIDTH-1:0] bool_src_b_i,
     input  logic [31:0]                         bitband_src_a_i,
     input  logic [LANE_NUM-1:0][LANE_WIDTH-1:0] bitband_src_b_i,
+    input  logic [LANE_NUM-1:0][LANE_WIDTH-1:0] bitband_pair_src_b_i,
     input  logic [LANE_NUM-1:0][LANE_WIDTH-1:0] xor0_contribution_packet_i,
 
     output logic [LANE_NUM-1:0][LANE_WIDTH-1:0] payload_q_o,
@@ -266,7 +267,8 @@ module hdec_vector_payload_4x64
 
     input  logic [LANE_NUM-1:0][LANE_WIDTH-1:0] clip_counter_i,
 
-    output logic [LANE_NUM*2-1:0]               bitband_parity_o
+    output logic [LANE_NUM*2-1:0]               bitband_parity_o,
+    output logic [LANE_NUM*2-1:0]               bitband_pair_parity_o
 );
 
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] xor0_merged_packet;
@@ -275,6 +277,9 @@ module hdec_vector_payload_4x64
     logic [LANE_NUM*2-1:0][31:0]         matrix_src_b;
     logic [LANE_NUM*2-1:0][31:0]         matrix_product_q;
     logic [LANE_NUM*2-1:0][31:0]         matrix_product;
+    logic [LANE_NUM*2-1:0][31:0]         matrix_pair_src_b;
+    logic [LANE_NUM*2-1:0]               matrix_pair_parity;
+    logic [LANE_NUM*2-1:0]               bitband_pair_parity_q;
     logic [LANE_NUM*2-1:0][5:0]          matrix_count;
     logic [LANE_NUM*2-1:0]               matrix_parity;
     logic [LANE_NUM*2-1:0]               matrix_xor_parity;
@@ -286,6 +291,7 @@ module hdec_vector_payload_4x64
 
     assign payload_q_o = payload_q;
     assign payload_pop_q_o = popcount_part_q;
+    assign bitband_pair_parity_o = bitband_pair_parity_q;
     assign xor0_field_packet_o = {xor0_merged_packet[3][40:0],
                                   xor0_merged_packet[2],
                                   xor0_merged_packet[1],
@@ -314,8 +320,12 @@ module hdec_vector_payload_4x64
         assign matrix_src_b[ROW_LO] = payload_bitband_i ? bitband_src_b_i[lid][31:0]  : bool_src_b_i[lid][31:0];
         assign matrix_src_a[ROW_HI] = payload_bitband_i ? bitband_src_a_i             : bool_src_a_i[lid][63:32];
         assign matrix_src_b[ROW_HI] = payload_bitband_i ? bitband_src_b_i[lid][63:32] : bool_src_b_i[lid][63:32];
+        assign matrix_pair_src_b[ROW_LO] = bitband_pair_src_b_i[lid][31:0];
+        assign matrix_pair_src_b[ROW_HI] = bitband_pair_src_b_i[lid][63:32];
         assign matrix_product_q[ROW_LO] = payload_q[lid][31:0];
         assign matrix_product_q[ROW_HI] = payload_q[lid][63:32];
+        assign matrix_pair_parity[ROW_LO] = ^(bitband_src_a_i & matrix_pair_src_b[ROW_LO]);
+        assign matrix_pair_parity[ROW_HI] = ^(bitband_src_a_i & matrix_pair_src_b[ROW_HI]);
         assign tile_product_word[lid] = {matrix_product[ROW_HI], matrix_product[ROW_LO]};
         assign matrix_count_by_lane[lid][0] = matrix_count[ROW_LO];
         assign matrix_count_by_lane[lid][1] = matrix_count[ROW_HI];
@@ -373,6 +383,12 @@ module hdec_vector_payload_4x64
                     payload_q[lid] <= {48'b0, clip_bits[lid]};
                 end
             end
+        end
+    end
+
+    always_ff @(posedge clk_i) begin
+        if (payload_bitband_i) begin
+            bitband_pair_parity_q <= matrix_pair_parity;
         end
     end
 
