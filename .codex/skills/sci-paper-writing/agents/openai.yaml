@@ -1,0 +1,7 @@
+interface:
+  display_name: "SCI Paper Writing"
+  short_description: "IEEE hardware-paper structure, evidence, and prose."
+  default_prompt: "Use $sci-paper-writing to structure and revise this hardware manuscript for TCAS-I with a claim-evidence audit."
+
+policy:
+  allow_implicit_invocation: true
