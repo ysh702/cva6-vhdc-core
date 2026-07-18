@@ -26,12 +26,49 @@ module tb_hdec_ecc_diag_reduce_map_v1;
     initial clk_i = 1'b0;
     always #2.5 clk_i = ~clk_i;
 
+    function automatic logic [31:0] clmul16_ref(
+        input logic [15:0] a,
+        input logic [15:0] b
+    );
+        logic [31:0] product;
+        begin
+            product = '0;
+            for (int bit_idx = 0; bit_idx < 16; bit_idx++) begin
+                if (a[bit_idx])
+                    product ^= ({16'b0, b} << bit_idx);
+            end
+            clmul16_ref = product;
+        end
+    endfunction
+
+    function automatic logic [63:0] clmul32_ref(
+        input logic [31:0] a,
+        input logic [31:0] b
+    );
+        logic [63:0] product;
+        begin
+            product = '0;
+            for (int bit_idx = 0; bit_idx < 32; bit_idx++) begin
+                if (a[bit_idx])
+                    product ^= ({32'b0, b} << bit_idx);
+            end
+            clmul32_ref = product;
+        end
+    endfunction
+
     initial begin
         logic [3:0] paths [0:8];
-        logic [LANE_NUM-1:0][LANE_WIDTH-1:0] got;
-        logic [LANE_NUM-1:0][LANE_WIDTH-1:0] exp;
-        logic [63:0] group_product;
-        logic [127:0] leaf_delta;
+        logic [31:0] a;
+        logic [31:0] b;
+        logic [31:0] z0;
+        logic [31:0] z2;
+        logic [31:0] zm;
+        logic [63:0] streamed_product;
+        logic [63:0] expected_product;
+        logic [127:0] streamed_delta;
+        logic [127:0] expected_delta;
+        logic [LANE_NUM-1:0][LANE_WIDTH-1:0] got_packet;
+        logic [LANE_NUM-1:0][LANE_WIDTH-1:0] expected_packet;
         int unsigned errors;
 
         paths[0] = 4'b00_00;
@@ -51,44 +88,65 @@ module tb_hdec_ecc_diag_reduce_map_v1;
         operand_b_i = '0;
         errors = 0;
 
-        for (int p = 0; p < 9; p++) begin
-            for (int sub = 0; sub < 3; sub++) begin
-                for (int group = 0; group < 8; group++) begin
-                    for (int row = 0; row < 256; row++) begin
-                        logic [LANE_NUM*2-1:0] parity_row;
-                        parity_row = row[LANE_NUM*2-1:0];
-                        if (group == 7)
-                            parity_row[7] = 1'b0;
+        // VV23 no longer has the VV22 per-diagonal ECC AND+XOR packet path.
+        // Check the replacement path directly: three products from the one
+        // shared 16x16 bit matrix are combined by the 32x32 Karatsuba token,
+        // then enter the unchanged leaf-placement and modular-fold mapping.
+        for (int test_idx = 0; test_idx < 4096; test_idx++) begin
+            unique case (test_idx)
+                0: begin a = 32'h0000_0000; b = 32'h0000_0000; end
+                1: begin a = 32'h0000_0001; b = 32'h0000_0001; end
+                2: begin a = 32'hffff_ffff; b = 32'hffff_ffff; end
+                3: begin a = 32'haaaa_aaaa; b = 32'h5555_5555; end
+                4: begin a = 32'h8000_0000; b = 32'h0000_0001; end
+                5: begin a = 32'h0123_4567; b = 32'h89ab_cdef; end
+                default: begin a = $urandom; b = $urandom; end
+            endcase
 
-                        got = '0;
-                        for (int slot = 0; slot < 4; slot++) begin
-                            got ^= dut.ecc_kpd64_diag_reduce_packet(
-                                paths[p],
-                                sub[1:0],
-                                group[2:0],
-                                parity_row,
-                                slot[1:0]
-                            );
-                        end
-                        group_product = dut.ecc_diag32_leaf_store_bitband('0, group[2:0], parity_row);
-                        leaf_delta = dut.ecc_kpd64_sub32_accum('0, sub[1:0], group_product);
-                        exp = dut.ecc_kpd64_leaf_reduce_packet(
-                            dut.ecc_kpd64_leaf_offset_mask(paths[p]),
-                            leaf_delta
-                        );
+            z0 = clmul16_ref(a[15:0], b[15:0]);
+            z2 = clmul16_ref(a[31:16], b[31:16]);
+            zm = clmul16_ref(a[15:0] ^ a[31:16], b[15:0] ^ b[31:16]);
+            streamed_product = dut.ecc_diag16_karatsuba_token(3'd0, z0)
+                             ^ dut.ecc_diag16_karatsuba_token(3'd1, z2)
+                             ^ dut.ecc_diag16_karatsuba_token(3'd2, zm);
+            expected_product = clmul32_ref(a, b);
 
-                        if (got !== exp) begin
-                            errors++;
-                            $display("DIAG_REDUCE_MAP mismatch path=%b sub=%0d group=%0d row=0x%02x got=%h exp=%h",
-                                     paths[p], sub, group, row, got, exp);
-                        end
+            if (streamed_product !== expected_product) begin
+                errors++;
+                $display("VV23 token mismatch test=%0d a=%h b=%h got=%h exp=%h",
+                         test_idx, a, b, streamed_product, expected_product);
+            end
+
+            for (int path_idx = 0; path_idx < 9; path_idx++) begin
+                for (int sub_idx = 0; sub_idx < 3; sub_idx++) begin
+                    streamed_delta = dut.ecc_kpd64_sub32_delta(
+                        sub_idx[1:0], streamed_product
+                    );
+                    expected_delta = dut.ecc_kpd64_sub32_accum(
+                        '0, sub_idx[1:0], expected_product
+                    );
+                    got_packet = dut.ecc_kpd64_leaf_reduce_packet(
+                        dut.ecc_kpd64_leaf_offset_mask(paths[path_idx]),
+                        streamed_delta
+                    );
+                    expected_packet = dut.ecc_kpd64_leaf_reduce_packet(
+                        dut.ecc_kpd64_leaf_offset_mask(paths[path_idx]),
+                        expected_delta
+                    );
+
+                    if ((streamed_delta !== expected_delta)
+                        || (got_packet !== expected_packet)) begin
+                        errors++;
+                        $display("VV23 reduce-map mismatch test=%0d path=%b sub=%0d got=%h exp=%h",
+                                 test_idx, paths[path_idx], sub_idx,
+                                 got_packet, expected_packet);
                     end
                 end
             end
         end
 
         if (errors == 0) begin
-            $display("[HDEC_ECC_DIAG_REDUCE_MAP_V1] PASS");
+            $display("[HDEC_ECC_DIAG_REDUCE_MAP_V1] PASS vectors=4096");
         end else begin
             $fatal(1, "[HDEC_ECC_DIAG_REDUCE_MAP_V1] FAIL errors=%0d", errors);
         end
