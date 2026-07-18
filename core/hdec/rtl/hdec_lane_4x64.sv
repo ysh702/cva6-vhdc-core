@@ -181,19 +181,193 @@ module hdec_lane_4x64
 
 endmodule
 
-// One physical 224-node XOR1 array.  In VV22 mode it implements the shared
-// 32-bit Karatsuba middle term, the 128-bit sub-product fold, and both 32-bit
-// low-XOR outputs.  In VV23 diagonal mode, 64 logical reduction nodes map onto
-// the live VV22 low-XOR nodes 160..223 and 23 map onto original nodes 0..22.
-// Each mapped LUT therefore selects either its original two-input XOR or a
-// three-input diagonal XOR.  There is no ECC-private XOR array or fourth AND.
+package hdec_vv24_diag_pkg;
+
+    localparam logic [255:0] HDEC_VV24_POP_MASK =
+        256'h0103070f1f3f7fff01ff03ff07ff7fff7fff07ff03ff01ffff7f3f1f0f070301;
+
+    localparam int HDEC_VV24_MATRIX_DIAG [0:255] = '{
+        0,11,11,11,11,11,11,11,1,1,11,11,11,11,11,12,
+        2,2,2,12,12,12,12,12,3,3,3,3,12,12,12,12,
+        4,4,4,4,4,12,12,12,5,5,5,5,5,5,13,13,
+        6,6,6,6,6,6,6,13,7,7,7,7,7,7,7,7,
+        8,8,8,8,8,8,8,8,8,13,13,13,13,13,13,13,
+        9,9,9,9,9,9,9,9,9,9,13,13,13,13,15,15,
+        10,10,10,10,10,10,10,10,10,10,10,15,15,15,15,15,
+        14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,15,
+        16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,15,
+        20,20,20,20,20,20,20,20,20,20,20,15,15,15,15,15,
+        21,21,21,21,21,21,21,21,21,21,15,15,17,17,17,17,
+        22,22,22,22,22,22,22,22,22,17,17,17,17,17,17,17,
+        23,23,23,23,23,23,23,23,24,24,24,24,24,24,24,17,
+        25,25,25,25,25,25,17,17,26,26,26,26,26,18,18,18,
+        27,27,27,27,18,18,18,18,28,28,28,18,18,18,18,18,
+        29,29,18,19,19,19,19,19,30,19,19,19,19,19,19,19
+    };
+
+    localparam int HDEC_VV24_MATRIX_TERM [0:255] = '{
+        0,0,1,2,3,4,5,6,0,1,7,8,9,10,11,0,
+        0,1,2,1,2,3,4,5,0,1,2,3,6,7,8,9,
+        0,1,2,3,4,10,11,12,0,1,2,3,4,5,0,1,
+        0,1,2,3,4,5,6,2,0,1,2,3,4,5,6,7,
+        0,1,2,3,4,5,6,7,8,3,4,5,6,7,8,9,
+        0,1,2,3,4,5,6,7,8,9,10,11,12,13,0,1,
+        0,1,2,3,4,5,6,7,8,9,10,2,3,4,5,6,
+        0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,7,
+        0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,8,
+        0,1,2,3,4,5,6,7,8,9,10,9,10,11,12,13,
+        0,1,2,3,4,5,6,7,8,9,14,15,0,1,2,3,
+        0,1,2,3,4,5,6,7,8,4,5,6,7,8,9,10,
+        0,1,2,3,4,5,6,7,0,1,2,3,4,5,6,11,
+        0,1,2,3,4,5,12,13,0,1,2,3,4,0,1,2,
+        0,1,2,3,3,4,5,6,0,1,2,7,8,9,10,11,
+        0,1,12,0,1,2,3,4,0,5,6,7,8,9,10,11
+    };
+
+    localparam int HDEC_VV24_POP_BYTE_BASE [0:30] = '{
+        0,1,2,3,4,5,6,7,8,10,12,14,14,14,14,16,
+        16,18,18,18,18,20,22,24,25,26,27,28,29,30,31
+    };
+
+    // Balanced binary trees over the 87 native XOR1 nodes.  A source below
+    // 256 names a registered AND-matrix bit; a source at or above 256 names
+    // an earlier native node.  This is fixed wiring outside XOR1, not another
+    // reduction operator.
+    localparam int HDEC_VV24_XOR_NODE_LHS [0:86] = '{
+        1,3,5,7,11,13,256,258,260,262,265,15,20,22,28,30,37,267,269,
+        271,273,275,276,46,55,74,76,78,90,92,279,281,283,286,288,289,
+        94,107,109,111,143,156,158,170,292,294,296,298,300,302,304,172,
+        174,185,187,189,191,214,307,309,311,314,316,317,221,223,229,231,
+        236,238,320,322,324,326,328,329,243,245,247,250,252,254,332,334,
+        336,338,341
+    };
+
+    localparam int HDEC_VV24_XOR_NODE_RHS [0:86] = '{
+        2,4,6,10,12,14,257,259,261,263,264,19,21,23,29,31,38,268,270,
+        272,274,39,277,47,73,75,77,79,91,93,280,282,284,287,285,290,
+        95,108,110,127,155,157,159,171,293,295,297,299,301,303,305,173,
+        175,186,188,190,207,215,308,310,312,315,313,318,222,228,230,235,
+        237,239,321,323,325,327,242,330,244,246,249,251,253,255,333,335,
+        337,339,340
+    };
+
+    localparam int HDEC_VV24_XOR_DIAG_SOURCE [0:30] = '{
+        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,266,278,291,-1,306,
+        -1,319,331,342,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1
+    };
+
+    localparam int HDEC_VV24_MATRIX_FLAT [0:30][0:15] = '{
+        '{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+        '{8,9,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+        '{16,17,18,0,0,0,0,0,0,0,0,0,0,0,0,0},
+        '{24,25,26,27,0,0,0,0,0,0,0,0,0,0,0,0},
+        '{32,33,34,35,36,0,0,0,0,0,0,0,0,0,0,0},
+        '{40,41,42,43,44,45,0,0,0,0,0,0,0,0,0,0},
+        '{48,49,50,51,52,53,54,0,0,0,0,0,0,0,0,0},
+        '{56,57,58,59,60,61,62,63,0,0,0,0,0,0,0,0},
+        '{64,65,66,67,68,69,70,71,72,0,0,0,0,0,0,0},
+        '{80,81,82,83,84,85,86,87,88,89,0,0,0,0,0,0},
+        '{96,97,98,99,100,101,102,103,104,105,106,0,0,0,0,0},
+        '{1,2,3,4,5,6,7,10,11,12,13,14,0,0,0,0},
+        '{15,19,20,21,22,23,28,29,30,31,37,38,39,0,0,0},
+        '{46,47,55,73,74,75,76,77,78,79,90,91,92,93,0,0},
+        '{112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,0},
+        '{94,95,107,108,109,110,111,127,143,155,156,157,158,159,170,171},
+        '{128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,0},
+        '{172,173,174,175,185,186,187,188,189,190,191,207,214,215,0,0},
+        '{221,222,223,228,229,230,231,235,236,237,238,239,242,0,0,0},
+        '{243,244,245,246,247,249,250,251,252,253,254,255,0,0,0,0},
+        '{144,145,146,147,148,149,150,151,152,153,154,0,0,0,0,0},
+        '{160,161,162,163,164,165,166,167,168,169,0,0,0,0,0,0},
+        '{176,177,178,179,180,181,182,183,184,0,0,0,0,0,0,0},
+        '{192,193,194,195,196,197,198,199,0,0,0,0,0,0,0,0},
+        '{200,201,202,203,204,205,206,0,0,0,0,0,0,0,0,0},
+        '{208,209,210,211,212,213,0,0,0,0,0,0,0,0,0,0},
+        '{216,217,218,219,220,0,0,0,0,0,0,0,0,0,0,0},
+        '{224,225,226,227,0,0,0,0,0,0,0,0,0,0,0,0},
+        '{232,233,234,0,0,0,0,0,0,0,0,0,0,0,0,0},
+        '{240,241,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+        '{248,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}
+    };
+
+    function automatic int hdec_vv24_diag_len(input int diag_idx);
+        if (diag_idx < 16)
+            hdec_vv24_diag_len = diag_idx + 1;
+        else
+            hdec_vv24_diag_len = 31 - diag_idx;
+    endfunction
+
+    // Probe D gives seven balanced middle-length diagonals to XOR1.  The other
+    // 24 complete diagonals fill the same 32 physical byte counters.
+    function automatic bit hdec_vv24_pop_owner(input int diag_idx);
+        int diag_len;
+        begin
+            diag_len = hdec_vv24_diag_len(diag_idx);
+            hdec_vv24_pop_owner = (diag_len != 12) && (diag_len != 13)
+                                  && (diag_len != 14) && (diag_len != 16);
+        end
+    endfunction
+
+    function automatic int hdec_vv24_pop_byte_base(input int diag_idx);
+        hdec_vv24_pop_byte_base = HDEC_VV24_POP_BYTE_BASE[diag_idx];
+    endfunction
+
+    function automatic bit hdec_vv24_is_pop_position(input int flat_idx);
+        hdec_vv24_is_pop_position = HDEC_VV24_POP_MASK[flat_idx];
+    endfunction
+
+    function automatic int hdec_vv24_matrix_diag(input int flat_idx);
+        hdec_vv24_matrix_diag = HDEC_VV24_MATRIX_DIAG[flat_idx];
+    endfunction
+
+    function automatic int hdec_vv24_matrix_term(input int flat_idx);
+        hdec_vv24_matrix_term = HDEC_VV24_MATRIX_TERM[flat_idx];
+    endfunction
+
+    function automatic int hdec_vv24_matrix_flat(
+        input int diag_idx,
+        input int term_idx
+    );
+        hdec_vv24_matrix_flat = HDEC_VV24_MATRIX_FLAT[diag_idx][term_idx];
+    endfunction
+
+    function automatic int hdec_vv24_xor_node_lhs(input int node_idx);
+        hdec_vv24_xor_node_lhs = HDEC_VV24_XOR_NODE_LHS[node_idx];
+    endfunction
+
+    function automatic int hdec_vv24_xor_node_rhs(input int node_idx);
+        hdec_vv24_xor_node_rhs = HDEC_VV24_XOR_NODE_RHS[node_idx];
+    endfunction
+
+    function automatic int hdec_vv24_xor_diag_source(input int diag_idx);
+        hdec_vv24_xor_diag_source = HDEC_VV24_XOR_DIAG_SOURCE[diag_idx];
+    endfunction
+
+endpackage
+
+// The native XOR1 body has no HDC/ECC mode and no third operand.  Every node
+// is exactly the original two-input XOR; operand selection lives outside it.
+module hdec_xor1_native_224 (
+    input  logic [223:0] lhs_i,
+    input  logic [223:0] rhs_i,
+    output logic [223:0] node_o
+);
+    for (genvar node_idx = 0; node_idx < 224; node_idx++) begin : gen_native_xor_node
+        assign node_o[node_idx] = lhs_i[node_idx] ^ rhs_i[node_idx];
+    end
+endmodule
+
+// One physical native XOR1 array.  The wrapper only selects its operands.
+// POPCOUNT and XOR1 own disjoint complete diagonals and never solve one
+// another's parity.
 module hdec_xor1_shared_8x32
     import hdec_pkg::*;
     import hdec_resource_pkg::*;
+    import hdec_vv24_diag_pkg::*;
 (
     input  logic                     diag_mode_i,
     input  logic [7:0][31:0]         matrix_product_i,
-    input  logic [7:0]               matrix_parity_i,
+    input  logic [30:0]              diag_pop_parity_i,
 
     input  logic [127:0] legacy_acc_i,
     input  logic [63:0]  legacy_sub_product_i,
@@ -213,28 +387,14 @@ module hdec_xor1_shared_8x32
     logic [223:0] legacy_rhs;
     logic [223:0] diag_lhs;
     logic [223:0] diag_rhs;
-    logic [223:0] diag_aux;
     logic [223:0] xor_node;
+    logic [223:0] native_lhs;
+    logic [223:0] native_rhs;
     logic [127:0] legacy_acc_rhs;
 
-    logic [86:0]      diag_node_lhs;
-    logic [86:0]      diag_node_rhs;
-    logic [86:0]      diag_node_aux;
-    logic [86:0]      diag_node;
-    logic [7:0][3:0]  diag_segment;
-
-    function automatic int hdec_diag_row_node_base(input int row_idx);
-        case (row_idx)
-            0: hdec_diag_row_node_base = 0;
-            1: hdec_diag_row_node_base = 9;
-            2: hdec_diag_row_node_base = 20;
-            3: hdec_diag_row_node_base = 30;
-            4: hdec_diag_row_node_base = 42;
-            5: hdec_diag_row_node_base = 53;
-            6: hdec_diag_row_node_base = 66;
-            default: hdec_diag_row_node_base = 78;
-        endcase
-    endfunction
+    logic [86:0] diag_node_lhs;
+    logic [86:0] diag_node_rhs;
+    logic [86:0] diag_node;
 
     // Exact VV22 behavior.  Nodes 0..31 compute sub_hi^sub_lo once and both
     // possible middle rows reuse it.  Nodes 32..159 fold into the accumulator;
@@ -277,169 +437,69 @@ module hdec_xor1_shared_8x32
         end
     end
 
-    // Rows 0..6 contain four diagonal segments A/B/C/D.  XOR1 directly reduces
-    // A, B and C with three-input nodes, then obtains D from the full row
-    // parity supplied by POPCOUNT.  This is the explicit AND->POPCOUNT/XOR1
-    // cooperation: XOR1 cannot complete the fourth diagonal without POPCOUNT.
-    for (genvar rid = 0; rid < 7; rid++) begin : gen_direct_rows_0_6
-        localparam int EDGE_LEN   = rid + 1;
-        localparam int LONG_LEN   = 16 - EDGE_LEN;
-        localparam int ROW_BASE   = hdec_diag_row_node_base(rid);
-        localparam int A_NODES    = EDGE_LEN / 2;
-        localparam int B_BASE     = ROW_BASE + A_NODES;
-        localparam int B_NODES    = EDGE_LEN / 2;
-        localparam int C_BASE     = B_BASE + B_NODES;
-        localparam int C_NODES    = LONG_LEN / 2;
-        localparam int SOLVE_BASE = C_BASE + C_NODES;
-
-        if (EDGE_LEN == 1) begin : gen_a_wire
-            assign diag_segment[rid][0] = matrix_product_i[rid][0];
-        end else begin : gen_a_tree
-            for (genvar node_idx = 0; node_idx < A_NODES; node_idx++) begin : gen_node
-                if (node_idx == 0) begin : gen_first
-                    assign diag_node_lhs[ROW_BASE] = matrix_product_i[rid][0];
-                    assign diag_node_rhs[ROW_BASE] = matrix_product_i[rid][1];
-                    assign diag_node_aux[ROW_BASE] = (EDGE_LEN >= 3)
-                                                       ? matrix_product_i[rid][2]
-                                                       : 1'b0;
-                end else begin : gen_follow
-                    assign diag_node_lhs[ROW_BASE + node_idx] =
-                        diag_node[ROW_BASE + node_idx - 1];
-                    assign diag_node_rhs[ROW_BASE + node_idx] =
-                        matrix_product_i[rid][2 * node_idx + 1];
-                    assign diag_node_aux[ROW_BASE + node_idx] =
-                        ((2 * node_idx + 2) < EDGE_LEN)
-                        ? matrix_product_i[rid][2 * node_idx + 2] : 1'b0;
-                end
-            end
-            assign diag_segment[rid][0] = diag_node[ROW_BASE + A_NODES - 1];
-        end
-
-        if (EDGE_LEN == 1) begin : gen_b_wire
-            assign diag_segment[rid][1] = matrix_product_i[rid][EDGE_LEN];
-        end else begin : gen_b_tree
-            for (genvar node_idx = 0; node_idx < B_NODES; node_idx++) begin : gen_node
-                if (node_idx == 0) begin : gen_first
-                    assign diag_node_lhs[B_BASE] = matrix_product_i[rid][EDGE_LEN];
-                    assign diag_node_rhs[B_BASE] = matrix_product_i[rid][EDGE_LEN + 1];
-                    assign diag_node_aux[B_BASE] = (EDGE_LEN >= 3)
-                        ? matrix_product_i[rid][EDGE_LEN + 2] : 1'b0;
-                end else begin : gen_follow
-                    assign diag_node_lhs[B_BASE + node_idx] =
-                        diag_node[B_BASE + node_idx - 1];
-                    assign diag_node_rhs[B_BASE + node_idx] =
-                        matrix_product_i[rid][EDGE_LEN + 2 * node_idx + 1];
-                    assign diag_node_aux[B_BASE + node_idx] =
-                        ((2 * node_idx + 2) < EDGE_LEN)
-                        ? matrix_product_i[rid][EDGE_LEN + 2 * node_idx + 2]
-                        : 1'b0;
-                end
-            end
-            assign diag_segment[rid][1] = diag_node[B_BASE + B_NODES - 1];
-        end
-
-        for (genvar node_idx = 0; node_idx < C_NODES; node_idx++) begin : gen_c_tree
-            if (node_idx == 0) begin : gen_first
-                assign diag_node_lhs[C_BASE] = matrix_product_i[rid][2 * EDGE_LEN];
-                assign diag_node_rhs[C_BASE] = matrix_product_i[rid][2 * EDGE_LEN + 1];
-                assign diag_node_aux[C_BASE] = matrix_product_i[rid][2 * EDGE_LEN + 2];
-            end else begin : gen_follow
-                assign diag_node_lhs[C_BASE + node_idx] =
-                    diag_node[C_BASE + node_idx - 1];
-                assign diag_node_rhs[C_BASE + node_idx] =
-                    matrix_product_i[rid][2 * EDGE_LEN + 2 * node_idx + 1];
-                assign diag_node_aux[C_BASE + node_idx] =
-                    ((2 * node_idx + 2) < LONG_LEN)
-                    ? matrix_product_i[rid][2 * EDGE_LEN + 2 * node_idx + 2]
-                    : 1'b0;
-            end
-        end
-        assign diag_segment[rid][2] = diag_node[C_BASE + C_NODES - 1];
-
-        assign diag_node_lhs[SOLVE_BASE] = diag_segment[rid][0];
-        assign diag_node_rhs[SOLVE_BASE] = diag_segment[rid][1];
-        assign diag_node_aux[SOLVE_BASE] = diag_segment[rid][2];
-        assign diag_node_lhs[SOLVE_BASE + 1] = matrix_parity_i[rid];
-        assign diag_node_rhs[SOLVE_BASE + 1] = diag_node[SOLVE_BASE];
-        assign diag_node_aux[SOLVE_BASE + 1] = 1'b0;
-        assign diag_segment[rid][3] = diag_node[SOLVE_BASE + 1];
-    end
-
-    // Row 7 contains A(8), B(16), C(8).  A and C use four nodes each; B is
-    // recovered in one node from the complete POPCOUNT parity.
-    for (genvar node_idx = 0; node_idx < 4; node_idx++) begin : gen_row7_a
-        if (node_idx == 0) begin : gen_first
-            assign diag_node_lhs[78] = matrix_product_i[7][0];
-            assign diag_node_rhs[78] = matrix_product_i[7][1];
-            assign diag_node_aux[78] = matrix_product_i[7][2];
-        end else begin : gen_follow
-            assign diag_node_lhs[78 + node_idx] = diag_node[77 + node_idx];
-            assign diag_node_rhs[78 + node_idx] = matrix_product_i[7][2 * node_idx + 1];
-            assign diag_node_aux[78 + node_idx] = ((2 * node_idx + 2) < 8)
-                ? matrix_product_i[7][2 * node_idx + 2] : 1'b0;
+    // Twelve complete diagonals (lengths 1..5 and 9, mirrored) belong to
+    // XOR1.  All seven complete diagonals use exactly 87 original two-input
+    // nodes: the 64 live low-XOR nodes 160..223 and live legacy nodes 0..22.
+    for (genvar diag_idx = 0; diag_idx < 31; diag_idx++) begin : gen_diag_owner
+        localparam int DIAG_SOURCE = hdec_vv24_xor_diag_source(diag_idx);
+        if (hdec_vv24_pop_owner(diag_idx)) begin : gen_pop_owner
+            assign diag16_product_o[diag_idx] = diag_pop_parity_i[diag_idx];
+        end else if (DIAG_SOURCE < 256) begin : gen_xor_wire
+            assign diag16_product_o[diag_idx] =
+                matrix_product_i[DIAG_SOURCE / 32][DIAG_SOURCE % 32];
+        end else begin : gen_xor_tree_result
+            assign diag16_product_o[diag_idx] = diag_node[DIAG_SOURCE - 256];
         end
     end
-    for (genvar node_idx = 0; node_idx < 4; node_idx++) begin : gen_row7_c
-        if (node_idx == 0) begin : gen_first
-            assign diag_node_lhs[82] = matrix_product_i[7][24];
-            assign diag_node_rhs[82] = matrix_product_i[7][25];
-            assign diag_node_aux[82] = matrix_product_i[7][26];
-        end else begin : gen_follow
-            assign diag_node_lhs[82 + node_idx] = diag_node[81 + node_idx];
-            assign diag_node_rhs[82 + node_idx] = matrix_product_i[7][24 + 2 * node_idx + 1];
-            assign diag_node_aux[82 + node_idx] = ((2 * node_idx + 2) < 8)
-                ? matrix_product_i[7][24 + 2 * node_idx + 2] : 1'b0;
+
+    for (genvar logical_node = 0; logical_node < 87; logical_node++) begin : gen_diag_node_wires
+        localparam int LHS_SOURCE = hdec_vv24_xor_node_lhs(logical_node);
+        localparam int RHS_SOURCE = hdec_vv24_xor_node_rhs(logical_node);
+        if (LHS_SOURCE < 256) begin : gen_lhs_matrix
+            assign diag_node_lhs[logical_node] =
+                matrix_product_i[LHS_SOURCE / 32][LHS_SOURCE % 32];
+        end else begin : gen_lhs_node
+            assign diag_node_lhs[logical_node] = diag_node[LHS_SOURCE - 256];
+        end
+        if (RHS_SOURCE < 256) begin : gen_rhs_matrix
+            assign diag_node_rhs[logical_node] =
+                matrix_product_i[RHS_SOURCE / 32][RHS_SOURCE % 32];
+        end else begin : gen_rhs_node
+            assign diag_node_rhs[logical_node] = diag_node[RHS_SOURCE - 256];
         end
     end
-    assign diag_segment[7][0] = diag_node[81];
-    assign diag_segment[7][2] = diag_node[85];
-    assign diag_node_lhs[86] = matrix_parity_i[7];
-    assign diag_node_rhs[86] = diag_segment[7][0];
-    assign diag_node_aux[86] = diag_segment[7][2];
-    assign diag_segment[7][1] = diag_node[86];
-    assign diag_segment[7][3] = 1'b0;
 
-    // Logical nodes 0..63 occupy every live VV22 low-XOR node.  Nodes 64..86
-    // occupy original XOR1 nodes 0..22.  No node exists outside XOR1.
     always_comb begin
         diag_lhs = '0;
         diag_rhs = '0;
-        diag_aux = '0;
-        for (int logical_node = 0; logical_node < 64; logical_node++) begin
-            diag_lhs[160 + logical_node] = diag_node_lhs[logical_node];
-            diag_rhs[160 + logical_node] = diag_node_rhs[logical_node];
-            diag_aux[160 + logical_node] = diag_node_aux[logical_node];
-        end
-        for (int logical_node = 64; logical_node < 87; logical_node++) begin
-            diag_lhs[logical_node - 64] = diag_node_lhs[logical_node];
-            diag_rhs[logical_node - 64] = diag_node_rhs[logical_node];
-            diag_aux[logical_node - 64] = diag_node_aux[logical_node];
+        for (int logical_node = 0; logical_node < 87; logical_node++) begin
+            if (logical_node < 64) begin
+                diag_lhs[160 + logical_node] = diag_node_lhs[logical_node];
+                diag_rhs[160 + logical_node] = diag_node_rhs[logical_node];
+            end else begin
+                diag_lhs[logical_node - 64] = diag_node_lhs[logical_node];
+                diag_rhs[logical_node - 64] = diag_node_rhs[logical_node];
+            end
         end
     end
 
-    for (genvar logical_node = 0; logical_node < 64; logical_node++) begin : gen_live_node_map
-        assign diag_node[logical_node] = xor_node[160 + logical_node];
-    end
-    for (genvar logical_node = 64; logical_node < 87; logical_node++) begin : gen_legacy_node_map
-        assign diag_node[logical_node] = xor_node[logical_node - 64];
+    for (genvar logical_node = 0; logical_node < 87; logical_node++) begin : gen_live_node_map
+        if (logical_node < 64) begin : gen_lowxor_node
+            assign diag_node[logical_node] = xor_node[160 + logical_node];
+        end else begin : gen_legacy_node
+            assign diag_node[logical_node] = xor_node[logical_node - 64];
+        end
     end
 
-    for (genvar rid = 0; rid < 7; rid++) begin : gen_diag_product_rows_0_6
-        assign diag16_product_o[rid]      = diag_segment[rid][0];
-        assign diag16_product_o[30-rid]   = diag_segment[rid][1];
-        assign diag16_product_o[14-rid]   = diag_segment[rid][2];
-        assign diag16_product_o[16+rid]   = diag_segment[rid][3];
-    end
-    assign diag16_product_o[7]  = diag_segment[7][0];
-    assign diag16_product_o[15] = diag_segment[7][1];
-    assign diag16_product_o[23] = diag_segment[7][2];
+    // Mode selection is outside the native operator.
+    assign native_lhs = diag_mode_i ? diag_lhs : legacy_lhs;
+    assign native_rhs = diag_mode_i ? diag_rhs : legacy_rhs;
 
-    // This generate block is the only XOR primitive description in XOR1.
-    for (genvar node_idx = 0; node_idx < 224; node_idx++) begin : gen_shared_xor_node
-        assign xor_node[node_idx] = diag_mode_i
-            ? (diag_lhs[node_idx] ^ diag_rhs[node_idx] ^ diag_aux[node_idx])
-            : (legacy_lhs[node_idx] ^ legacy_rhs[node_idx]);
-    end
+    hdec_xor1_native_224 i_native_xor1 (
+        .lhs_i  (native_lhs),
+        .rhs_i  (native_rhs),
+        .node_o (xor_node)
+    );
 
     assign legacy_accum_o   = xor_node[159:32];
     assign legacy_lowxor_a_o = xor_node[191:160];
@@ -454,6 +514,7 @@ endmodule
 module hdec_gf2_contribution_row_tile_8x32
     import hdec_pkg::*;
     import hdec_resource_pkg::*;
+    import hdec_vv24_diag_pkg::*;
 (
     input  logic [LANE_NUM*2-1:0][31:0] matrix_src_a_i,
     input  logic [LANE_NUM*2-1:0][31:0] matrix_src_b_i,
@@ -477,9 +538,18 @@ module hdec_gf2_contribution_row_tile_8x32
 );
 
     function automatic logic [3:0] hdec_popcount8_fixed(input logic [7:0] bits);
-        hdec_popcount8_fixed =
-            4'(bits[0]) + 4'(bits[1]) + 4'(bits[2]) + 4'(bits[3]) +
-            4'(bits[4]) + 4'(bits[5]) + 4'(bits[6]) + 4'(bits[7]);
+        logic [1:0] pair_count [0:3];
+        logic [2:0] quad_count [0:1];
+        begin
+            pair_count[0] = 2'(bits[0]) + 2'(bits[1]);
+            pair_count[1] = 2'(bits[2]) + 2'(bits[3]);
+            pair_count[2] = 2'(bits[4]) + 2'(bits[5]);
+            pair_count[3] = 2'(bits[6]) + 2'(bits[7]);
+            quad_count[0] = {1'b0, pair_count[0]} + {1'b0, pair_count[1]};
+            quad_count[1] = {1'b0, pair_count[2]} + {1'b0, pair_count[3]};
+            hdec_popcount8_fixed = {1'b0, quad_count[0]}
+                                 + {1'b0, quad_count[1]};
+        end
     endfunction
 
     // Four byte counters per row retain the complete eight-row POPCOUNT while
@@ -487,15 +557,31 @@ module hdec_gf2_contribution_row_tile_8x32
     // disabled or split away from the 256-bit AND result.
     logic [LANE_NUM*2-1:0][3:0][3:0] matrix_byte_count;
     logic [LANE_NUM*2-1:0][3:0]      matrix_byte_parity;
+    logic [LANE_NUM*2-1:0][31:0]     matrix_pop_view;
+    logic [31:0][3:0]                 matrix_byte_count_flat;
+    logic [30:0]                      diag_pop_parity;
 
     for (genvar rid = 0; rid < LANE_NUM*2; rid++) begin : gen_bitmatrix_row
         assign matrix_product_o[rid] = matrix_src_a_i[rid] & matrix_src_b_i[rid];
         for (genvar byte_idx = 0; byte_idx < 4; byte_idx++) begin : gen_byte_count
+            for (genvar bit_idx = 0; bit_idx < 8; bit_idx++) begin : gen_pop_view
+                localparam int FLAT = rid * 32 + byte_idx * 8 + bit_idx;
+                if (hdec_vv24_is_pop_position(FLAT)) begin : gen_pop_owned
+                    assign matrix_pop_view[rid][byte_idx * 8 + bit_idx] =
+                        matrix_product_q_i[rid][byte_idx * 8 + bit_idx];
+                end else begin : gen_xor_owned
+                    assign matrix_pop_view[rid][byte_idx * 8 + bit_idx] =
+                        matrix_product_q_i[rid][byte_idx * 8 + bit_idx]
+                        & ~xor1_diag_mode_i;
+                end
+            end
             assign matrix_byte_count[rid][byte_idx] = hdec_popcount8_fixed(
-                matrix_product_q_i[rid][8 * byte_idx +: 8]
+                matrix_pop_view[rid][8 * byte_idx +: 8]
             );
             assign matrix_byte_parity[rid][byte_idx] =
                 matrix_byte_count[rid][byte_idx][0];
+            assign matrix_byte_count_flat[rid * 4 + byte_idx] =
+                matrix_byte_count[rid][byte_idx];
         end
         assign matrix_count_o[rid] =
               {2'b0, matrix_byte_count[rid][0]}
@@ -505,10 +591,29 @@ module hdec_gf2_contribution_row_tile_8x32
         assign matrix_parity_o[rid] = matrix_count_o[rid][0];
     end
 
+    for (genvar diag_idx = 0; diag_idx < 31; diag_idx++) begin : gen_pop_diagonal
+        localparam int DIAG_LEN = hdec_vv24_diag_len(diag_idx);
+        localparam int BYTE_BASE = hdec_vv24_pop_byte_base(diag_idx);
+        if (hdec_vv24_pop_owner(diag_idx)) begin : gen_owned
+            if (DIAG_LEN <= 8) begin : gen_one_byte
+                assign diag_pop_parity[diag_idx] =
+                    matrix_byte_count_flat[BYTE_BASE][0];
+            end else begin : gen_two_bytes
+                logic [4:0] diag_count_sum;
+                assign diag_count_sum =
+                    {1'b0, matrix_byte_count_flat[BYTE_BASE]}
+                    + {1'b0, matrix_byte_count_flat[BYTE_BASE + 1]};
+                assign diag_pop_parity[diag_idx] = diag_count_sum[0];
+            end
+        end else begin : gen_not_owned
+            assign diag_pop_parity[diag_idx] = 1'b0;
+        end
+    end
+
     hdec_xor1_shared_8x32 i_xor1 (
         .diag_mode_i              (xor1_diag_mode_i),
         .matrix_product_i         (matrix_product_q_i),
-        .matrix_parity_i          (matrix_parity_o),
+        .diag_pop_parity_i        (diag_pop_parity),
         .legacy_acc_i             (xor1_legacy_acc_i),
         .legacy_sub_product_i     (xor1_legacy_sub_product_i),
         .legacy_sub_idx_i         (xor1_legacy_sub_idx_i),
@@ -530,6 +635,7 @@ endmodule
 module hdec_vector_payload_4x64
     import hdec_pkg::*;
     import hdec_resource_pkg::*;
+    import hdec_vv24_diag_pkg::*;
 #(
     parameter bit ENABLE_ECC_REDUCE = 1'b1
 ) (
@@ -599,26 +705,16 @@ module hdec_vector_payload_4x64
         input int row_idx,
         input int column_idx
     );
-        int edge_len;
+        int flat_idx;
+        int diag_idx;
+        int term_idx;
+        int a_start;
         begin
-            if (row_idx < 7) begin
-                edge_len = row_idx + 1;
-                if (column_idx < edge_len)
-                    hdec_diag16_a_index = column_idx;
-                else if (column_idx < 2 * edge_len)
-                    hdec_diag16_a_index = 16 - edge_len + column_idx - edge_len;
-                else if (column_idx < edge_len + 16)
-                    hdec_diag16_a_index = column_idx - 2 * edge_len;
-                else
-                    hdec_diag16_a_index = column_idx - 16;
-            end else begin
-                if (column_idx < 8)
-                    hdec_diag16_a_index = column_idx;
-                else if (column_idx < 24)
-                    hdec_diag16_a_index = column_idx - 8;
-                else
-                    hdec_diag16_a_index = column_idx - 16;
-            end
+            flat_idx = row_idx * 32 + column_idx;
+            diag_idx = hdec_vv24_matrix_diag(flat_idx);
+            term_idx = hdec_vv24_matrix_term(flat_idx);
+            a_start = (diag_idx > 15) ? (diag_idx - 15) : 0;
+            hdec_diag16_a_index = a_start + term_idx;
         end
     endfunction
 
@@ -626,24 +722,14 @@ module hdec_vector_payload_4x64
         input int row_idx,
         input int column_idx
     );
-        int edge_len;
+        int flat_idx;
+        int diag_idx;
+        int a_idx;
         begin
-            if (row_idx < 7) begin
-                edge_len = row_idx + 1;
-                if (column_idx < edge_len)
-                    hdec_diag16_b_index = edge_len - 1 - column_idx;
-                else if (column_idx < edge_len + 16)
-                    hdec_diag16_b_index = 15 + edge_len - column_idx;
-                else
-                    hdec_diag16_b_index = 31 + edge_len - column_idx;
-            end else begin
-                if (column_idx < 8)
-                    hdec_diag16_b_index = 7 - column_idx;
-                else if (column_idx < 24)
-                    hdec_diag16_b_index = 23 - column_idx;
-                else
-                    hdec_diag16_b_index = 39 - column_idx;
-            end
+            flat_idx = row_idx * 32 + column_idx;
+            diag_idx = hdec_vv24_matrix_diag(flat_idx);
+            a_idx = hdec_diag16_a_index(row_idx, column_idx);
+            hdec_diag16_b_index = diag_idx - a_idx;
         end
     endfunction
 
@@ -668,24 +754,32 @@ module hdec_vector_payload_4x64
         input logic [LANE_NUM*2-1:0][31:0] matrix
     );
         logic [30:0] product;
-        int unsigned edge_len;
+        int diag_idx;
         begin
             product = '0;
-            for (int rid = 0; rid < 7; rid++) begin
-                edge_len = rid + 1;
-                product[rid] = hdec_xor_range_ref(matrix[rid], 0, edge_len);
-                product[30-rid] = hdec_xor_range_ref(matrix[rid], edge_len, edge_len);
-                product[14-rid] = hdec_xor_range_ref(
-                    matrix[rid], 2 * edge_len, 16 - edge_len
-                );
-                product[16+rid] = hdec_xor_range_ref(
-                    matrix[rid], 16 + edge_len, 16 - edge_len
-                );
+            for (int flat_idx = 0; flat_idx < 256; flat_idx++) begin
+                diag_idx = hdec_vv24_matrix_diag(flat_idx);
+                product[diag_idx] ^=
+                    matrix[flat_idx / 32][flat_idx % 32];
             end
-            product[7]  = hdec_xor_range_ref(matrix[7], 0, 8);
-            product[15] = hdec_xor_range_ref(matrix[7], 8, 16);
-            product[23] = hdec_xor_range_ref(matrix[7], 24, 8);
             hdec_diag16_matrix_ref = product;
+        end
+    endfunction
+
+    function automatic logic [5:0] hdec_diag16_popcount_row_ref(
+        input logic [LANE_NUM*2-1:0][31:0] matrix,
+        input int row_idx
+    );
+        logic [5:0] count;
+        int flat_idx;
+        begin
+            count = '0;
+            for (int column_idx = 0; column_idx < 32; column_idx++) begin
+                flat_idx = row_idx * 32 + column_idx;
+                if (hdec_vv24_is_pop_position(flat_idx))
+                    count += 6'(matrix[row_idx][column_idx]);
+            end
+            hdec_diag16_popcount_row_ref = count;
         end
     endfunction
     // synthesis translate_on
@@ -771,18 +865,19 @@ module hdec_vector_payload_4x64
     );
 
     // synthesis translate_off
-    // This assertion block is the executable shared-dataflow proof: on every
-    // diagonal capture, all 256 registered AND bits are consumed by the full
-    // eight-row POPCOUNT and by the mode-selected original XOR1 instance.
+    // Executable ownership proof: the POPCOUNT-owned cells are counted once;
+    // the complementary cells feed native XOR1, and the combined 31 outputs
+    // reproduce all 256 registered AND partial products.
     always_ff @(posedge clk_i) begin
         if (rst_ni && xor1_diag_mode_i) begin
             for (int rid = 0; rid < LANE_NUM*2; rid++) begin
-                if (matrix_count[rid] !== $countones(matrix_product_q[rid]))
-                    $error("VV23 full POPCOUNT mismatch row=%0d matrix=%h count=%0d",
+                if (matrix_count[rid]
+                    !== hdec_diag16_popcount_row_ref(matrix_product_q, rid))
+                    $error("VV24 owned POPCOUNT mismatch row=%0d matrix=%h count=%0d",
                            rid, matrix_product_q[rid], matrix_count[rid]);
             end
             if (diag16_product !== hdec_diag16_matrix_ref(matrix_product_q))
-                $error("VV23 shared XOR1 diagonal product mismatch got=%h expected=%h",
+                $error("VV24 independent diagonal product mismatch got=%h expected=%h",
                        diag16_product, hdec_diag16_matrix_ref(matrix_product_q));
         end
     end
