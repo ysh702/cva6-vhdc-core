@@ -9,15 +9,18 @@ module tb_hdec_ecc_pmul_profile_v27;
     localparam int ST_ECC_LOAD_B_WAIT         = 24;
     localparam int ST_ECC_LOAD_B              = 25;
     localparam int ST_ECC_DIAG_ISSUE          = 26;
-    localparam int ST_ECC_DIAG_CAPTURE        = 27;
-    localparam int ST_ECC_LEAF_FOLD           = 28;
-    localparam int ST_ECC_WRITE_PAIR          = 29;
-    localparam int ST_ECC_WRITE_DRAIN         = 30;
-    localparam int ST_ECC_REDUCE_LOAD_LO_WAIT = 31;
-    localparam int ST_ECC_REDUCE_LOAD_LO      = 32;
-    localparam int ST_ECC_REDUCE_LOAD_HI_WAIT = 33;
-    localparam int ST_ECC_REDUCE_WRITE        = 34;
-    localparam int ST_ECC_INV_INIT            = 35;
+    localparam int ST_ECC_DIAG_CAPTURE0       = 27;
+    localparam int ST_ECC_DIAG_CAPTURE1       = 28;
+    localparam int ST_ECC_DIAG_CAPTURE2       = 29;
+    localparam int ST_ECC_DIAG_FOLD_ISSUE     = 30;
+    localparam int ST_ECC_LEAF_FOLD           = 31;
+    localparam int ST_ECC_WRITE_PAIR          = 32;
+    localparam int ST_ECC_WRITE_DRAIN         = 33;
+    localparam int ST_ECC_REDUCE_LOAD_LO_WAIT = 34;
+    localparam int ST_ECC_REDUCE_LOAD_LO      = 35;
+    localparam int ST_ECC_REDUCE_LOAD_HI_WAIT = 36;
+    localparam int ST_ECC_REDUCE_WRITE        = 37;
+    localparam int ST_ECC_INV_INIT            = 38;
 
     localparam int PH_INV_SQR                 = 1;
     localparam int PH_INV_MUL                 = 2;
@@ -208,7 +211,10 @@ module tb_hdec_ecc_pmul_profile_v27;
                 ST_ECC_LOAD_B:
                     st_ecc_load_cycles++;
                 ST_ECC_DIAG_ISSUE,
-                ST_ECC_DIAG_CAPTURE:
+                ST_ECC_DIAG_CAPTURE0,
+                ST_ECC_DIAG_CAPTURE1,
+                ST_ECC_DIAG_CAPTURE2,
+                ST_ECC_DIAG_FOLD_ISSUE:
                     st_ecc_diag_cycles++;
                 ST_ECC_LEAF_FOLD:
                     st_ecc_leaf_fold_cycles++;

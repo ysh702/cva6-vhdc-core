@@ -34,7 +34,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         S_UOP_P2_LANE, S_UOP_P3_GLOBAL, S_UOP_P3_POP_CAPTURE, S_UOP_P3_VRF_WAIT, S_UOP_P3_ACCUM, S_UOP_P4_RESP,
         S_UOP_CLIP_WRITE,
         S_ECC_LOAD_A_WAIT, S_ECC_LOAD_A, S_ECC_LOAD_B_WAIT, S_ECC_LOAD_B,
-        S_ECC_DIAG_ISSUE, S_ECC_DIAG_CAPTURE,
+        S_ECC_DIAG_ISSUE, S_ECC_DIAG_CAPTURE0, S_ECC_DIAG_CAPTURE1,
+        S_ECC_DIAG_CAPTURE2, S_ECC_DIAG_FOLD_ISSUE,
         S_ECC_LEAF_FOLD,
         S_ECC_WRITE_PAIR, S_ECC_WRITE_DRAIN,
         S_ECC_REDUCE_LOAD_LO_WAIT, S_ECC_REDUCE_LOAD_LO, S_ECC_REDUCE_LOAD_HI_WAIT, S_ECC_REDUCE_WRITE,
@@ -136,8 +137,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     logic [VRF_IDX_W-1:0] ecc_acc_dst_q, ecc_acc_dst_n;
     logic [31:0]          ecc_leaf_a_q, ecc_leaf_a_n;
     logic [31:0]          ecc_leaf_b_q, ecc_leaf_b_n;
-    logic [31:0]          ecc_leaf_a_next_q;
-    logic [31:0]          ecc_leaf_xor_a_next_q;
     logic [63:0]          ecc_leaf_prod_q, ecc_leaf_prod_n;
     logic [31:0]          ecc_leaf_xor_a_q, ecc_leaf_xor_a_n;
     logic [31:0]          ecc_leaf_xor_b_q, ecc_leaf_xor_b_n;
@@ -157,9 +156,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     logic [31:0]          ecc_leaf_b_lowxor_xor1;
     logic [127:0]         ecc_sub32_capture_accum_xor1;
     logic [127:0]         ecc_direct_reduce_leaf128;
-    logic [2:0]           ecc_diag_group_q, ecc_diag_group_n;
-    logic [2:0]           ecc_diag_issue_group;
     logic                 ecc_diag_product_issue;
+    logic                 ecc_diag_fold_preissue;
     logic                 ecc_xor1_diag_mode;
     logic                 ecc_diag_sub_shadow_mode;
     logic                 ecc_kernel_token_fold_mode;
@@ -170,8 +168,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     logic [15:0]          ecc_bitmatrix_src_a;
     logic [15:0]          ecc_bitmatrix_src_b;
     logic [31:0]          ecc_bitmatrix_product;
-    logic [63:0]          ecc_diag16_token_w;
-    logic [63:0]          ecc_sub_product_done_w;
     logic                                ecc_autoreduce_fast;
     logic [3:0]           ecc_leaf_path_q, ecc_leaf_path_n;
     logic [3:0]           ecc_next_leaf_path;
@@ -278,13 +274,11 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     assign uop_p2_use_clip    = (uop_p2_q.op_type == UOP_HCNTCLIP_READ);
     assign ecc_next_leaf_path = ecc_kpd64_path_inc(ecc_leaf_path_q);
     assign ecc_diag_next_leaf_a_capture = ecc_diag_sub_shadow_mode
-                                        && (st_q == S_ECC_DIAG_CAPTURE)
-                                        && (ecc_diag_group_q == 3'd2)
+                                        && (st_q == S_ECC_DIAG_CAPTURE2)
                                         && (ecc_kpd64_sub_q == 2'd2)
                                         && !ecc_leaf_last;
     assign ecc_diag_next_leaf_b_capture = ecc_diag_sub_shadow_mode
-                                        && (st_q == S_ECC_DIAG_ISSUE)
-                                        && (ecc_diag_group_q == 3'd3)
+                                        && (st_q == S_ECC_DIAG_FOLD_ISSUE)
                                         && (ecc_kpd64_sub_q == 2'd2)
                                         && !ecc_leaf_last;
     assign ecc_leaf_read_path = ((st_q == S_ECC_LEAF_FOLD)
@@ -318,33 +312,43 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     assign ecc_kernel_token_acc_cycle =
         ecc_kernel_token_fold_mode
         && ecc_autoreduce_q
-        && (((st_q == S_ECC_DIAG_CAPTURE) && (ecc_diag_group_q != 3'd0))
-            || ((st_q == S_ECC_DIAG_ISSUE) && (ecc_diag_group_q == 3'd3)));
+        && (((st_q == S_ECC_DIAG_CAPTURE1)
+             || (st_q == S_ECC_DIAG_CAPTURE2))
+            || (st_q == S_ECC_DIAG_FOLD_ISSUE));
+    // The fourteen diagonal equations occupy middle-XOR nodes, leaving the
+    // native leaf low-XOR nodes live during group2.  Sub0 and sub1 can hand
+    // their next operands to the existing leaf registers before group3, where
+    // the otherwise-idle shared AND preissues the next group0 matrix.
+    assign ecc_diag_fold_preissue =
+        (st_q == S_ECC_DIAG_FOLD_ISSUE)
+        && ecc_diag_sub_shadow_mode
+        && (ecc_kpd64_sub_q < 2'd2);
     assign ecc_diag_product_issue =
-        ((st_q == S_ECC_DIAG_ISSUE) && (ecc_diag_group_q != 3'd3))
-        || ((st_q == S_ECC_DIAG_CAPTURE) && (ecc_diag_group_q < 3'd2));
-    assign ecc_diag_issue_group =
-        (st_q == S_ECC_DIAG_CAPTURE) ? (ecc_diag_group_q + 3'd1)
-                                     : ecc_diag_group_q;
-    assign ecc_xor1_diag_mode = (st_q == S_ECC_DIAG_CAPTURE);
+        (st_q == S_ECC_DIAG_ISSUE)
+        || (st_q == S_ECC_DIAG_CAPTURE0)
+        || (st_q == S_ECC_DIAG_CAPTURE1)
+        || ecc_diag_fold_preissue;
+    assign ecc_xor1_diag_mode = (st_q == S_ECC_DIAG_CAPTURE0)
+                              || (st_q == S_ECC_DIAG_CAPTURE1)
+                              || (st_q == S_ECC_DIAG_CAPTURE2);
     assign ecc_leaf_b_unreversed = ecc_bitrev32_top(ecc_leaf_b_q);
 
     always_comb begin
-        ecc_bitmatrix_src_a = '0;
-        ecc_bitmatrix_src_b = '0;
-        unique case (ecc_diag_issue_group)
-            3'd0: begin
-                ecc_bitmatrix_src_a = ecc_leaf_a_q[15:0];
-                ecc_bitmatrix_src_b = ecc_leaf_b_unreversed[15:0];
-            end
-            3'd1: begin
+        // ISSUE and FOLD launch group0.  CAP0 and CAP1 overlap the next two
+        // fixed matrix groups without a group register or incrementer.
+        ecc_bitmatrix_src_a = ecc_leaf_a_q[15:0];
+        ecc_bitmatrix_src_b = ecc_leaf_b_unreversed[15:0];
+        unique case (st_q)
+            S_ECC_DIAG_CAPTURE0: begin
                 ecc_bitmatrix_src_a = ecc_leaf_a_q[31:16];
                 ecc_bitmatrix_src_b = ecc_leaf_b_unreversed[31:16];
             end
-            default: begin
+            S_ECC_DIAG_CAPTURE1: begin
                 ecc_bitmatrix_src_a = ecc_leaf_a_q[15:0] ^ ecc_leaf_a_q[31:16];
                 ecc_bitmatrix_src_b = ecc_leaf_b_unreversed[15:0]
                                     ^ ecc_leaf_b_unreversed[31:16];
+            end
+            default: begin
             end
         endcase
     end
@@ -984,11 +988,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         end
     endfunction
 
-    assign ecc_diag16_token_w = ecc_diag16_karatsuba_token(
-        ecc_diag_group_q,
-        ecc_bitmatrix_product
-    );
-    assign ecc_sub_product_done_w = ecc_leaf_prod_q ^ ecc_diag16_token_w;
     // synthesis translate_off
     function automatic logic [15:0] ecc_diag16_operand_ref(
         input logic [31:0] word,
@@ -1016,28 +1015,46 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         end
     endfunction
 
+    logic [2:0] ecc_diag_assert_group;
+    always_comb begin
+        unique case (st_q)
+            S_ECC_DIAG_CAPTURE1: ecc_diag_assert_group = 3'd1;
+            S_ECC_DIAG_CAPTURE2: ecc_diag_assert_group = 3'd2;
+            default:             ecc_diag_assert_group = 3'd0;
+        endcase
+    end
+
     always_ff @(posedge clk_i) begin
-        if (rst_ni && (st_q == S_ECC_DIAG_CAPTURE)) begin
+        if (rst_ni && ((st_q == S_ECC_DIAG_CAPTURE0)
+                    || (st_q == S_ECC_DIAG_CAPTURE1)
+                    || (st_q == S_ECC_DIAG_CAPTURE2))) begin
             if (ecc_bitmatrix_product !== ecc_clmul16_ref(
-                    ecc_diag16_operand_ref(ecc_leaf_a_q, ecc_diag_group_q),
-                    ecc_diag16_operand_ref(ecc_leaf_b_unreversed, ecc_diag_group_q))) begin
+                    ecc_diag16_operand_ref(ecc_leaf_a_q, ecc_diag_assert_group),
+                    ecc_diag16_operand_ref(ecc_leaf_b_unreversed,
+                                           ecc_diag_assert_group))) begin
                 $error("VV23 shared matrix kernel mismatch sub=%0d kernel=%0d got=%h",
-                       ecc_kpd64_sub_q, ecc_diag_group_q, ecc_bitmatrix_product);
+                       ecc_kpd64_sub_q, ecc_diag_assert_group,
+                       ecc_bitmatrix_product);
             end
         end
-        if (rst_ni && (st_q == S_ECC_DIAG_ISSUE)
-            && (ecc_diag_group_q == 3'd3)) begin
-            if (ecc_diag_product_issue)
-                $error("VV23 XOR1 fold cycle illegally issued a fourth AND matrix");
+        if (rst_ni && (st_q == S_ECC_DIAG_FOLD_ISSUE)) begin
+            if (ecc_diag_product_issue !== ecc_diag_fold_preissue)
+                $error("VV25 fold preissue enable mismatch");
+            if (ecc_diag_fold_preissue
+                && ((ecc_bitmatrix_src_a !== ecc_leaf_a_q[15:0])
+                    || (ecc_bitmatrix_src_b !== ecc_leaf_b_unreversed[15:0])))
+                $error("VV25 fold did not preissue group0");
+            if (ecc_diag_fold_preissue && (st_n != S_ECC_DIAG_CAPTURE0))
+                $error("VV25 fold preissue did not advance to capture");
             if (ecc_leaf_a_lowxor_xor1 !== (ecc_leaf_a_q ^ ecc_leaf_xor_a_q))
-                $error("VV23 XOR1 changed VV22 leaf-A lowxor behavior");
+                $error("VV25 XOR1 changed VV22 leaf-A lowxor behavior");
             if (ecc_leaf_b_lowxor_xor1 !== (ecc_leaf_b_q ^ ecc_leaf_xor_b_q))
-                $error("VV23 XOR1 changed VV22 leaf-B lowxor behavior");
+                $error("VV25 XOR1 changed VV22 leaf-B lowxor behavior");
             if (!ecc_kernel_token_fold_mode
                 && (ecc_sub32_capture_accum_xor1 !== ecc_kpd64_sub32_accum(
                         ecc_leaf128_prod_q, ecc_kpd64_sub_q, ecc_leaf_prod_q))) begin
-                $error("VV23 XOR1 changed VV22 sub32 fold behavior sub=%0d",
-                       ecc_kpd64_sub_q);
+                $error("VV25 XOR1 changed VV22 sub32 fold behavior sub=%0d",
+                        ecc_kpd64_sub_q);
             end
         end
     end
@@ -1175,7 +1192,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         ecc_leaf128_prod_n=ecc_leaf128_prod_q; ecc_kpd64_sub_n=ecc_kpd64_sub_q;
         ecc_leaf_path_n=ecc_leaf_path_q;
         ecc_fold_word_n=ecc_fold_word_q;
-        ecc_diag_group_n=ecc_diag_group_q;
         ecc_product_we=1'b0;
         ecc_autoreduce_n=ecc_autoreduce_q; ecc_raw_product_n=ecc_raw_product_q;
         ecc_mac_n=ecc_mac_q; ecc_sqr_repeat_n=ecc_sqr_repeat_q;
@@ -1553,104 +1569,140 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             ecc_leaf128_prod_n = '0;
             ecc_kpd64_sub_n = 2'd0;
             ecc_leaf_prod_n = '0;
-            ecc_diag_group_n = '0;
             ecc_leaf_path_n = '0;
             ecc_fold_word_n = 2'd0;
             st_n=S_ECC_DIAG_ISSUE;
         end
 
         S_ECC_DIAG_ISSUE: begin
+            // Start the first 16x16 kernel and prefetch the next 64-bit leaf
+            // while the third 32x32 sub-product is in flight.
+            if (ecc_diag_sub_shadow_mode && !ecc_leaf_last
+                && (ecc_kpd64_sub_q == 2'd2)) begin
+                vrf_req.ra=ecc_src_a_q;
+            end
+            st_n=S_ECC_DIAG_CAPTURE0;
+        end
+
+        S_ECC_DIAG_FOLD_ISSUE: begin
             if (ecc_kernel_token_acc_cycle) begin
                 hdc_src0_acc_we=1'b1;
             end
-            if (ecc_diag_group_q == 3'd3) begin
-                // XOR1 is in its VV22 fold mode in this transition cycle.
-                // This resolves the mode conflict without cloning XOR1.
-                if (!ecc_kernel_token_fold_mode)
-                    ecc_leaf128_prod_n = ecc_sub32_capture_accum_xor1;
-                else
-                    ecc_leaf128_prod_n = '0;
-                ecc_leaf_prod_n = '0;
-                ecc_diag_group_n = 3'd0;
-
-                unique case (ecc_kpd64_sub_q)
-                    2'd0: begin
-                        ecc_leaf_a_n = ecc_leaf_a_lowxor_xor1;
-                        ecc_leaf_b_n = ecc_leaf_b_lowxor_xor1;
-                        ecc_kpd64_sub_n = 2'd1;
-                        st_n=S_ECC_DIAG_ISSUE;
-                    end
-                    2'd1: begin
-                        ecc_leaf_a_n = ecc_leaf_xor_a_q;
-                        ecc_leaf_b_n = ecc_leaf_xor_b_q;
-                        ecc_kpd64_sub_n = 2'd2;
-                        st_n=S_ECC_DIAG_ISSUE;
-                    end
-                    default: begin
-                        if (ecc_diag_sub_shadow_mode) begin
-                            if (!ecc_leaf_last) begin
-                                ecc_leaf_a_n = ecc_leaf_a_next_q;
-                                ecc_leaf_xor_a_n = ecc_leaf_xor_a_next_q;
-                                ecc_leaf_b_n = ecc_bitrev32_top(ecc_leaf_lowxor_rd[31:0]);
-                                ecc_leaf_xor_b_n = ecc_bitrev32_top(ecc_leaf_lowxor_rd[63:32]);
-                                ecc_leaf_path_n = ecc_next_leaf_path;
-                                ecc_kpd64_sub_n = 2'd0;
-                                ecc_fold_word_n = 2'd0;
-                                st_n=S_ECC_DIAG_ISSUE;
-                            end else begin
-                                ecc_kpd64_sub_n = 2'd3;
-                                ecc_fold_word_n = 2'd0;
-                                st_n=S_ECC_WRITE_PAIR;
-                            end
+            // XOR1 is in its original VV22 fold mode, while the same shared
+            // AND may preissue the next group0 matrix through the operands
+            // handed off at the preceding group2 capture.
+            if (!ecc_kernel_token_fold_mode)
+                ecc_leaf128_prod_n = ecc_sub32_capture_accum_xor1;
+            else
+                ecc_leaf128_prod_n = '0;
+            ecc_leaf_prod_n = '0;
+            unique case (ecc_kpd64_sub_q)
+                2'd0: begin
+                    ecc_kpd64_sub_n = 2'd1;
+                    st_n=ecc_diag_fold_preissue
+                       ? S_ECC_DIAG_CAPTURE0 : S_ECC_DIAG_ISSUE;
+                end
+                2'd1: begin
+                    ecc_kpd64_sub_n = 2'd2;
+                    // This fold/launch cycle replaces sub2 ISSUE0, so retain
+                    // ISSUE0's next-leaf A prefetch side effect.
+                    if (ecc_diag_fold_preissue && !ecc_leaf_last)
+                        vrf_req.ra=ecc_src_a_q;
+                    st_n=ecc_diag_fold_preissue
+                       ? S_ECC_DIAG_CAPTURE0 : S_ECC_DIAG_ISSUE;
+                end
+                default: begin
+                    if (ecc_diag_sub_shadow_mode) begin
+                        if (!ecc_leaf_last) begin
+                            ecc_leaf_b_n = ecc_bitrev32_top(ecc_leaf_lowxor_rd[31:0]);
+                            ecc_leaf_xor_b_n = ecc_bitrev32_top(ecc_leaf_lowxor_rd[63:32]);
+                            ecc_leaf_path_n = ecc_next_leaf_path;
+                            ecc_kpd64_sub_n = 2'd0;
+                            ecc_fold_word_n = 2'd0;
+                            st_n=S_ECC_DIAG_ISSUE;
                         end else begin
                             ecc_kpd64_sub_n = 2'd3;
                             ecc_fold_word_n = 2'd0;
-                            if (!ecc_leaf_last)
-                                vrf_req.ra=ecc_src_a_q;
-                            st_n=S_ECC_LEAF_FOLD;
+                            st_n=S_ECC_WRITE_PAIR;
                         end
+                    end else begin
+                        ecc_kpd64_sub_n = 2'd3;
+                        ecc_fold_word_n = 2'd0;
+                        if (!ecc_leaf_last)
+                            vrf_req.ra=ecc_src_a_q;
+                        st_n=S_ECC_LEAF_FOLD;
                     end
-                endcase
-            end else begin
-                // Start the first 16x16 kernel and prefetch the next 64-bit
-                // leaf while the third 32x32 sub-product is in flight.
-                if (ecc_diag_sub_shadow_mode && !ecc_leaf_last
-                    && (ecc_kpd64_sub_q == 2'd2)) begin
-                    vrf_req.ra=ecc_src_a_q;
                 end
-                st_n=S_ECC_DIAG_CAPTURE;
-            end
+            endcase
         end
 
-        S_ECC_DIAG_CAPTURE: begin
-            if (ecc_kernel_token_acc_cycle) begin
-                hdc_src0_acc_we=1'b1;
-            end
+        S_ECC_DIAG_CAPTURE0: begin
             if (ecc_kernel_token_fold_mode) begin
-                // Production mode keeps only the 64-bit delayed Karatsuba
-                // token.  The existing modular-reduction input interprets it
-                // with ecc_kpd64_sub_q in the following cycle, avoiding a
-                // 128-bit token register and its duplicated input cone.
-                ecc_leaf_prod_n = ecc_diag16_token_w;
+                ecc_leaf_prod_n = ecc_diag16_karatsuba_token(
+                    3'd0, ecc_bitmatrix_product
+                );
             end else begin
-                ecc_leaf_prod_n = ecc_sub_product_done_w;
+                ecc_leaf_prod_n = ecc_leaf_prod_q
+                                ^ ecc_diag16_karatsuba_token(
+                                      3'd0, ecc_bitmatrix_product
+                                  );
             end
-
             if (ecc_diag_sub_shadow_mode && !ecc_leaf_last
-                && (ecc_kpd64_sub_q == 2'd2)
-                && (ecc_diag_group_q == 3'd0)) begin
+                && (ecc_kpd64_sub_q == 2'd2)) begin
                 vrf_req.ra=ecc_src_b_q;
             end
-            if (ecc_diag_group_q < 3'd2) begin
-                ecc_diag_group_n = ecc_diag_group_q + 3'd1;
-                st_n=S_ECC_DIAG_CAPTURE;
+            st_n=S_ECC_DIAG_CAPTURE1;
+        end
+
+        S_ECC_DIAG_CAPTURE1: begin
+            if (ecc_kernel_token_acc_cycle)
+                hdc_src0_acc_we=1'b1;
+            if (ecc_kernel_token_fold_mode) begin
+                ecc_leaf_prod_n = ecc_diag16_karatsuba_token(
+                    3'd1, ecc_bitmatrix_product
+                );
             end else begin
-                // Group 3 is a real XOR1 legacy-mode cycle, not a fourth
-                // AND matrix.  It folds the completed sub-product and drains
-                // the final streamed token before the next sub-product.
-                ecc_diag_group_n = 3'd3;
-                st_n=S_ECC_DIAG_ISSUE;
+                ecc_leaf_prod_n = ecc_leaf_prod_q
+                                ^ ecc_diag16_karatsuba_token(
+                                      3'd1, ecc_bitmatrix_product
+                                  );
             end
+            st_n=S_ECC_DIAG_CAPTURE2;
+        end
+
+        S_ECC_DIAG_CAPTURE2: begin
+            if (ecc_kernel_token_acc_cycle)
+                hdc_src0_acc_we=1'b1;
+            if (ecc_kernel_token_fold_mode) begin
+                ecc_leaf_prod_n = ecc_diag16_karatsuba_token(
+                    3'd2, ecc_bitmatrix_product
+                );
+            end else begin
+                ecc_leaf_prod_n = ecc_leaf_prod_q
+                                ^ ecc_diag16_karatsuba_token(
+                                      3'd2, ecc_bitmatrix_product
+                                  );
+            end
+
+            // After group2, reuse the same leaf registers for the next
+            // Karatsuba operands or the prefetched next-leaf A.
+            unique case (ecc_kpd64_sub_q)
+                2'd0: begin
+                    ecc_leaf_a_n = ecc_leaf_a_lowxor_xor1;
+                    ecc_leaf_b_n = ecc_leaf_b_lowxor_xor1;
+                end
+                2'd1: begin
+                    ecc_leaf_a_n = ecc_leaf_xor_a_q;
+                    ecc_leaf_b_n = ecc_leaf_xor_b_q;
+                end
+                default: begin
+                    if (ecc_diag_next_leaf_a_capture) begin
+                        ecc_leaf_a_n = ecc_leaf_lowxor_rd[31:0];
+                        ecc_leaf_xor_a_n = ecc_leaf_lowxor_rd[63:32];
+                    end
+                end
+            endcase
+            st_n=S_ECC_DIAG_FOLD_ISSUE;
         end
 
         S_ECC_LEAF_FOLD: begin
@@ -2645,8 +2697,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             hdc_src0_q<='0;
             p2_lane_compute_q<=1'b0;
             ecc_src_a_q<='0;ecc_src_b_q<='0;ecc_dst_q<='0;ecc_acc_dst_q<='0;
-            ecc_leaf_a_q<='0;ecc_leaf_b_q<='0;ecc_leaf_a_next_q<='0;ecc_leaf_xor_a_next_q<='0;ecc_leaf_prod_q<='0;ecc_leaf_path_q<='0;ecc_fold_word_q<='0;
-            ecc_diag_group_q<='0;
+            ecc_leaf_a_q<='0;ecc_leaf_b_q<='0;ecc_leaf_prod_q<='0;ecc_leaf_path_q<='0;ecc_fold_word_q<='0;
             ecc_leaf_xor_a_q<='0;ecc_leaf_xor_b_q<='0;ecc_leaf128_prod_q<='0;ecc_kpd64_sub_q<='0;
             ecc_autoreduce_q<=1'b0;ecc_raw_product_q<=1'b0;ecc_mac_q<=1'b0;ecc_sqr_repeat_q<='0;
             ecc_job_kind_q<=ECC_JOB_NONE;ecc_job_phase_q<=ECC_PHASE_NONE;ecc_job_active_q<=1'b0;ecc_job_done_q<=1'b0;ecc_job_bg_q<=1'b0;ecc_job_cycle_q<='0;ecc_inv_step_q<='0;ecc_job_src_q<='0;ecc_job_dst_q<='0;
@@ -2677,11 +2728,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             ecc_src_a_q<=ecc_src_a_n;ecc_src_b_q<=ecc_src_b_n;ecc_dst_q<=ecc_dst_n;ecc_acc_dst_q<=ecc_acc_dst_n;
             ecc_leaf_a_q<=ecc_leaf_a_n;ecc_leaf_b_q<=ecc_leaf_b_n;
             ecc_leaf_prod_q<=ecc_leaf_prod_n;ecc_leaf_path_q<=ecc_leaf_path_n;ecc_fold_word_q<=ecc_fold_word_n;
-            if (ecc_diag_next_leaf_a_capture) begin
-                ecc_leaf_a_next_q<=ecc_leaf_lowxor_rd[31:0];
-                ecc_leaf_xor_a_next_q<=ecc_leaf_lowxor_rd[63:32];
-            end
-            ecc_diag_group_q<=ecc_diag_group_n;
             ecc_leaf_xor_a_q<=ecc_leaf_xor_a_n;ecc_leaf_xor_b_q<=ecc_leaf_xor_b_n;
             ecc_leaf128_prod_q<=ecc_leaf128_prod_n;ecc_kpd64_sub_q<=ecc_kpd64_sub_n;
             ecc_autoreduce_q<=ecc_autoreduce_n;ecc_raw_product_q<=ecc_raw_product_n;
