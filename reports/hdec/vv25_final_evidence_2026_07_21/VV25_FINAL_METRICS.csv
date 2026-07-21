@@ -1,0 +1,6 @@
+version,logic_lut,ff,bram,dsp,fmax_mhz,pmul_wall_cycles,selection
+VV22,4734,1442,4,0,214.041,189412,baseline
+VV23,4840,1375,4,0,204.290,188224,shared_matrix_reduction
+VV24,4822,1370,4,0,204.040,188224,native_xor1_independent_reduction
+VV25_R31,4661,1304,4,0,214.041,166840,selected_balanced_point
+VV25_R28,4657,1304,4,0,206.398,166840,retained_area_first_pareto_point

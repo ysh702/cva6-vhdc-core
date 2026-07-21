@@ -1,0 +1,33 @@
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2024 Advanced Micro Devices, Inc. All Rights Reserved.
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2024.2 (win64) Build 5239630 Fri Nov 08 22:35:27 MST 2024
+| Date         : Sun Jul 19 04:07:40 2026
+| Host         : WIN-20240824NZS running 64-bit major release  (build 9200)
+| Command      : report_utilization -hierarchical -file E:/HDEC/cva6-vhdc-core/tmp/hdec_vv25_byte_equation_worktree/reports/hdec/vv25_r31_final_inventory_20260719/utilization_hier.rpt
+| Design       : hdec_top
+| Device       : xc7z020clg400-2
+| Speed File   : -2
+| Design State : Synthesized
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Utilization Design Information
+
+Table of Contents
+-----------------
+1. Utilization by Hierarchy
+
+1. Utilization by Hierarchy
+---------------------------
+
++---------------------------------+-------------------------------------+------------+------------+---------+------+------+--------+--------+------------+
+|             Instance            |                Module               | Total LUTs | Logic LUTs | LUTRAMs | SRLs |  FFs | RAMB36 | RAMB18 | DSP Blocks |
++---------------------------------+-------------------------------------+------------+------------+---------+------+------+--------+--------+------------+
+| hdec_top                        |                               (top) |       4645 |       4645 |       0 |    0 | 1304 |      4 |      0 |          0 |
+|   (hdec_top)                    |                               (top) |       1709 |       1709 |       0 |    0 | 1000 |      0 |      0 |          0 |
+|   i_vec                         |            hdec_vector_payload_4x64 |       2936 |       2936 |       0 |    0 |  304 |      0 |      0 |          0 |
+|     (i_vec)                     |            hdec_vector_payload_4x64 |       2360 |       2360 |       0 |    0 |  304 |      0 |      0 |          0 |
+|     i_gf2_contribution_row_tile | hdec_gf2_contribution_row_tile_8x32 |        576 |        576 |       0 |    0 |    0 |      0 |      0 |          0 |
+|   i_vrf                         |                     hdec_vrf_64x256 |          0 |          0 |       0 |    0 |    0 |      4 |      0 |          0 |
++---------------------------------+-------------------------------------+------------+------------+---------+------+------+--------+--------+------------+
+
+
