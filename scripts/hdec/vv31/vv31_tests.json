@@ -1,0 +1,111 @@
+{
+  "schema": "hdec-vv31-tests-v1",
+  "tests": {
+    "baseline_gap": {
+      "runner": "generic",
+      "top": "tb_vv31_baseline_gap",
+      "file": "verif/hdec/vv31/system/tb_vv31_baseline_gap.sv",
+      "pass_marker": "[VV31:baseline_gap] PASS"
+    },
+    "hdc_episode": {
+      "runner": "generic",
+      "top": "tb_vv31_hdc_episode",
+      "file": "verif/hdec/vv31/system/tb_vv31_hdc_episode.sv",
+      "pass_marker": "[VV31:hdc_episode] PASS"
+    },
+    "bg_pmul_hdc_train_infer": {
+      "runner": "generic",
+      "top": "tb_vv31_bg_pmul_hdc_train_infer",
+      "file": "verif/hdec/vv31/system/tb_vv31_bg_pmul_hdc_train_infer.sv",
+      "pass_marker": "[VV31:bg_pmul_hdc_train_infer] PASS"
+    },
+    "atomic_priority_contract": {
+      "runner": "generic",
+      "top": "tb_vv31_atomic_priority_contract",
+      "file": "verif/hdec/vv31/integration/tb_vv31_atomic_priority_contract.sv",
+      "pass_marker": "[VV31:atomic_priority_contract] PASS"
+    },
+    "resource_pairing": {
+      "runner": "generic",
+      "top": "tb_vv31_resource_pairing",
+      "file": "verif/hdec/vv31/integration/tb_vv31_resource_pairing.sv",
+      "pass_marker": "[VV31:resource_pairing] PASS"
+    },
+    "pmul_pipeline_contract": {
+      "runner": "generic",
+      "top": "tb_vv31_pmul_pipeline_contract",
+      "file": "verif/hdec/vv31/system/tb_vv31_pmul_pipeline_contract.sv",
+      "pass_marker": "[VV31:pmul_pipeline_contract] PASS"
+    },
+    "ecc_schedule_trace": {
+      "runner": "generic",
+      "top": "tb_vv31_ecc_schedule_trace",
+      "file": "verif/hdec/vv31/system/tb_vv31_ecc_schedule_trace.sv",
+      "pass_marker": "[VV31:ecc_schedule_trace] PASS"
+    },
+    "interleave_constant_time": {
+      "runner": "generic",
+      "top": "tb_vv31_interleave_constant_time",
+      "file": "verif/hdec/vv31/system/tb_vv31_interleave_constant_time.sv",
+      "pass_marker": "[VV31:interleave_constant_time] PASS"
+    },
+    "mode_switch": {
+      "runner": "generic",
+      "top": "tb_vv31_mode_switch",
+      "file": "verif/hdec/vv31/system/tb_vv31_mode_switch.sv",
+      "pass_marker": "[VV31:mode_switch] PASS"
+    }
+  },
+  "suites": {
+    "baseline_gap": [
+      "baseline_gap"
+    ],
+    "quick": [
+      "hdc_episode",
+      "bg_pmul_hdc_train_infer",
+      "atomic_priority_contract"
+    ],
+    "stage": [
+      "baseline_gap",
+      "hdc_episode",
+      "bg_pmul_hdc_train_infer",
+      "atomic_priority_contract",
+      "resource_pairing",
+      "pmul_pipeline_contract",
+      "ecc_schedule_trace",
+      "interleave_constant_time",
+      "mode_switch"
+    ],
+    "full": [
+      "baseline_gap",
+      "hdc_episode",
+      "bg_pmul_hdc_train_infer",
+      "atomic_priority_contract",
+      "resource_pairing",
+      "pmul_pipeline_contract",
+      "ecc_schedule_trace",
+      "interleave_constant_time",
+      "mode_switch"
+    ],
+    "stress": [
+      "baseline_gap",
+      "hdc_episode",
+      "bg_pmul_hdc_train_infer",
+      "atomic_priority_contract",
+      "resource_pairing",
+      "pmul_pipeline_contract",
+      "interleave_constant_time",
+      "mode_switch"
+    ],
+    "replay": [
+      "baseline_gap",
+      "hdc_episode",
+      "bg_pmul_hdc_train_infer",
+      "atomic_priority_contract",
+      "resource_pairing",
+      "pmul_pipeline_contract",
+      "interleave_constant_time",
+      "mode_switch"
+    ]
+  }
+}

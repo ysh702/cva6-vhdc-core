@@ -9,7 +9,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     parameter bit ECC_PMUL_AFFINE_FACTORING = 1'b1,
     parameter bit ECC_INV_SQUARE_REDIRECT = 1'b1,
     parameter bit ECC_PMUL_DBL_FROBENIUS = 1'b1,
-    parameter bit ECC_PMUL_ADD_Z_FORWARD = 1'b1
+    parameter bit ECC_PMUL_ADD_Z_FORWARD = 1'b1,
+    parameter bit VV31_SCHED_ENABLE = 1'b1
 ) (
     input logic clk_i, rst_ni, valid_i, output logic ready_o,
     input hdec_op_t operator_i, input logic [63:0] operand_a_i, operand_b_i,
@@ -166,6 +167,10 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     logic [127:0]         ecc_sub32_capture_accum_xor1;
     logic                 ecc_diag_product_issue;
     logic                 ecc_diag_fold_preissue;
+    logic                 ecc_diag_leaf_preissue;
+    logic                 ecc_diag_early_b_load;
+    logic                 ecc_pmul_add_t1_prefetch;
+    logic                 ecc_pmul_add_t2_prefetch;
     logic                 ecc_xor1_diag_mode;
     logic                 ecc_diag_sub_shadow_mode;
     logic                 ecc_kernel_token_fold_mode;
@@ -286,18 +291,24 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     assign uop_p2_use_shift   = (uop_p2_q.op_type == UOP_HPERM_CHUNK);
     assign uop_p2_use_clip    = (uop_p2_q.op_type == UOP_HCNTCLIP_READ);
     assign ecc_next_leaf_path = ecc_kpd64_path_inc(ecc_leaf_path_q);
+    // The legacy schedule captures next A at group2 completion and next B in
+    // the following fold. VV31 preserves A's original capture point, but
+    // returns B one cycle earlier after group2 has consumed the old operands.
     assign ecc_diag_next_leaf_a_capture = ecc_diag_sub_shadow_mode
                                         && (st_q == S_ECC_DIAG_CAPTURE2)
                                         && (ecc_kpd64_sub_q == 2'd2)
                                         && !ecc_leaf_last;
     assign ecc_diag_next_leaf_b_capture = ecc_diag_sub_shadow_mode
-                                        && (st_q == S_ECC_DIAG_FOLD_ISSUE)
                                         && (ecc_kpd64_sub_q == 2'd2)
-                                        && !ecc_leaf_last;
+                                        && !ecc_leaf_last
+                                        && ((!VV31_SCHED_ENABLE
+                                             && (st_q == S_ECC_DIAG_FOLD_ISSUE))
+                                         || (VV31_SCHED_ENABLE
+                                             && (st_q == S_ECC_DIAG_CAPTURE1)));
     assign ecc_leaf_read_path = ((st_q == S_ECC_LEAF_FOLD)
-                              || ecc_diag_next_leaf_a_capture
-                              || ecc_diag_next_leaf_b_capture)
-                              ? ecc_next_leaf_path[3:0] : ecc_leaf_path_q[3:0];
+                               || ecc_diag_next_leaf_a_capture
+                               || ecc_diag_next_leaf_b_capture)
+                               ? ecc_next_leaf_path[3:0] : ecc_leaf_path_q[3:0];
     assign ecc_leaf_lowxor_rd = ecc_kpd64_leaf_lowxor_pack({vrf_rd[3], vrf_rd[2], vrf_rd[1], vrf_rd[0]}, ecc_leaf_read_path);
     assign ecc_leaf_first = (ecc_leaf_path_q[3:0] == 4'b00_00);
     assign ecc_leaf_last  = (ecc_leaf_path_q[3:0] == 4'b10_10);
@@ -328,6 +339,24 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         && (ecc_job_phase_q == ECC_PHASE_PMUL_FIELD)
         && (ecc_pmul_subop_q == ECC_PMUL_SUB_ADD)
         && (ecc_pmul_step_q == 5'd7);
+    // T0 and T1 have disjoint input dependencies.  While T0 uses the VRF write
+    // port, start T1's first operand read on the independent read port and
+    // enter the existing load pipeline without STEP_NEXT/PMUL_STEP bubbles.
+    assign ecc_pmul_add_t1_prefetch =
+        VV31_SCHED_ENABLE
+        && !ECC_DEBUG_FIELD_OPS
+        && (ecc_pmul_subop_q == ECC_PMUL_SUB_ADD)
+        && (ecc_pmul_step_q == 5'd0);
+    // Q(T4) only consumes T4, whereas the following T2 multiply consumes the
+    // selected point-coordinate pair.  Use the two square-read wait slots for
+    // those independent A/B reads, then enter the canonical leaf load path.
+    assign ecc_pmul_add_t2_prefetch =
+        VV31_SCHED_ENABLE
+        && !ECC_DEBUG_FIELD_OPS
+        && ecc_job_active_q
+        && (ecc_job_phase_q == ECC_PHASE_PMUL_FIELD)
+        && (ecc_pmul_subop_q == ECC_PMUL_SUB_ADD)
+        && (ecc_pmul_step_q == 5'd3);
     assign affine_field_active =
         ECC_PMUL_RESIDUE_SEED_ACTIVE
         && ecc_job_active_q
@@ -359,11 +388,29 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         (st_q == S_ECC_DIAG_FOLD_ISSUE)
         && ecc_diag_sub_shadow_mode
         && (ecc_kpd64_sub_q < 2'd2);
+    // At the final sub-product fold, both next-leaf operands have already
+    // replaced dead current-leaf register values. XOR0 folds the current
+    // token, leaving the shared bit matrix free to launch next group0.
+    assign ecc_diag_leaf_preissue =
+        VV31_SCHED_ENABLE
+        && (st_q == S_ECC_DIAG_FOLD_ISSUE)
+        && ecc_diag_sub_shadow_mode
+        && (ecc_kpd64_sub_q == 2'd2)
+        && !ecc_leaf_last;
+    // The PMUL residue-seed read is the only autoreduced multiply that still
+    // needs the LOAD_A_WAIT read slot. All other field multiplies can move B
+    // into that slot and have both first-leaf operands registered by LOAD_B.
+    assign ecc_diag_early_b_load =
+        VV31_SCHED_ENABLE
+        && ecc_autoreduce_fast
+        && !ecc_mac_q
+        && !ecc_pmul_residue_seed_vrf;
     assign ecc_diag_product_issue =
         (st_q == S_ECC_DIAG_ISSUE)
         || (st_q == S_ECC_DIAG_CAPTURE0)
         || (st_q == S_ECC_DIAG_CAPTURE1)
-        || ecc_diag_fold_preissue;
+        || ecc_diag_fold_preissue
+        || ecc_diag_leaf_preissue;
     assign ecc_xor1_diag_mode = (st_q == S_ECC_DIAG_CAPTURE0)
                               || (st_q == S_ECC_DIAG_CAPTURE1)
                               || (st_q == S_ECC_DIAG_CAPTURE2);
@@ -1195,7 +1242,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     always_ff @(posedge clk_i) begin
         if (rst_ni && ((st_q == S_ECC_DIAG_CAPTURE0)
                     || (st_q == S_ECC_DIAG_CAPTURE1)
-                    || (st_q == S_ECC_DIAG_CAPTURE2))) begin
+                    || (st_q == S_ECC_DIAG_CAPTURE2))
+            && !(VV31_SCHED_ENABLE && ecc_diag_next_leaf_a_capture)) begin
             if (ecc_bitmatrix_product !== ecc_clmul16_ref(
                     ecc_diag16_operand_ref(ecc_leaf_a_q, ecc_diag_assert_group),
                     ecc_diag16_operand_ref(ecc_leaf_b_unreversed,
@@ -1206,13 +1254,19 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             end
         end
         if (rst_ni && (st_q == S_ECC_DIAG_FOLD_ISSUE)) begin
-            if (ecc_diag_product_issue !== ecc_diag_fold_preissue)
+            if (ecc_diag_product_issue
+                !== (ecc_diag_fold_preissue || ecc_diag_leaf_preissue))
                 $error("VV25 fold preissue enable mismatch");
             if (ecc_diag_fold_preissue
                 && ((ecc_bitmatrix_src_a !== ecc_leaf_a_q[15:0])
                     || (ecc_bitmatrix_src_b !== ecc_leaf_b_unreversed[15:0])))
                 $error("VV25 fold did not preissue group0");
-            if (ecc_diag_fold_preissue && (st_n != S_ECC_DIAG_CAPTURE0))
+            if (ecc_diag_leaf_preissue
+                && ((ecc_bitmatrix_src_a !== ecc_leaf_a_q[15:0])
+                    || (ecc_bitmatrix_src_b !== ecc_leaf_b_unreversed[15:0])))
+                $error("VV31 next-leaf registered preissue mismatch");
+            if ((ecc_diag_fold_preissue || ecc_diag_leaf_preissue)
+                && (st_n != S_ECC_DIAG_CAPTURE0))
                 $error("VV25 fold preissue did not advance to capture");
             if (ecc_leaf_a_lowxor_xor1 !== (ecc_leaf_a_q ^ ecc_leaf_xor_a_q))
                 $error("VV25 XOR1 changed VV22 leaf-A lowxor behavior");
@@ -1653,10 +1707,14 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         S_VWR_WAIT: begin res_n='0;st_n=S_RESULT;end
 
         S_RD_WAIT: begin
+            if (ecc_pmul_add_t2_prefetch)
+                vrf_req.ra=ecc_pmul_dbl_x;
             st_n=S_RD_WAIT2;
         end
 
         S_RD_WAIT2: begin
+            if (ecc_pmul_add_t2_prefetch)
+                vrf_req.ra=ecc_pmul_dbl_z;
             if (ecc_autoreduce_q
              && (((op_q == HDEC_HPERM) && hperm_spread_q)
               || (ecc_job_active_q && (ecc_job_phase_q == ECC_PHASE_INV_SQR))
@@ -1678,7 +1736,19 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             hperm_spread_n=1'b0;
             ecc_dst_n=hspread_dst_base;
             ecc_autoreduce_n=1'b0;
-            if (ecc_mac_q && (ecc_sqr_repeat_q == 7'd0)) begin
+            if (ecc_pmul_add_t2_prefetch) begin
+                ecc_pmul_step_n=5'd4;
+                ecc_dst_n=ECC_PMUL_T2;
+                ecc_src_a_n=ecc_pmul_dbl_x;
+                ecc_src_b_n=ecc_pmul_dbl_z;
+                ecc_autoreduce_n=1'b1;
+                ecc_mac_n=1'b0;
+                ecc_sqr_repeat_n='0;
+                ecc_leaf_path_n='0;
+                hdc_src0_n='0;
+                hdc_src0_we=1'b1;
+                st_n=S_ECC_LOAD_A;
+            end else if (ecc_mac_q && (ecc_sqr_repeat_q == 7'd0)) begin
                 uop_p0_n='0;
                 uop_p0_n.valid     = 1'b1;
                 uop_p0_n.op_type   = UOP_HBIND_CHUNK;
@@ -1734,11 +1804,14 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                     hdc_src0_we=1'b1;
                 end
             end
+            if (ecc_diag_early_b_load)
+                vrf_req.ra=ecc_src_b_q;
             st_n=S_ECC_LOAD_A_WAIT2;
         end
 
         S_ECC_LOAD_A_WAIT2: begin
-            vrf_req.ra=ecc_src_b_q;
+            if (!ecc_diag_early_b_load)
+                vrf_req.ra=ecc_src_b_q;
             st_n=S_ECC_LOAD_A;
         end
 
@@ -1750,7 +1823,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             end else begin
                 ecc_leaf_a_n = ecc_leaf_lowxor_rd[31:0];
                 ecc_leaf_xor_a_n = ecc_leaf_lowxor_rd[63:32];
-                vrf_req.ra=ecc_src_b_q;
+                if (!ecc_diag_early_b_load)
+                    vrf_req.ra=ecc_src_b_q;
             end
             st_n=S_ECC_LOAD_B_WAIT;
         end
@@ -1759,13 +1833,28 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             if (ecc_mac_q || ecc_pmul_residue_seed_vrf) begin
                 ecc_leaf_a_n = ecc_leaf_lowxor_rd[31:0];
                 ecc_leaf_xor_a_n = ecc_leaf_lowxor_rd[63:32];
+                st_n=S_ECC_LOAD_B;
+            end else if (ecc_diag_early_b_load) begin
+                ecc_leaf_b_n =
+                    ecc_bitrev32_top(ecc_leaf_lowxor_rd[31:0]);
+                ecc_leaf_xor_b_n =
+                    ecc_bitrev32_top(ecc_leaf_lowxor_rd[63:32]);
+                ecc_leaf128_prod_n = '0;
+                ecc_kpd64_sub_n = 2'd0;
+                ecc_leaf_prod_n = '0;
+                ecc_leaf_path_n = '0;
+                ecc_fold_word_n = 2'd0;
+                st_n=S_ECC_DIAG_ISSUE;
+            end else begin
+                st_n=S_ECC_LOAD_B;
             end
-            st_n=S_ECC_LOAD_B;
         end
 
         S_ECC_LOAD_B: begin
-            ecc_leaf_b_n = ecc_bitrev32_top(ecc_leaf_lowxor_rd[31:0]);
-            ecc_leaf_xor_b_n = ecc_bitrev32_top(ecc_leaf_lowxor_rd[63:32]);
+            ecc_leaf_b_n =
+                ecc_bitrev32_top(ecc_leaf_lowxor_rd[31:0]);
+            ecc_leaf_xor_b_n =
+                ecc_bitrev32_top(ecc_leaf_lowxor_rd[63:32]);
             ecc_leaf128_prod_n = '0;
             ecc_kpd64_sub_n = 2'd0;
             ecc_leaf_prod_n = '0;
@@ -1777,7 +1866,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         S_ECC_DIAG_ISSUE: begin
             // Start the first 16x16 kernel and prefetch the next 64-bit leaf
             // while the third 32x32 sub-product is in flight.
-            if (ecc_diag_sub_shadow_mode && !ecc_leaf_last
+            if (!VV31_SCHED_ENABLE
+                && ecc_diag_sub_shadow_mode && !ecc_leaf_last
                 && (ecc_kpd64_sub_q == 2'd2)) begin
                 vrf_req.ra=ecc_src_a_q;
             end
@@ -1804,8 +1894,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                 end
                 2'd1: begin
                     ecc_kpd64_sub_n = 2'd2;
-                    // This fold/launch cycle replaces sub2 ISSUE0, so retain
-                    // ISSUE0's next-leaf A prefetch side effect.
+                    // Keep A on its original path. The preceding CAP2 issues B,
+                    // so the two operands return in sub2 CAP1 and CAP2.
                     if (ecc_diag_fold_preissue && !ecc_leaf_last)
                         vrf_req.ra=ecc_src_a_q;
                     st_n=ecc_diag_fold_preissue
@@ -1814,12 +1904,17 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                 default: begin
                     if (ecc_diag_sub_shadow_mode) begin
                         if (!ecc_leaf_last) begin
-                            ecc_leaf_b_n = ecc_bitrev32_top(ecc_leaf_lowxor_rd[31:0]);
-                            ecc_leaf_xor_b_n = ecc_bitrev32_top(ecc_leaf_lowxor_rd[63:32]);
+                            if (ecc_diag_next_leaf_b_capture) begin
+                                ecc_leaf_b_n =
+                                    ecc_bitrev32_top(ecc_leaf_lowxor_rd[31:0]);
+                                ecc_leaf_xor_b_n =
+                                    ecc_bitrev32_top(ecc_leaf_lowxor_rd[63:32]);
+                            end
                             ecc_leaf_path_n = ecc_next_leaf_path;
                             ecc_kpd64_sub_n = 2'd0;
                             ecc_fold_word_n = 2'd0;
-                            st_n=S_ECC_DIAG_ISSUE;
+                            st_n=ecc_diag_leaf_preissue
+                               ? S_ECC_DIAG_CAPTURE0 : S_ECC_DIAG_ISSUE;
                         end else begin
                             ecc_kpd64_sub_n = 2'd3;
                             ecc_fold_word_n = 2'd0;
@@ -1862,7 +1957,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             end else begin
                 ecc_leaf_prod_n = {33'b0, ecc_bitmatrix_product[30:0]};
             end
-            if (ecc_diag_sub_shadow_mode && !ecc_leaf_last
+            if (!VV31_SCHED_ENABLE
+                && ecc_diag_sub_shadow_mode && !ecc_leaf_last
                 && (ecc_kpd64_sub_q == 2'd2)) begin
                 vrf_req.ra=ecc_src_b_q;
             end
@@ -1880,6 +1976,14 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             end else begin
                 ecc_leaf_prod_n = {33'b0, ecc_bitmatrix_product[30:0]};
             end
+            if (VV31_SCHED_ENABLE && ecc_diag_next_leaf_b_capture) begin
+                // CAP1 launches current group2 before this edge, so the
+                // returning next-leaf B can occupy its normal register pair.
+                ecc_leaf_b_n =
+                    ecc_bitrev32_top(ecc_leaf_lowxor_rd[31:0]);
+                ecc_leaf_xor_b_n =
+                    ecc_bitrev32_top(ecc_leaf_lowxor_rd[63:32]);
+            end
             st_n=S_ECC_DIAG_CAPTURE2;
         end
 
@@ -1895,8 +1999,11 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                 ecc_leaf_prod_n = {33'b0, ecc_bitmatrix_product[30:0]};
             end
 
-            // After group2, reuse the same leaf registers for the next
-            // Karatsuba operands or the prefetched next-leaf A.
+            // Start the two consecutive next-leaf reads at sub1 completion.
+            if (VV31_SCHED_ENABLE && ecc_diag_sub_shadow_mode
+                && (ecc_kpd64_sub_q == 2'd1) && !ecc_leaf_last) begin
+                vrf_req.ra=ecc_src_b_q;
+            end
             unique case (ecc_kpd64_sub_q)
                 2'd0: begin
                     ecc_leaf_a_n = ecc_leaf_a_lowxor_xor1;
@@ -2004,11 +2111,22 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                     end else if (ecc_job_active_q && (ecc_job_phase_q == ECC_PHASE_INV_MUL)) begin
                         st_n=S_ECC_INV_AFTER_MUL;
                     end else if (ecc_job_active_q && (ecc_job_phase_q == ECC_PHASE_PMUL_FIELD)) begin
-                        ecc_job_phase_n=ECC_PHASE_NONE;
-                        if (ecc_pmul_residue_seed_one) begin
+                        if (ecc_pmul_add_t1_prefetch) begin
+                            ecc_pmul_step_n=5'd1;
+                            ecc_dst_n=ECC_PMUL_T1;
+                            ecc_src_a_n=ECC_PMUL_R1X;
+                            ecc_src_b_n=ECC_PMUL_R0Z;
+                            ecc_autoreduce_n=1'b1;
+                            ecc_mac_n=1'b0;
+                            ecc_sqr_repeat_n='0;
+                            vrf_req.ra=ECC_PMUL_R1X;
+                            st_n=S_ECC_LOAD_A_WAIT;
+                        end else if (ecc_pmul_residue_seed_one) begin
+                            ecc_job_phase_n=ECC_PHASE_NONE;
                             ecc_pmul_step_n=5'd17;
                             st_n=S_ECC_PMUL_STEP;
                         end else begin
+                            ecc_job_phase_n=ECC_PHASE_NONE;
                             st_n=S_ECC_PMUL_STEP_NEXT;
                         end
                     end else begin
@@ -3018,6 +3136,136 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         vrf_wa = vrf_req.wa;
         vrf_wd = vrf_req.wd;
     end
+
+`ifndef SYNTHESIS
+    // VV31 simulation-only resource events. These probes never participate in
+    // arbitration; they give matched baseline and candidate runs stable names.
+    localparam logic [2:0] VV31_VRF_OWNER_NONE = 3'd0;
+    localparam logic [2:0] VV31_VRF_OWNER_HDC  = 3'd1;
+    localparam logic [2:0] VV31_VRF_OWNER_ECC  = 3'd2;
+
+    logic       vv31_evt_hdc_matrix;
+    logic       vv31_evt_ecc_matrix;
+    logic       vv31_evt_hdc_xor0;
+    logic       vv31_evt_ecc_xor0;
+    logic       vv31_evt_ecc_square;
+    logic       vv31_evt_ecc_vrf_prefetch;
+    logic       vv31_evt_ecc_entry_b_prefetch;
+    logic       vv31_evt_ecc_leaf_operand_prefetch;
+    logic       vv31_evt_ecc_leaf_preissue;
+    logic       vv31_evt_ecc_t1_prefetch;
+    logic       vv31_evt_ecc_t2_prefetch_a;
+    logic       vv31_evt_ecc_t2_prefetch_b;
+    logic       vv31_evt_hdc_vrf_read;
+    logic       vv31_evt_ecc_control_progress;
+    logic       vv31_evt_vrf_write;
+    logic [2:0] vv31_evt_vrf_read_owner;
+    logic [2:0] vv31_evt_vrf_write_owner;
+
+    always_comb begin
+        vv31_evt_hdc_matrix = hdc_pop_product_issue;
+        vv31_evt_ecc_matrix = ecc_diag_product_issue;
+        vv31_evt_hdc_xor0   = hdc_xor_issue;
+        vv31_evt_ecc_xor0   = hdc_src0_acc_we;
+        vv31_evt_ecc_square = (st_q == S_ECC_SQR_WRITE);
+
+        // Named evidence events for the accepted ECC-only schedule.  They are
+        // observation points only and are removed from synthesis.
+        vv31_evt_ecc_entry_b_prefetch =
+            (st_q == S_ECC_LOAD_A_WAIT) && ecc_diag_early_b_load;
+        vv31_evt_ecc_leaf_operand_prefetch =
+            (VV31_SCHED_ENABLE
+             && ecc_diag_sub_shadow_mode
+             && !ecc_leaf_last
+             && (((st_q == S_ECC_DIAG_CAPTURE2)
+                  && (ecc_kpd64_sub_q == 2'd1))
+                 || ((st_q == S_ECC_DIAG_FOLD_ISSUE)
+                  && (ecc_kpd64_sub_q == 2'd1))));
+        vv31_evt_ecc_leaf_preissue = ecc_diag_leaf_preissue;
+        vv31_evt_ecc_t1_prefetch =
+            (st_q == S_ECC_WRITE_PAIR) && ecc_pmul_add_t1_prefetch;
+        vv31_evt_ecc_t2_prefetch_a =
+            (st_q == S_RD_WAIT) && ecc_pmul_add_t2_prefetch;
+        vv31_evt_ecc_t2_prefetch_b =
+            (st_q == S_RD_WAIT2) && ecc_pmul_add_t2_prefetch;
+        vv31_evt_ecc_vrf_prefetch =
+            vv31_evt_ecc_entry_b_prefetch
+          || vv31_evt_ecc_leaf_operand_prefetch
+          || vv31_evt_ecc_t1_prefetch
+          || vv31_evt_ecc_t2_prefetch_a
+          || vv31_evt_ecc_t2_prefetch_b;
+
+        vv31_evt_hdc_vrf_read = 1'b0;
+        unique case (st_q)
+        S_UOP_P1_RD0,
+        S_UOP_P1_RD0_WAIT2,
+        S_UOP_P1_RD1,
+        S_HPERM_LANE64:
+            vv31_evt_hdc_vrf_read =
+                !(ecc_job_active_q
+               && (ecc_job_phase_q == ECC_PHASE_PMUL_ADD));
+        S_UOP_P1_RD0_WAIT:
+            vv31_evt_hdc_vrf_read =
+                (uop_p0_q.op_type == UOP_HPERM_CHUNK)
+             && !(ecc_job_active_q
+               && (ecc_job_phase_q == ECC_PHASE_PMUL_ADD));
+        S_UOP_P2_LANE:
+            vv31_evt_hdc_vrf_read = uop_p2_use_shift;
+        S_UOP_P3_GLOBAL:
+            vv31_evt_hdc_vrf_read =
+                (uop_p3_q.op_type == UOP_HCNTADD_SUBGROUP)
+             || (uop_p3_q.op_type == UOP_HCNTCLIP_READ);
+        S_EXEC:
+            vv31_evt_hdc_vrf_read = (op_q == HDEC_VRD64);
+        default:
+            vv31_evt_hdc_vrf_read = 1'b0;
+        endcase
+
+        vv31_evt_vrf_read_owner = VV31_VRF_OWNER_NONE;
+        if (vv31_evt_hdc_vrf_read)
+            vv31_evt_vrf_read_owner = VV31_VRF_OWNER_HDC;
+        else if (vv31_evt_ecc_vrf_prefetch
+              || (ecc_job_active_q
+              && ((st_q inside {S_ECC_LOAD_A_WAIT,
+                                 S_ECC_LOAD_A_WAIT2,
+                                 S_ECC_LOAD_A,
+                                S_ECC_LOAD_B_WAIT,
+                                S_ECC_DIAG_FOLD_ISSUE,
+                                S_ECC_DIAG_CAPTURE0,
+                                S_ECC_LEAF_FOLD,
+                                S_ECC_INV_COPY_WAIT,
+                                S_ECC_INV_COPY_WAIT2,
+                                S_ECC_INV_STEP,
+                                S_ECC_PMUL_INIT,
+                                S_ECC_PMUL_READ_SCALAR_WAIT,
+                                 S_ECC_PMUL_STEP})
+               || (ecc_job_phase_q == ECC_PHASE_PMUL_ADD))))
+            vv31_evt_vrf_read_owner = VV31_VRF_OWNER_ECC;
+
+        vv31_evt_vrf_write = |vrf_we_direct;
+        vv31_evt_vrf_write_owner = VV31_VRF_OWNER_NONE;
+        if (vv31_evt_vrf_write) begin
+            if ((st_q inside {S_ECC_SQR_WRITE,
+                              S_ECC_INV_COPY_WRITE,
+                              S_ECC_PMUL_CONST_WRITE,
+                              S_ECC_WRITE_PAIR})
+             || (ecc_job_active_q
+              && (ecc_job_phase_q == ECC_PHASE_PMUL_ADD)))
+                vv31_evt_vrf_write_owner = VV31_VRF_OWNER_ECC;
+            else
+                vv31_evt_vrf_write_owner = VV31_VRF_OWNER_HDC;
+        end
+
+        vv31_evt_ecc_control_progress =
+            ecc_job_active_q
+         && (st_n != st_q)
+         && !vv31_evt_ecc_matrix
+         && !vv31_evt_ecc_xor0
+         && !vv31_evt_ecc_square
+         && (vv31_evt_vrf_read_owner == VV31_VRF_OWNER_NONE)
+         && (vv31_evt_vrf_write_owner == VV31_VRF_OWNER_NONE);
+    end
+`endif
 
     // ── Sequential ──────────────────────────────────────────────────────────
     always_ff @(posedge clk_i) begin
