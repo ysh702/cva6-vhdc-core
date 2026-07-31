@@ -304,9 +304,9 @@ module tb_hdec_hdc_full_flow_v20;
         check_status("HBIND slot3", status);
         check_constant_slot("HBIND pattern xor complement", 4'd3, 64'hffff_ffff_ffff_ffff);
 
-        issue(HDEC_HPERM, hperm_operand(4'd4, 4'd0, 4'd0, 6'd1), status);
-        check_status("HPERM shift1", status);
-        check_hperm_first_entry(6'd1);
+        issue(HDEC_HPERM, hperm_operand(4'd4, 4'd0, 4'd0, 6'd4), status);
+        check_status("HPERM shift4", status);
+        check_hperm_first_entry(6'd4);
 
         issue(HDEC_HCNTCLR, 64'd0, status);
         check_status("HCNTCLR acc0", status);

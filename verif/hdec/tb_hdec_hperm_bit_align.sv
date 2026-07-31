@@ -200,14 +200,17 @@ module tb_hdec_hperm_bit_align;
 
         write_src_hv0();
         issue(HDEC_HPERM, hperm_operand(4'd1, 4'd0, 4'd0, 6'd1), status);
-        if (status[1:0] !== STATUS_OK)
-            $fatal(1, "HPERM shift1 returned bad status 0x%016h", status);
-        check_first_entry(6'd1);
+        if (status[1:0] !== STATUS_ERROR)
+            $fatal(1, "HPERM shift1 should be rejected, got 0x%016h", status);
 
         issue(HDEC_HPERM, hperm_operand(4'd1, 4'd0, 4'd0, 6'd5), status);
+        if (status[1:0] !== STATUS_ERROR)
+            $fatal(1, "HPERM shift5 should be rejected, got 0x%016h", status);
+
+        issue(HDEC_HPERM, hperm_operand(4'd1, 4'd0, 4'd0, 6'd4), status);
         if (status[1:0] !== STATUS_OK)
-            $fatal(1, "HPERM shift5 returned bad status 0x%016h", status);
-        check_first_entry(6'd5);
+            $fatal(1, "HPERM shift4 returned bad status 0x%016h", status);
+        check_first_entry(6'd4);
 
         issue(HDEC_HPERM, hspread_operand(6'd9, 6'd0), status);
         if (status[1:0] !== STATUS_OK)

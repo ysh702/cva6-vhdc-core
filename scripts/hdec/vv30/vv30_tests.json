@@ -1,0 +1,54 @@
+{
+  "schema": "hdec-vv30-tests-v1",
+  "tests": {
+    "shift_align_basis": {
+      "runner": "generic",
+      "pass_marker": "[VV30:shift_align_basis] PASS"
+    },
+    "fused_map_unit": {
+      "runner": "generic",
+      "pass_marker": "[VV30:fused_map_unit] PASS"
+    },
+    "diag_native_map": {
+      "runner": "generic",
+      "pass_marker": "[VV30:diag_native_map] PASS"
+    },
+    "square_basis": {
+      "runner": "generic",
+      "pass_marker": "[VV30:square_basis] PASS"
+    },
+    "gfmac_tail_fusion": {
+      "runner": "generic",
+      "pass_marker": "[VV30:gfmac_tail_fusion] PASS"
+    },
+    "inv_redirect_contract": {
+      "runner": "generic",
+      "pass_marker": "[VV30:inv_redirect_contract] PASS"
+    },
+    "hperm_contract": {
+      "runner": "dedicated_tcl",
+      "script": "scripts/hdec/vv30/vv30_hperm_contract.tcl",
+      "result_log": "xsim_vv30_hperm_contract/xsim.log",
+      "pass_marker": "[VV30:hperm_contract] PASS"
+    },
+    "hdc_full_flow": {
+      "runner": "dedicated_tcl",
+      "script": "scripts/hdec/xsim_hdec_hdc_full_flow_v20.tcl",
+      "result_log": "xsim_hdc_full_flow_v20/xsim.log",
+      "pass_marker": "[HDEC_HDC_FULL_FLOW_V20] PASS"
+    },
+    "pmul_random_k": {
+      "runner": "generic",
+      "pass_marker": "[VV30:pmul_random_k] PASS"
+    }
+  },
+  "suites": {
+    "quick": ["shift_align_basis", "fused_map_unit", "diag_native_map", "square_basis", "inv_redirect_contract", "pmul_random_k"],
+    "stage1": ["fused_map_unit", "diag_native_map", "square_basis", "shift_align_basis", "inv_redirect_contract", "pmul_random_k", "hdc_full_flow"],
+    "stage2": ["shift_align_basis", "fused_map_unit", "diag_native_map", "square_basis", "gfmac_tail_fusion", "inv_redirect_contract", "pmul_random_k", "hdc_full_flow"],
+    "stage3": ["square_basis", "fused_map_unit", "diag_native_map", "shift_align_basis", "gfmac_tail_fusion", "inv_redirect_contract", "pmul_random_k", "hdc_full_flow", "hperm_contract"],
+    "full": ["shift_align_basis", "fused_map_unit", "diag_native_map", "square_basis", "gfmac_tail_fusion", "inv_redirect_contract", "pmul_random_k", "hdc_full_flow", "hperm_contract"],
+    "stress": ["shift_align_basis", "fused_map_unit", "diag_native_map", "square_basis", "gfmac_tail_fusion", "inv_redirect_contract", "pmul_random_k", "hdc_full_flow", "hperm_contract"],
+    "replay": ["shift_align_basis", "fused_map_unit", "diag_native_map", "square_basis", "gfmac_tail_fusion", "inv_redirect_contract", "pmul_random_k", "hdc_full_flow", "hperm_contract"]
+  }
+}

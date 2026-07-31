@@ -1,0 +1,58 @@
+{
+  "stage": "VV30-1-fused-map",
+  "result": "PASS_F1D",
+  "baseline_commit": "a3ba6f4b6289d7cef4dd9bdfe08cb8e6da361ad8",
+  "vivado": {
+    "version": "2024.2",
+    "part": "xc7z020clg400-2",
+    "clock_period_ns": 5.0
+  },
+  "selected_variant": "F1d-static-mask-equations",
+  "selected_ppa": {
+    "logic_lut": 4658,
+    "ff": 1304,
+    "bram": 4,
+    "dsp": 0,
+    "wns_ns": 0.328,
+    "fmax_est_mhz": 214.041
+  },
+  "baseline_ppa": {
+    "logic_lut": 4661,
+    "ff": 1304,
+    "bram": 4,
+    "dsp": 0,
+    "wns_ns": 0.328,
+    "fmax_est_mhz": 214.041
+  },
+  "rejected_variants": {
+    "F1": {"logic_lut": 4744, "ff": 1298, "wns_ns": 0.328},
+    "F1b": {"logic_lut": 4683, "ff": 1306, "wns_ns": 0.328},
+    "F1c": {"logic_lut": 4669, "ff": 1305, "wns_ns": 0.328},
+    "F2_direct": {
+      "logic_lut": 4768,
+      "ff": 1239,
+      "wns_ns": -0.576,
+      "fmax_est_mhz": 179.340
+    }
+  },
+  "coverage": {
+    "path_encodings": 16,
+    "valid_paths": 9,
+    "invalid_paths": 7,
+    "legacy_map_vectors": 4096,
+    "independent_4464_basis": "PENDING_VV30_FRAMEWORK"
+  },
+  "cycles": {
+    "ecc_mul": 184,
+    "pmul": null
+  },
+  "tests": {
+    "independent_path16": "PASS",
+    "legacy_diag_reduce_map": "PASS:4096",
+    "diag_mul": "PASS",
+    "ecc_mul_cycle": "PASS:184",
+    "legacy_pmul": "PASS_FIXED_K"
+  },
+  "commit_created": false,
+  "push_performed": false
+}
