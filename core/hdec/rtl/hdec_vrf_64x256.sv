@@ -11,8 +11,9 @@ module hdec_vrf_64x256
 (
     input  logic        clk_i,
 
-    input  logic [VRF_IDX_W-1:0]                row_ra_addr_i,
+    input  logic [LANE_NUM-1:0][VRF_IDX_W-1:0]  bank_ra_addr_i,
     output logic [LANE_NUM-1:0][LANE_WIDTH-1:0] bank_ra_data_o,
+    output logic [LANE_NUM-1:0][LANE_WIDTH-1:0] bank_ra_early_o,
 
     input  logic [LANE_NUM-1:0]                 bank_we_i,
     input  logic [VRF_IDX_W-1:0]                row_wa_addr_i,
@@ -27,11 +28,16 @@ module hdec_vrf_64x256
         (* ram_style = "block" *) logic [LANE_WIDTH-1:0] vrf_mem [0:VRF_ENTRIES-1];
         logic [LANE_WIDTH-1:0] bank_ra_raw_q;
 
+        // Consecutive requests occupy the raw BRAM return and the registered
+        // public return together.  This early tap exposes that existing
+        // pipeline stage; it does not add another memory read port.
+        assign bank_ra_early_o[bid] = bank_ra_raw_q;
+
         always_ff @(posedge clk_i) begin
             if (bank_we_i[bid])
                 vrf_mem[row_wa_addr_i] <= bank_wdata_i[bid];
 
-            bank_ra_raw_q <= vrf_mem[row_ra_addr_i];
+            bank_ra_raw_q <= vrf_mem[bank_ra_addr_i[bid]];
             bank_ra_data_o[bid] <= bank_ra_raw_q;
         end
     end

@@ -10,7 +10,9 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     parameter bit ECC_INV_SQUARE_REDIRECT = 1'b1,
     parameter bit ECC_PMUL_DBL_FROBENIUS = 1'b1,
     parameter bit ECC_PMUL_ADD_Z_FORWARD = 1'b1,
-    parameter bit VV31_SCHED_ENABLE = 1'b1
+    parameter bit VV31_SCHED_ENABLE = 1'b1,
+    parameter bit VV33_FINE_INTERLEAVE = 1'b1,
+    parameter bit VV33_PAIRED_HMATCH = 1'b1
 ) (
     input logic clk_i, rst_ni, valid_i, output logic ready_o,
     input hdec_op_t operator_i, input logic [63:0] operand_a_i, operand_b_i,
@@ -21,7 +23,9 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     localparam bit ECC_PMUL_AFFINE_FACTOR_ACTIVE =
         ECC_PMUL_AFFINE_FACTORING && !ECC_DEBUG_FIELD_OPS;
     logic [VRF_IDX_W-1:0] vrf_ra, vrf_ra_q;
+    logic [LANE_NUM-1:0][VRF_IDX_W-1:0] vrf_bank_ra;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] vrf_rd;
+    logic [LANE_NUM-1:0][LANE_WIDTH-1:0] vrf_rd_early;
     logic [LANE_NUM-1:0] vrf_we;
     logic [LANE_NUM-1:0] vrf_we_direct;
     logic [VRF_IDX_W-1:0] vrf_wa;
@@ -33,7 +37,16 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     } hdec_vrf_req_t;
     hdec_vrf_req_t vrf_req;
     (* keep_hierarchy = "yes" *)
-    hdec_vrf_64x256 i_vrf(.clk_i,.row_ra_addr_i(vrf_ra_q),.bank_ra_data_o(vrf_rd),.bank_we_i(vrf_we),.row_wa_addr_i(vrf_wa),.bank_wdata_i(vrf_wd),.vrf_ready_o());
+    hdec_vrf_64x256 i_vrf(
+        .clk_i,
+        .bank_ra_addr_i(vrf_bank_ra),
+        .bank_ra_data_o(vrf_rd),
+        .bank_ra_early_o(vrf_rd_early),
+        .bank_we_i(vrf_we),
+        .row_wa_addr_i(vrf_wa),
+        .bank_wdata_i(vrf_wd),
+        .vrf_ready_o()
+    );
     logic [VRF_BNK_W-1:0] vaddr_bank_q,vaddr_bank_n; logic [VRF_IDX_W-1:0] vaddr_idx_q,vaddr_idx_n;
 
     // ── State Machine ───────────────────────────────────────────────────────
@@ -73,18 +86,15 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     logic [2:0] hmatch_best_idx_q,hmatch_best_idx_n;
     logic [3:0] hmatch_class_slot_q,hmatch_class_slot_n;
     logic [10:0] hmatch_best_dist_q,hmatch_best_dist_n;
-    logic hmatch_update_q,hmatch_update_n;
     logic [3:0] hmatch_req_base;
     logic [3:0] hmatch_req_count_lo;
     logic [3:0] hmatch_req_max_count;
     logic       hmatch_req_invalid;
 
     // ── HPERM registers ─────────────────────────────────────────────────────
-    logic [VRF_IDX_W-1:0] hperm_dst_base_q,hperm_dst_base_n;
     logic [1:0] hperm_bit_low_q,hperm_bit_low_n;
     logic hperm_spread_q,hperm_spread_n;
     logic [1:0] hperm_lane_base_q,hperm_lane_base_n;
-    logic [VRF_IDX_W-1:0] hspread_dst_base;
 
     // ── HCNTCLIP registers ──────────────────────────────────────────────────
     logic [VRF_IDX_W-1:0] hcntclip_dst_base_q,hcntclip_dst_base_n,hcntclip_acc_base;
@@ -100,14 +110,12 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     // P1: VRF read address / read wait (uop stays in P0 until the second read)
     // P2: VRF read data (vrf_rd) directly feeds Lane local compute
     // P2/P3 boundary: lane_*_q registers cut the critical combinational path
-    hdec_uop_t uop_p0_q, uop_p0_n, uop_p2_q, uop_p2_n, uop_p3_q, uop_p3_n;
+    hdec_uop_t uop_p0_q, uop_p0_n, uop_p3_q, uop_p3_n;
 
     // ── Lane compute wires ──────────────────────────────────────────────────
     logic                                hdc_pop_product_issue, hdc_pop_capture, hdc_xor_issue;
-    logic                                p2_is_pop_q, p2_is_pop_n;
-    logic                                p2_is_hbind_q, p2_is_hbind_n;
-    logic                                uop_p2_use_counter, uop_p2_use_shift, uop_p2_use_clip;
-    logic                                p2_lane_compute_q, p2_lane_compute_n;
+    logic                                uop_p0_use_counter, uop_p0_use_shift, uop_p0_use_clip;
+    logic                                uop_p0_use_paired_sources;
     logic [LANE_NUM-1:0][LANE_WIDTH-1:0] hdc_src0_q, hdc_src0_n;
     logic                                hdc_src0_we, hdc_src0_acc_we;
     logic [5:0]                          lane_shift_bit;
@@ -269,8 +277,81 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     logic                 ecc_pmul_residue_seed_one;
     logic                 ecc_pmul_residue_seed_vrf;
 
+    // A two-bit lifetime tag is sufficient for the fixed HSIM/HMATCH path:
+    // the deferred ECC square read is issued after the second HDC source read,
+    // then committed at the later popcount-capture state.  No wide operand or
+    // result buffer is added.
+    localparam logic [1:0] VV33_SQ_IDLE    = 2'd0;
+    localparam logic [1:0] VV33_SQ_PENDING = 2'd1;
+    localparam logic [1:0] VV33_SQ_ISSUED  = 2'd2;
+    localparam logic [1:0] VV33_SQ_DONE    = 2'd3;
+    logic [1:0]           vv33_sq_phase_q, vv33_sq_phase_n;
+    logic                 vv33_sq_defer_fire;
+    logic                 vv33_sq_read_fire;
+    logic                 vv33_sq_write_fire;
+    logic                 vv33_sq_commit_q, vv33_sq_commit_n;
+    logic                 vv33_hdc_request_valid;
+    logic                 vv33_hdc_square_overlap;
+
+    // Paired-return HMATCH sidecar.  Only narrow traversal and score state is
+    // retained.  The two 256-bit operands remain in the VRF raw/output return
+    // stages and enter the existing bit matrix for one CAP2 cycle.
+    logic                 vv33_pair_active_q, vv33_pair_active_n;
+    logic                 vv33_pair_a_sent_q, vv33_pair_a_sent_n;
+    logic                 vv33_pair_next_q, vv33_pair_next_n;
+    logic                 vv33_pair_read_ready_q, vv33_pair_read_ready_n;
+    logic                 vv33_pair_product_q, vv33_pair_product_n;
+    logic                 vv33_pair_pop_q, vv33_pair_pop_n;
+    logic                 vv33_pair_sum_q, vv33_pair_sum_n;
+    logic                 vv33_pair_finish_q, vv33_pair_finish_n;
+    logic                 vv33_pair_resp_q, vv33_pair_resp_n;
+    logic [1:0]           vv33_pair_class_idx_q, vv33_pair_class_idx_n;
+    logic [1:0]           vv33_pair_chunk_q, vv33_pair_chunk_n;
+    logic [10:0]          vv33_pair_total_q, vv33_pair_total_n;
+    logic [10:0]          vv33_pair_best_q, vv33_pair_best_n;
+    logic [1:0]           vv33_pair_best_idx_q, vv33_pair_best_idx_n;
+    logic                 vv33_pair_start;
+    logic                 vv33_pair_product_fire;
+    logic                 vv33_pair_pop_fire;
+    logic                 vv33_pair_fold_launch;
+    logic                 vv33_pair_has_next;
+    logic [1:0]           vv33_pair_next_chunk;
+    logic [1:0]           vv33_pair_next_class_idx;
+    logic [5:0]           vv33_pair_src_a_addr;
+    logic [5:0]           vv33_pair_src_b_addr;
+    logic [5:0]           vv33_pair_next_src_a_addr;
+    logic [5:0]           vv33_pair_next_src_b_addr;
+    logic [10:0]          vv33_pair_score;
+    logic                 vv33_hinfer_pair_launch;
+    logic                 vv33_hinfer_active;
+    logic                 vv33_hinfer_request;
+    logic                 vv33_hinfer_invalid;
+    logic                 vv33_hinfer_field_ready;
+    logic                 vv33_hinfer_field_accept;
+    logic                 vv33_hinfer_pending_q, vv33_hinfer_pending_n;
+    logic [9:0]           vv33_hinfer_rot_q, vv33_hinfer_rot_n;
+    logic                 vv33_hinfer_resume_step_q, vv33_hinfer_resume_step_n;
+`ifndef SYNTHESIS
+    // Stable observation alias retained for the VV33 full-inference monitor.
+    // The fixed resident path accepts a paired search exactly when it launches
+    // at the first compatible diagonal slot.
+    logic                 vv33_pair_accept;
+`endif
+
+    // The interleaved inference macro uses a compile-time resident partition.
+    // Fixing these bases removes a runtime wide address-selection cone while
+    // ordinary programmable HPERM, HBIND, and HMATCH remain unchanged.
+    localparam logic [5:0] VV33_HINFER_ROLE_BASE  = 6'd8;
+    localparam logic [5:0] VV33_HINFER_QUERY_BASE = 6'd12;
+    localparam logic [5:0] VV33_HINFER_PROTO_BASE = 6'd16;
+    localparam logic [5:0] VV33_HINFER_INPUT_BASE = 6'd28;
+    localparam logic [2:0] VV33_HINFER_LAST_CLASS = 3'd2;
+
     // ── Combinational helpers ───────────────────────────────────────────────
-    assign interleave_active = ecc_job_bg_q;
+    // Capture the counter-bank epoch when HCNTCLR starts.  A background PMUL
+    // may complete before the later HCNTADD/HCNTCLIP requests arrive, so the
+    // live ECC-busy flag cannot safely select their bank.
+    assign interleave_active = hcntclip_dst_base_q[5];
     assign hdc_cnt_base0 = interleave_active ? 6'd16 : 6'd32;
     assign hdc_cnt_base1 = interleave_active ? 6'd24 : 6'd48;
     assign hcntclip_acc_base = hcntclip_acc_sel_q ? hdc_cnt_base1 : hdc_cnt_base0;
@@ -280,16 +361,108 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     assign hmatch_req_invalid = (a_q[15:8] == 8'd0) || (|a_q[15:12])
                               || hmatch_req_base[3]
                               || (hmatch_req_count_lo > hmatch_req_max_count);
+    assign vv33_hdc_request_valid = valid_i
+                                  && (operator_i >= HDEC_HCLR)
+                                  && (operator_i <= HDEC_HMATCH);
+    assign vv33_hinfer_request = (operator_i == HDEC_HMATCH)
+                               && operand_a_i[63];
+    assign vv33_hinfer_active = vv33_hinfer_pending_q;
+    assign vv33_hdc_square_overlap = (operator_i == HDEC_HBIND)
+                                    || (operator_i == HDEC_HSIM)
+                                    || ((operator_i == HDEC_HMATCH)
+                                     && !operand_a_i[63]);
+    assign vv33_hinfer_invalid = (|vv33_hinfer_rot_q[1:0])
+                               || (ecc_job_active_q
+                                && (ecc_job_kind_q != ECC_JOB_PMUL));
+    // One narrow pending bit retains the encoded inference after the descriptor
+    // is released. Its paired context is initialized only at the existing
+    // first-diagonal entry, preserving a single write point for all pair state.
+    assign vv33_hinfer_pair_launch = vv33_hinfer_pending_q
+                                   && VV33_PAIRED_HMATCH
+                                   && VV31_SCHED_ENABLE
+                                   && ecc_diag_sub_shadow_mode
+                                   && !vv33_pair_active_q
+                                   && !vv33_pair_resp_q
+                                   && (vv33_sq_phase_q == VV33_SQ_IDLE)
+                                   && ecc_job_bg_q
+                                   && ecc_job_active_q
+                                   && (ecc_job_phase_q == ECC_PHASE_PMUL_FIELD)
+                                   && (st_q == S_ECC_DIAG_ISSUE)
+                                   && (ecc_leaf_path_q == 4'b00_00)
+                                   && (ecc_kpd64_sub_q == 2'd0);
+    // A completed field product has already committed its 233-bit residue to
+    // the VRF.  At this point hdc_src0_q and the shared payload no longer carry
+    // live field state, so a fused HDC job can borrow the complete shared path
+    // without a 233-bit checkpoint or a second compute core.
+    assign vv33_hinfer_field_ready = valid_i
+                                   && vv33_hinfer_request
+                                   && !ECC_DEBUG_FIELD_OPS
+                                   && !(|operand_a_i[9:8])
+                                   && VV33_FINE_INTERLEAVE
+                                   && !vv33_hinfer_active
+                                   && !vv33_pair_active_q
+                                   && !vv33_pair_resp_q
+                                   && ecc_job_bg_q
+                                   && ecc_job_active_q
+                                   && (ecc_job_kind_q == ECC_JOB_PMUL)
+                                   && (ecc_job_phase_q == ECC_PHASE_PMUL_FIELD)
+                                   && (((st_q == S_ECC_WRITE_PAIR)
+                                     && ecc_autoreduce_q
+                                     && !ecc_pmul_add_t1_prefetch
+                                     && !ecc_pmul_residue_seed_one)
+                                    || (st_q == S_ECC_WRITE_DRAIN));
+    assign vv33_hinfer_field_accept = valid_i && vv33_hinfer_field_ready;
+    assign vv33_pair_start = vv33_hinfer_pair_launch;
+`ifndef SYNTHESIS
+    assign vv33_pair_accept = vv33_hinfer_pair_launch;
+`endif
+    assign vv33_pair_product_fire = vv33_pair_active_q
+                                  && vv33_pair_read_ready_q
+                                  && (st_q == S_ECC_DIAG_CAPTURE2);
+    assign vv33_pair_pop_fire = vv33_pair_active_q
+                              && vv33_pair_product_q
+                              && (st_q == S_ECC_DIAG_FOLD_ISSUE);
+    assign vv33_pair_has_next = !((vv33_pair_class_idx_q == 2'd2)
+                               && (vv33_pair_chunk_q == 2'd3));
+    assign vv33_pair_next_chunk = (vv33_pair_chunk_q == 2'd3)
+                                ? 2'd0 : (vv33_pair_chunk_q + 2'd1);
+    assign vv33_pair_next_class_idx = (vv33_pair_chunk_q == 2'd3)
+                                    ? (vv33_pair_class_idx_q + 2'd1)
+                                    : vv33_pair_class_idx_q;
+    assign vv33_pair_src_a_addr = {4'b0011, vv33_pair_chunk_q};
+    assign vv33_pair_src_b_addr = {2'b01, vv33_pair_class_idx_q,
+                                   vv33_pair_chunk_q};
+    assign vv33_pair_next_src_a_addr = {4'b0011, vv33_pair_next_chunk};
+    assign vv33_pair_next_src_b_addr = {2'b01, vv33_pair_next_class_idx,
+                                        vv33_pair_next_chunk};
+    assign vv33_pair_score = vv33_pair_total_q + {2'b00, group_dist_q};
+    // Only folds that already launch a following CAP0 and do not consume the
+    // VRF read port for next-leaf A are paired-read launch points.
+    assign vv33_pair_fold_launch = vv33_pair_active_q
+                                 && (st_q == S_ECC_DIAG_FOLD_ISSUE)
+                                 && (((ecc_kpd64_sub_q == 2'd0)
+                                   && ecc_diag_fold_preissue)
+                                  || ((ecc_kpd64_sub_q == 2'd2)
+                                   && ecc_diag_leaf_preissue))
+                                 && ((vv33_pair_product_q && vv33_pair_has_next)
+                                  || (!vv33_pair_product_q
+                                   && !vv33_pair_pop_q
+                                   && !vv33_pair_a_sent_q
+                                   && !vv33_pair_read_ready_q));
     assign hsim_total_step = hsim_total_q + {2'b00, group_dist_q};
-    assign hdc_pop_product_issue = p2_lane_compute_q && p2_is_pop_q;
+    assign hdc_pop_product_issue = (st_q == S_UOP_P1_RD1)
+                                 && uop_p0_q.valid
+                                 && uop_p0_use_paired_sources;
     assign hdc_pop_capture = (st_q == S_UOP_P3_GLOBAL)
                           && ((uop_p3_q.op_type == UOP_HSIM_CHUNK)
                            || (uop_p3_q.op_type == UOP_HMATCH_CHUNK));
-    assign hdc_xor_issue = p2_lane_compute_q && p2_is_hbind_q;
-    assign hspread_dst_base = hperm_dst_base_q;
-    assign uop_p2_use_counter = (uop_p2_q.op_type == UOP_HCNTADD_SUBGROUP);
-    assign uop_p2_use_shift   = (uop_p2_q.op_type == UOP_HPERM_CHUNK);
-    assign uop_p2_use_clip    = (uop_p2_q.op_type == UOP_HCNTCLIP_READ);
+    assign hdc_xor_issue = (st_q == S_UOP_P2_LANE) && uop_p0_q.valid
+                         && (uop_p0_q.op_type == UOP_HBIND_CHUNK);
+    assign uop_p0_use_counter = (uop_p0_q.op_type == UOP_HCNTADD_SUBGROUP);
+    assign uop_p0_use_shift   = (uop_p0_q.op_type == UOP_HPERM_CHUNK);
+    assign uop_p0_use_clip    = (uop_p0_q.op_type == UOP_HCNTCLIP_READ);
+    assign uop_p0_use_paired_sources = (uop_p0_q.op_type == UOP_HSIM_CHUNK)
+                                     || (uop_p0_q.op_type == UOP_HMATCH_CHUNK);
     assign ecc_next_leaf_path = ecc_kpd64_path_inc(ecc_leaf_path_q);
     // The legacy schedule captures next A at group2 completion and next B in
     // the following fold. VV31 preserves A's original capture point, but
@@ -831,6 +1004,23 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         end
     endfunction
 
+    function automatic logic [3:0] ecc_leaf_bank_mask(input logic [3:0] path);
+        begin
+            unique case (path)
+                4'b00_00: ecc_leaf_bank_mask = 4'b0001;
+                4'b00_01: ecc_leaf_bank_mask = 4'b0011;
+                4'b00_10: ecc_leaf_bank_mask = 4'b0010;
+                4'b01_00: ecc_leaf_bank_mask = 4'b0101;
+                4'b01_01: ecc_leaf_bank_mask = 4'b1111;
+                4'b01_10: ecc_leaf_bank_mask = 4'b1010;
+                4'b10_00: ecc_leaf_bank_mask = 4'b0100;
+                4'b10_01: ecc_leaf_bank_mask = 4'b1100;
+                4'b10_10: ecc_leaf_bank_mask = 4'b1000;
+                default:  ecc_leaf_bank_mask = 4'b1111;
+            endcase
+        end
+    endfunction
+
     function automatic logic [3:0] ecc_kpd64_path_inc(input logic [3:0] path);
         logic [1:0] d1, d0;
         begin
@@ -1341,16 +1531,21 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     ) i_vec (
         .clk_i(clk_i), .rst_ni(rst_ni),
         .payload_xor_i(hdc_xor_issue),
-        .payload_product_i(hdc_pop_product_issue || ecc_diag_product_issue),
-        .payload_pop_i(hdc_pop_capture),
+        .payload_product_i(hdc_pop_product_issue || ecc_diag_product_issue
+                         || vv33_pair_product_fire),
+        .payload_pop_i(hdc_pop_capture || vv33_pair_pop_fire),
         .payload_bitband_i(ecc_diag_product_issue),
-        .payload_cnt_i(p2_lane_compute_q && uop_p2_use_counter),
-        .payload_clip_i(p2_lane_compute_q && uop_p2_use_clip),
+        .payload_cnt_i((st_q == S_UOP_P2_LANE) && uop_p0_q.valid && uop_p0_use_counter),
+        .payload_clip_i((st_q == S_UOP_P2_LANE) && uop_p0_q.valid && uop_p0_use_clip),
         .hperm_we_i(hperm_lane_we),
-        .hperm_slot_i(hperm_lane_slot_q),
+        // During the overlapped HPERM phase slot_q names the window being
+        // prepared, while the registered previous window retires to slot-1.
+        .hperm_slot_i(hperm_lane_slot_q - 2'd1),
         .hperm_word_i(hperm_lane_word),
         .bool_src_a_i(hdc_src0_q),
         .bool_src_b_i(vrf_rd),
+        .hdc_pair_src_a_i(vrf_rd),
+        .hdc_pair_src_b_i(vrf_rd_early),
         .bitmatrix_src_a_i(ecc_bitmatrix_src_a),
         .bitmatrix_src_b_i(ecc_bitmatrix_src_b),
         .xor1_diag_mode_i(ecc_xor1_diag_mode),
@@ -1371,7 +1566,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         .xor1_legacy_lowxor_b_o(ecc_leaf_b_lowxor_xor1),
         .cnt_hv_word_i(hdc_src0_q),
         .cnt_old_counter_i(vrf_rd),
-        .cnt_subgroup_i(uop_p2_q.subgroup_idx),
+        .cnt_subgroup_i(uop_p0_q.subgroup_idx),
         .clip_counter_i(vrf_rd)
     );
 
@@ -1382,17 +1577,19 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
 
     // ── Main FSM ────────────────────────────────────────────────────────────
     always_comb begin
-        st_n=st_q; ready_o=(st_q==S_IDLE); valid_o=(st_q==S_RESULT); result_o=res_q;
+        st_n=st_q;
+        ready_o=((st_q==S_IDLE) && !vv33_pair_active_q
+              && !vv33_hinfer_active) || vv33_hinfer_field_ready;
+        valid_o=(st_q==S_RESULT) || vv33_pair_resp_q;
+        result_o=res_q;
         res_n=res_q; op_n=op_q; a_n=a_q; vaddr_bank_n=vaddr_bank_q; vaddr_idx_n=vaddr_idx_q;
         clr_cnt_n=clr_cnt_q; clr_base_n=clr_base_q;
         hsim_src0_base_n=hsim_src0_base_q; hsim_src1_base_n=hsim_src1_base_q; hsim_total_n=hsim_total_q;
         group_dist_n=group_dist_q;
-        hmatch_last_idx_n=hmatch_last_idx_q; hmatch_best_idx_n=hmatch_best_idx_q; hmatch_class_slot_n=hmatch_class_slot_q; hmatch_best_dist_n=hmatch_best_dist_q; hmatch_update_n=hmatch_update_q;
-        hperm_dst_base_n=hperm_dst_base_q;
+        hmatch_last_idx_n=hmatch_last_idx_q; hmatch_best_idx_n=hmatch_best_idx_q; hmatch_class_slot_n=hmatch_class_slot_q; hmatch_best_dist_n=hmatch_best_dist_q;
         hperm_bit_low_n=hperm_bit_low_q; hperm_spread_n=hperm_spread_q; hperm_lane_base_n=hperm_lane_base_q;
         hcntclip_dst_base_n=hcntclip_dst_base_q; hcntclip_acc_sel_n=hcntclip_acc_sel_q; hcntclip_chunk_n=hcntclip_chunk_q;
-        uop_p0_n=uop_p0_q; uop_p2_n=uop_p2_q; uop_p3_n=uop_p3_q;
-        p2_is_pop_n=p2_is_pop_q; p2_is_hbind_n=p2_is_hbind_q;
+        uop_p0_n=uop_p0_q; uop_p3_n=uop_p3_q;
         hdc_src0_n='x;
         hdc_src0_we=1'b0;
         hdc_src0_acc_we=1'b0;
@@ -1406,8 +1603,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         hperm_stage_we=1'b0;
         hperm_lane_clear=1'b0;
         hperm_lane_we=1'b0;
-        // P3 consumes these one-cycle payloads; later values are don't-care.
-        p2_lane_compute_n=1'b0;
+        // P2 lane issue is derived from the active state and P0 uop. P3
+        // consumes the resulting one-cycle payload; later values are don't-care.
         ecc_src_a_n=ecc_src_a_q; ecc_src_b_n=ecc_src_b_q; ecc_dst_n=ecc_dst_q; ecc_acc_dst_n=ecc_acc_dst_q;
         ecc_leaf_a_n=ecc_leaf_a_q; ecc_leaf_b_n=ecc_leaf_b_q;
         ecc_leaf_prod_n=ecc_leaf_prod_q;
@@ -1431,14 +1628,47 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         ecc_pmul_scalar_bit_n=ecc_pmul_scalar_bit_q;
         ecc_pmul_r0_inf_n=ecc_pmul_r0_inf_q;
         ecc_pmul_result_n=ecc_pmul_result_q; ecc_pmul_point_n=ecc_pmul_point_q;
+        vv33_sq_phase_n=vv33_sq_phase_q;
+        vv33_sq_defer_fire=1'b0;
+        vv33_sq_read_fire=1'b0;
+        vv33_sq_write_fire=1'b0;
+        vv33_sq_commit_n=vv33_sq_commit_q;
+        vv33_pair_active_n=vv33_pair_active_q;
+        vv33_pair_a_sent_n=vv33_pair_a_sent_q;
+        vv33_pair_next_n=vv33_pair_next_q;
+        vv33_pair_read_ready_n=vv33_pair_read_ready_q;
+        vv33_pair_product_n=vv33_pair_product_q;
+        vv33_pair_pop_n=vv33_pair_pop_q;
+        vv33_pair_sum_n=vv33_pair_sum_q;
+        vv33_pair_finish_n=vv33_pair_finish_q;
+        vv33_pair_resp_n=1'b0;
+        vv33_pair_class_idx_n=vv33_pair_class_idx_q;
+        vv33_pair_chunk_n=vv33_pair_chunk_q;
+        vv33_pair_total_n=vv33_pair_total_q;
+        vv33_pair_best_n=vv33_pair_best_q;
+        vv33_pair_best_idx_n=vv33_pair_best_idx_q;
+        vv33_hinfer_pending_n=vv33_hinfer_pending_q;
+        vv33_hinfer_rot_n=vv33_hinfer_rot_q;
+        vv33_hinfer_resume_step_n=vv33_hinfer_resume_step_q;
         lane_shift_bit='0;
         vrf_req.ra='0; vrf_req.wa='x; vrf_req.wd='x;
-        vrf_we_direct='0;
+        // The deferred square token is created only for the two compatible
+        // foreground phases below.  Its lifecycle invariant is checked in
+        // simulation, so the legacy write-enable cone remains narrow.
+        vrf_we_direct={LANE_NUM{vv33_sq_commit_q}};
+        // A registered one-cycle commit removes the foreground state decode
+        // from the legacy BRAM write-enable cone.
 
         case(st_q)
         S_IDLE: begin
             if(valid_i&&ready_o)begin
-                op_n=operator_i;a_n=operand_a_i;st_n=S_EXEC;
+                op_n=operator_i;a_n=operand_a_i;
+                if (vv33_hinfer_request) begin
+                    vv33_hinfer_pending_n=1'b1;
+                    vv33_hinfer_rot_n=operand_a_i[17:8];
+                    a_n[63]=1'b0;
+                end
+                st_n=S_EXEC;
             end
         end
 
@@ -1558,7 +1788,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                 if (!ECC_DEBUG_FIELD_OPS) begin
                     res_n={62'b0,STATUS_NOT_IMPLEMENTED};st_n=S_RESULT;
                 end else begin
-                    hperm_dst_base_n       = a_q[17:12];
                     hperm_bit_low_n        = a_q[19:18];
                     hperm_spread_n         = 1'b0;
                     hperm_lane_base_n      = a_q[25:24];
@@ -1595,7 +1824,10 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             end
 
             HDEC_HCNTCLR: begin
-                clr_base_n=a_q[0]?hdc_cnt_base1:hdc_cnt_base0;clr_cnt_n=4'd0;st_n=S_CLR;
+                hcntclip_dst_base_n[5]=ecc_job_bg_q;
+                clr_base_n=a_q[0] ? (ecc_job_bg_q ? 6'd24 : 6'd48)
+                                  : (ecc_job_bg_q ? 6'd16 : 6'd32);
+                clr_cnt_n=4'd0;st_n=S_CLR;
             end
 
             HDEC_HCNTADD: begin
@@ -1629,19 +1861,50 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             end
 
             HDEC_HMATCH: begin
-                hsim_src0_base_n={a_q[3:0],2'b00};
-                hsim_src1_base_n={a_q[7:4],2'b00};
-                hmatch_class_slot_n=a_q[7:4];
-                hmatch_last_idx_n=a_q[10:8] - 3'd1;
-                if(hmatch_req_invalid)begin
-                    res_n={62'b0,STATUS_ERROR};st_n=S_RESULT;
+                if (vv33_hinfer_active) begin
+                    if (vv33_hinfer_invalid) begin
+                        vv33_hinfer_pending_n=1'b0;
+                        res_n={62'b0,STATUS_ERROR};st_n=S_RESULT;
+                    end else begin
+                        // The resident role, query, input, and three prototype
+                        // bases are fixed. Bits [17:8] carry the runtime HPERM
+                        // rotation used by this inference instance.
+                        hperm_bit_low_n=vv33_hinfer_rot_q[1:0];
+                        hperm_spread_n=1'b0;
+                        hperm_lane_base_n=vv33_hinfer_rot_q[7:6];
+                        uop_p0_n.valid       = 1'b1;
+                        // The macro reuses the ordinary HPERM uop encoding;
+                        // op_q plus bit63 retain its lifecycle without a new
+                        // payload mode or a separate macro FSM.
+                        uop_p0_n.op_type     = UOP_HPERM_CHUNK;
+                        uop_p0_n.chunk_idx   = 2'd0;
+                        uop_p0_n.src0_addr   = VV33_HINFER_ROLE_BASE
+                                             + {4'b0,vv33_hinfer_rot_q[9:8]};
+                        uop_p0_n.src1_addr   = VV33_HINFER_ROLE_BASE
+                                             + {4'b0,vv33_hinfer_rot_q[9:8] + 2'd1};
+                        uop_p0_n.dst_addr    = VV33_HINFER_QUERY_BASE;
+                        uop_p0_n.perm_nibble = vv33_hinfer_rot_q[5:2];
+                        // Reuse an existing uop bit that is inactive for
+                        // HPERM/HBIND as the macro-chain tag. No new state bit
+                        // or wide address comparator is required.
+                        uop_p0_n.is_last_class = 1'b1;
+                        st_n=S_UOP_P1_RD0;
+                    end
                 end else begin
-                    st_n=S_HMATCH_INIT;
+                    hsim_src0_base_n={a_q[3:0],2'b00};
+                    hsim_src1_base_n={a_q[7:4],2'b00};
+                    hmatch_class_slot_n=a_q[7:4];
+                    hmatch_last_idx_n=a_q[10:8] - 3'd1;
+                    if(hmatch_req_invalid)begin
+                        res_n={62'b0,STATUS_ERROR};st_n=S_RESULT;
+                    end else begin
+                        st_n=S_HMATCH_INIT;
+                    end
                 end
             end
 
             HDEC_HCNTCLIP: begin
-                hcntclip_dst_base_n={a_q[2:0],2'b00};
+                hcntclip_dst_base_n={hcntclip_dst_base_q[5],a_q[2:0],2'b00};
                 hcntclip_acc_sel_n=a_q[3];
                 // Low-area bit-plane mode fixes clip to the non-zero predicate.
                 hcntclip_chunk_n=2'd0;
@@ -1665,7 +1928,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                         ecc_mac_n=1'b0; ecc_sqr_repeat_n='0;
                         res_n={62'b0,STATUS_ERROR};st_n=S_RESULT;
                     end else begin
-                        hperm_dst_base_n=a_q[5:0];
                         hperm_spread_n=1'b1;
                         ecc_dst_n=a_q[5:0];
                         ecc_acc_dst_n=a_q[17:12];
@@ -1680,7 +1942,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                     res_n={62'b0,STATUS_ERROR};st_n=S_RESULT;
                 end
                 else begin
-                    hperm_dst_base_n={a_q[3:0],2'b00};
                     hperm_bit_low_n=a_q[9:8];
                     hperm_spread_n=1'b0;
                     hperm_lane_base_n=a_q[15:14];
@@ -1695,7 +1956,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                         a_q[7:4],
                         a_q[17:16] + 2'd1
                     };
-                    uop_p0_n.dst_addr    = hperm_dst_base_n;
+                    uop_p0_n.dst_addr    = {a_q[3:0],2'b00};
                     uop_p0_n.perm_nibble = a_q[13:10];
                     st_n=S_UOP_P1_RD0;
                 end
@@ -1731,10 +1992,9 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         S_RD_CAPTURE: begin res_n=vrf_rd[vaddr_bank_q];st_n=S_RESULT;end
 
         S_ECC_SQR_WRITE: begin
-            vrf_req.wa=hspread_dst_base;
+            vrf_req.wa=ecc_dst_q;
             vrf_req.wd=ecc_square_reduce_word;
             hperm_spread_n=1'b0;
-            ecc_dst_n=hspread_dst_base;
             ecc_autoreduce_n=1'b0;
             if (ecc_pmul_add_t2_prefetch) begin
                 ecc_pmul_step_n=5'd4;
@@ -1753,7 +2013,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                 uop_p0_n.valid     = 1'b1;
                 uop_p0_n.op_type   = UOP_HBIND_CHUNK;
                 uop_p0_n.src0_addr = ecc_acc_dst_q;
-                uop_p0_n.src1_addr = hspread_dst_base;
+                uop_p0_n.src1_addr = ecc_dst_q;
                 uop_p0_n.dst_addr  = ecc_acc_dst_q;
                 uop_p0_n.chunk_idx = 2'd3;
                 st_n=S_UOP_P1_RD0;
@@ -1763,7 +2023,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         end
 
         S_HSPREAD_LO_WRITE: begin
-            vrf_req.wa=hspread_dst_base;
+            vrf_req.wa=ecc_dst_q;
             hdc_src0_n[2] = vrf_rd[2];
             hdc_src0_n[3] = vrf_rd[3];
             hdc_src0_we=1'b1;
@@ -1775,7 +2035,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         end
 
         S_HSPREAD_HI_WRITE: begin
-            vrf_req.wa=hspread_dst_base + 6'd1;
+            vrf_req.wa=ecc_dst_q + 6'd1;
             vrf_req.wd[0]=hspread_half64(hdc_src0_q[2], 1'b0);
             vrf_req.wd[1]=hspread_half64(hdc_src0_q[2], 1'b1);
             vrf_req.wd[2]=hspread_half64(hdc_src0_q[3], 1'b0);
@@ -1871,6 +2131,22 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                 && (ecc_kpd64_sub_q == 2'd2)) begin
                 vrf_req.ra=ecc_src_a_q;
             end
+            if (vv33_pair_start) begin
+                vv33_pair_active_n=1'b1;
+                vv33_pair_a_sent_n=1'b1;
+                vv33_pair_next_n=1'b0;
+                vv33_pair_read_ready_n=1'b0;
+                vv33_pair_product_n=1'b0;
+                vv33_pair_pop_n=1'b0;
+                vv33_pair_sum_n=1'b0;
+                vv33_pair_finish_n=1'b0;
+                vv33_pair_class_idx_n=2'd0;
+                vv33_pair_chunk_n=2'd0;
+                vv33_pair_total_n='0;
+                vv33_pair_best_n='0;
+                vv33_pair_best_idx_n='0;
+                vrf_req.ra=VV33_HINFER_QUERY_BASE;
+            end
             st_n=S_ECC_DIAG_CAPTURE0;
         end
 
@@ -1946,6 +2222,20 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                     end
                 end
             endcase
+            if (vv33_pair_pop_fire) begin
+                vv33_pair_product_n=1'b0;
+                vv33_pair_pop_n=1'b1;
+            end
+            if (vv33_pair_fold_launch) begin
+                if (vv33_pair_product_q) begin
+                    vrf_req.ra=vv33_pair_next_src_a_addr;
+                    vv33_pair_next_n=1'b1;
+                end else begin
+                    vrf_req.ra=vv33_pair_src_a_addr;
+                    vv33_pair_next_n=1'b0;
+                end
+                vv33_pair_a_sent_n=1'b1;
+            end
         end
 
         S_ECC_DIAG_CAPTURE0: begin
@@ -1961,6 +2251,19 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                 && ecc_diag_sub_shadow_mode && !ecc_leaf_last
                 && (ecc_kpd64_sub_q == 2'd2)) begin
                 vrf_req.ra=ecc_src_b_q;
+            end
+            if (vv33_pair_a_sent_q) begin
+                vrf_req.ra=vv33_pair_next_q
+                           ? vv33_pair_next_src_b_addr
+                           : vv33_pair_src_b_addr;
+                vv33_pair_a_sent_n=1'b0;
+                vv33_pair_next_n=1'b0;
+                vv33_pair_read_ready_n=1'b1;
+            end
+            if (vv33_pair_pop_q) begin
+                vv33_pair_pop_n=1'b0;
+                group_dist_n=group_dist_sum;
+                vv33_pair_sum_n=1'b1;
             end
             st_n=S_ECC_DIAG_CAPTURE1;
         end
@@ -1983,6 +2286,31 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                     ecc_bitrev32_top(ecc_leaf_lowxor_rd[31:0]);
                 ecc_leaf_xor_b_n =
                     ecc_bitrev32_top(ecc_leaf_lowxor_rd[63:32]);
+            end
+            if (vv33_pair_sum_q) begin
+                vv33_pair_sum_n=1'b0;
+                if (vv33_pair_chunk_q == 2'd3) begin
+                    if (vv33_pair_score > vv33_pair_best_q) begin
+                        vv33_pair_best_n=vv33_pair_score;
+                        vv33_pair_best_idx_n=vv33_pair_class_idx_q;
+                    end
+                    if (vv33_pair_class_idx_q == 2'd2) begin
+                        // Commit the winning score first.  Response packing is
+                        // deferred one cycle so the score add/compare chain
+                        // never terminates directly at the broad res_q mux.
+                        vv33_pair_finish_n=1'b1;
+                        vv33_pair_read_ready_n=1'b0;
+                        vv33_pair_product_n=1'b0;
+                        vv33_pair_total_n='0;
+                    end else begin
+                        vv33_pair_total_n='0;
+                        vv33_pair_chunk_n=2'd0;
+                        vv33_pair_class_idx_n=vv33_pair_class_idx_q+2'd1;
+                    end
+                end else begin
+                    vv33_pair_total_n=vv33_pair_score;
+                    vv33_pair_chunk_n=vv33_pair_chunk_q+2'd1;
+                end
             end
             st_n=S_ECC_DIAG_CAPTURE2;
         end
@@ -2020,6 +2348,18 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                     end
                 end
             endcase
+            if (vv33_pair_product_fire) begin
+                vv33_pair_read_ready_n=1'b0;
+                vv33_pair_product_n=1'b1;
+            end
+            if (vv33_pair_finish_q) begin
+                res_n={51'b0, vv33_pair_best_idx_q, vv33_pair_best_q};
+                vv33_pair_resp_n=1'b1;
+                vv33_pair_finish_n=1'b0;
+                vv33_pair_active_n=1'b0;
+                if (vv33_hinfer_active)
+                    vv33_hinfer_pending_n=1'b0;
+            end
             st_n=S_ECC_DIAG_FOLD_ISSUE;
         end
 
@@ -2104,7 +2444,28 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                 ecc_autoreduce_n=1'b0;
                 if (ecc_mac_q)
                     ecc_mac_n=1'b0;
-                if (ecc_sqr_repeat_q == 7'd0) begin
+                if (vv33_hinfer_field_accept) begin
+                    // The write above commits the complete field result.  This
+                    // is the highest-frequency safe boundary in PMUL: all wide
+                    // residue state is now architectural, while the original
+                    // continuation is the narrow STEP_NEXT transition.
+                    op_n=HDEC_HMATCH;
+                    vv33_hinfer_pending_n=1'b1;
+                    vv33_hinfer_rot_n=operand_a_i[17:8];
+                    if (ecc_sqr_repeat_q != 7'd0) begin
+                        // Keep one square live across the query encoder.  The
+                        // HPERM phase leaves it pending; the existing HBIND
+                        // read/compute/write lifecycle then issues and commits
+                        // the square without a second wide result path.
+                        vv33_sq_phase_n=VV33_SQ_PENDING;
+                        ecc_sqr_repeat_n=ecc_sqr_repeat_q-7'd1;
+                        vv33_hinfer_resume_step_n=1'b0;
+                    end else begin
+                        ecc_job_phase_n=ECC_PHASE_NONE;
+                        vv33_hinfer_resume_step_n=1'b1;
+                    end
+                    st_n=S_EXEC;
+                end else if (ecc_sqr_repeat_q == 7'd0) begin
                     res_n={56'b0, ecc_dst_q, STATUS_OK};
                     if (ecc_job_active_q && (ecc_job_phase_q == ECC_PHASE_INV_SQR)) begin
                         st_n=S_ECC_INV_AFTER_SQR;
@@ -2162,17 +2523,53 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
 
         // ── S_CLR: shared by HCLR (4 entries) and HCNTCLR (16 entries) ──────
         S_ECC_WRITE_DRAIN: begin
-            if (ECC_DEBUG_FIELD_OPS && ecc_autoreduce_q) begin
+            if (vv33_hinfer_field_accept) begin
+                // The field result is architectural at this boundary.  Retire
+                // the PMUL microstep now, keep only a one-bit continuation, and
+                // execute the fused inference through the normal HDC decode.
+                op_n=HDEC_HMATCH;
+                vv33_hinfer_pending_n=1'b1;
+                vv33_hinfer_rot_n=operand_a_i[17:8];
+                if (ecc_sqr_repeat_q != 7'd0) begin
+                    vv33_sq_phase_n=VV33_SQ_PENDING;
+                    ecc_sqr_repeat_n=ecc_sqr_repeat_q-7'd1;
+                    vv33_hinfer_resume_step_n=1'b0;
+                end else begin
+                    ecc_job_phase_n=ECC_PHASE_NONE;
+                    vv33_hinfer_resume_step_n=1'b1;
+                end
+                st_n=S_EXEC;
+            end else if (ECC_DEBUG_FIELD_OPS && ecc_autoreduce_q) begin
                 vrf_req.ra=ecc_src_a_q;
                 st_n=S_ECC_REDUCE_LOAD_LO_WAIT;
             end else if (ecc_sqr_repeat_q != 7'd0) begin
-                hperm_dst_base_n=ecc_dst_q;
-                hperm_spread_n=1'b1;
-                ecc_src_a_n=ecc_dst_q;
-                ecc_autoreduce_n=1'b1;
-                ecc_sqr_repeat_n=ecc_sqr_repeat_q - 7'd1;
-                vrf_req.ra=ecc_dst_q;
-                st_n=S_RD_WAIT;
+                if (VV33_FINE_INTERLEAVE
+                 && ecc_job_bg_q
+                 && vv33_hdc_request_valid
+                 && !vv33_hinfer_active
+                 && !vv33_pair_active_q
+                 && ((ecc_job_phase_q == ECC_PHASE_PMUL_FIELD)
+                  || (ecc_job_phase_q == ECC_PHASE_INV_SQR))) begin
+                    // A dual-source Boolean operation carries one square
+                    // through its own VRF/compute lifecycle.  Other HDC
+                    // instructions use the same safe boundary but leave the
+                    // square pending for normal replay after they retire.
+                    vv33_sq_phase_n=vv33_hdc_square_overlap
+                                      ? VV33_SQ_PENDING : VV33_SQ_DONE;
+                    vv33_sq_defer_fire=1'b1;
+                    if (vv33_hdc_square_overlap)
+                        ecc_sqr_repeat_n=ecc_sqr_repeat_q - 7'd1;
+                    hperm_spread_n=1'b0;
+                    ecc_autoreduce_n=1'b0;
+                    st_n=S_IDLE;
+                end else begin
+                    hperm_spread_n=1'b1;
+                    ecc_src_a_n=ecc_dst_q;
+                    ecc_autoreduce_n=1'b1;
+                    ecc_sqr_repeat_n=ecc_sqr_repeat_q - 7'd1;
+                    vrf_req.ra=ecc_dst_q;
+                    st_n=S_RD_WAIT;
+                end
             end else begin
                 if (ecc_job_active_q && (ecc_job_phase_q == ECC_PHASE_INV_SQR)) begin
                     st_n=S_ECC_INV_AFTER_SQR;
@@ -2277,9 +2674,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
 
         S_ECC_INV_ISSUE_SQR: begin
             hperm_spread_n=1'b1;
-            hperm_dst_base_n=(ECC_INV_SQUARE_REDIRECT
-                              && ecc_inv_step_has_mul(ecc_inv_step_q))
-                            ? (ecc_job_dst_q + 6'd2) : ecc_job_dst_q;
             ecc_dst_n=(ECC_INV_SQUARE_REDIRECT
                        && ecc_inv_step_has_mul(ecc_inv_step_q))
                      ? (ecc_job_dst_q + 6'd2) : ecc_job_dst_q;
@@ -2486,7 +2880,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                 end
                 5'd13: begin
                     hperm_spread_n=1'b1;
-                    hperm_dst_base_n=ECC_PMUL_T5;
                     ecc_dst_n=ECC_PMUL_T5; ecc_src_a_n=ECC_PMUL_T5;
                     ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0;
                     ecc_job_phase_n=ECC_PHASE_PMUL_FIELD;
@@ -2520,7 +2913,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                 end
                 5'd17: begin
                     hperm_spread_n=1'b1;
-                    hperm_dst_base_n=ECC_PMUL_T8;
                     ecc_dst_n=ECC_PMUL_T8; ecc_src_a_n=ECC_PMUL_T8;
                     ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0;
                     ecc_job_phase_n=ECC_PHASE_PMUL_FIELD;
@@ -2547,7 +2939,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                 end
                 5'd20: begin
                     hperm_spread_n=1'b1;
-                    hperm_dst_base_n=ECC_PMUL_T8;
                     ecc_dst_n=ECC_PMUL_T8; ecc_src_a_n=ECC_PMUL_T8;
                     ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0;
                     ecc_job_phase_n=ECC_PHASE_PMUL_FIELD;
@@ -2608,7 +2999,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                         ecc_job_phase_n=ECC_PHASE_PMUL_ADD;
                         st_n=S_UOP_P1_RD0;
                     end else begin
-                        hperm_spread_n=1'b1; hperm_dst_base_n=ECC_PMUL_T0;
+                        hperm_spread_n=1'b1;
                         ecc_dst_n=ECC_PMUL_T0; ecc_src_a_n=ECC_PMUL_T0;
                         ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0;
                         ecc_job_phase_n=ECC_PHASE_PMUL_FIELD;
@@ -2618,7 +3009,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                 5'd1: begin
                     if (ECC_PMUL_DBL_FROBENIUS) begin
                         hperm_spread_n=1'b1;
-                        hperm_dst_base_n=ecc_pmul_dbl_x;
                         ecc_dst_n=ecc_pmul_dbl_x;
                         ecc_src_a_n=ecc_pmul_dbl_x;
                         ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0;
@@ -2627,7 +3017,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                         vrf_req.ra=ecc_pmul_dbl_x;
                         st_n=S_RD_WAIT;
                     end else begin
-                        hperm_spread_n=1'b1; hperm_dst_base_n=ECC_PMUL_T1;
+                        hperm_spread_n=1'b1;
                         ecc_dst_n=ECC_PMUL_T1; ecc_src_a_n=ECC_PMUL_T1;
                         ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0;
                         ecc_job_phase_n=ECC_PHASE_PMUL_FIELD;
@@ -2637,7 +3027,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                 5'd2: begin
                     if (ECC_PMUL_DBL_FROBENIUS) begin
                         hperm_spread_n=1'b1;
-                        hperm_dst_base_n=ecc_pmul_dbl_z;
                         ecc_dst_n=ecc_pmul_dbl_z;
                         ecc_src_a_n=ecc_pmul_dbl_z;
                         ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0;
@@ -2646,7 +3035,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                         vrf_req.ra=ECC_PMUL_T2;
                         st_n=S_RD_WAIT;
                     end else begin
-                        hperm_spread_n=1'b1; hperm_dst_base_n=ECC_PMUL_T4;
+                        hperm_spread_n=1'b1;
                         ecc_dst_n=ECC_PMUL_T4; ecc_src_a_n=ECC_PMUL_T4;
                         ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0;
                         ecc_job_phase_n=ECC_PHASE_PMUL_FIELD;
@@ -2657,7 +3046,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                     if (ECC_PMUL_DBL_FROBENIUS) begin
                         st_n=S_ECC_PMUL_STEP_NEXT;
                     end else begin
-                        hperm_spread_n=1'b1; hperm_dst_base_n=ECC_PMUL_T5;
+                        hperm_spread_n=1'b1;
                         ecc_dst_n=ECC_PMUL_T5; ecc_src_a_n=ECC_PMUL_T5;
                         ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0;
                         ecc_job_phase_n=ECC_PHASE_PMUL_FIELD;
@@ -2678,7 +3067,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                         st_n=S_UOP_P1_RD0;
                     end
                 end
-                default: begin hperm_spread_n=1'b1; hperm_dst_base_n=ecc_pmul_dbl_z; ecc_dst_n=ecc_pmul_dbl_z; ecc_src_a_n=ecc_pmul_dbl_z; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_req.ra=ECC_PMUL_T2; st_n=S_RD_WAIT; end
+                default: begin hperm_spread_n=1'b1; ecc_dst_n=ecc_pmul_dbl_z; ecc_src_a_n=ecc_pmul_dbl_z; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_req.ra=ECC_PMUL_T2; st_n=S_RD_WAIT; end
                 endcase
             end
             ECC_PMUL_SUB_ADD: begin
@@ -2686,7 +3075,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                 5'd0: begin ecc_dst_n=ECC_PMUL_T0; ecc_src_a_n=ECC_PMUL_R0X; ecc_src_b_n=ECC_PMUL_R1Z; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_req.ra=ECC_PMUL_R0X; st_n=S_ECC_LOAD_A_WAIT; end
                 5'd1: begin ecc_dst_n=ECC_PMUL_T1; ecc_src_a_n=ECC_PMUL_R1X; ecc_src_b_n=ECC_PMUL_R0Z; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_req.ra=ECC_PMUL_R1X; st_n=S_ECC_LOAD_A_WAIT; end
                 5'd2: begin uop_p0_n='0; uop_p0_n.valid=1'b1; uop_p0_n.op_type=UOP_HBIND_CHUNK; uop_p0_n.src0_addr=ECC_PMUL_T0; uop_p0_n.src1_addr=ECC_PMUL_T1; uop_p0_n.dst_addr=ECC_PMUL_T4; uop_p0_n.chunk_idx=2'd3; ecc_job_phase_n=ECC_PHASE_PMUL_ADD; st_n=S_UOP_P1_RD0; end
-                5'd3: begin hperm_spread_n=1'b1; hperm_dst_base_n=ECC_PMUL_ADD_Z_FORWARD ? ecc_pmul_add_out_z : ECC_PMUL_T5; ecc_dst_n=ECC_PMUL_ADD_Z_FORWARD ? ecc_pmul_add_out_z : ECC_PMUL_T5; ecc_src_a_n=ECC_PMUL_ADD_Z_FORWARD ? ecc_pmul_add_out_z : ECC_PMUL_T5; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_req.ra=ECC_PMUL_T4; st_n=S_RD_WAIT; end
+                5'd3: begin hperm_spread_n=1'b1; ecc_dst_n=ECC_PMUL_ADD_Z_FORWARD ? ecc_pmul_add_out_z : ECC_PMUL_T5; ecc_src_a_n=ECC_PMUL_ADD_Z_FORWARD ? ecc_pmul_add_out_z : ECC_PMUL_T5; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_req.ra=ECC_PMUL_T4; st_n=S_RD_WAIT; end
                 5'd4: begin ecc_dst_n=ECC_PMUL_T2; ecc_src_a_n=ecc_pmul_scalar_bit_q ? ECC_PMUL_R1X : ECC_PMUL_R0X; ecc_src_b_n=ecc_pmul_scalar_bit_q ? ECC_PMUL_R1Z : ECC_PMUL_R0Z; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_req.ra=ecc_pmul_scalar_bit_q ? ECC_PMUL_R1X : ECC_PMUL_R0X; st_n=S_ECC_LOAD_A_WAIT; end
                 5'd5: begin ecc_dst_n=ECC_PMUL_T6; ecc_src_a_n=ECC_PMUL_T0; ecc_src_b_n=ECC_PMUL_T1; ecc_autoreduce_n=1'b1; ecc_mac_n=1'b0; ecc_sqr_repeat_n='0; ecc_job_phase_n=ECC_PHASE_PMUL_FIELD; vrf_req.ra=ECC_PMUL_T0; st_n=S_ECC_LOAD_A_WAIT; end
                 5'd6: begin st_n=S_ECC_PMUL_STEP_NEXT; end
@@ -2715,7 +3104,9 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                 ECC_PMUL_SUB_DBL: begin
                     if (ecc_pmul_bit_q == 8'd0) begin
                         ecc_pmul_subop_n=ecc_pmul_r0_inf_n ? ECC_PMUL_SUB_ZERO_OUT : ECC_PMUL_SUB_AFFINE;
-                        st_n=(ecc_job_bg_q && valid_i) ? S_IDLE : S_ECC_PMUL_STEP;
+                        st_n=(ecc_job_bg_q && valid_i
+                           && !vv33_hinfer_active && !vv33_pair_active_q)
+                           ? S_IDLE : S_ECC_PMUL_STEP;
                     end else begin
                         ecc_pmul_bit_n=ecc_pmul_bit_q - 8'd1;
                         vrf_req.ra=ecc_job_src_q;
@@ -2727,7 +3118,19 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                     ecc_job_done_n=1'b1;
                     ecc_job_bg_n=1'b0;
                     ecc_job_phase_n=ECC_PHASE_NONE;
-                    if (ecc_job_bg_q) begin
+                    if (ecc_job_bg_q && vv33_hinfer_active) begin
+                        // No compatible diagonal lifecycle remains. Complete
+                        // the retained resident query on the ordinary shared
+                        // HMATCH path before returning the macro response.
+                        vv33_pair_active_n=1'b0;
+                        vv33_hinfer_pending_n=1'b0;
+                        a_n[63]=1'b0;
+                        hsim_src0_base_n=VV33_HINFER_QUERY_BASE;
+                        hsim_src1_base_n=VV33_HINFER_PROTO_BASE;
+                        hmatch_class_slot_n=VV33_HINFER_PROTO_BASE[5:2];
+                        hmatch_last_idx_n=VV33_HINFER_LAST_CLASS;
+                        st_n=S_HMATCH_INIT;
+                    end else if (ecc_job_bg_q) begin
                         st_n=S_IDLE;
                     end else begin
                         res_n={32'b0, ecc_job_cycle_status, 6'b0, ecc_pmul_result_q, 2'b10, STATUS_OK};
@@ -2785,7 +3188,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         S_HMATCH_INIT: begin
             hmatch_best_idx_n=3'd0;
             hmatch_best_dist_n = 11'd0;
-            hmatch_update_n=1'b0;
             hsim_total_n='0;
             uop_p0_n='0;
             uop_p0_n.valid        = 1'b1;
@@ -2800,14 +3202,21 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
 
         // ── UOP Pipeline ─────────────────────────────────────────────────────
         S_UOP_P1_RD0: begin
-            if ((uop_p0_q.op_type == UOP_HMATCH_CHUNK) && (uop_p0_q.chunk_idx == 2'd0)
-                    && (uop_p0_q.class_idx != uop_p3_q.class_idx)) begin
-                if (hmatch_update_q) begin
-                    hmatch_best_dist_n = hsim_total_q;
-                    hmatch_best_idx_n  = uop_p3_q.class_idx;
+            if (VV33_FINE_INTERLEAVE && vv33_sq_commit_q) begin
+                vrf_req.wa=ecc_dst_q;
+                vrf_req.wd=ecc_square_reduce_word;
+                vv33_sq_write_fire=1'b1;
+                vv33_sq_commit_n=1'b0;
+                if ((ecc_sqr_repeat_q != 7'd0)
+                 && (uop_p0_q.op_type == UOP_HBIND_CHUNK)) begin
+                    // The next HBIND chunk already needs another VRF read
+                    // sequence.  Carry one more square through that existing
+                    // lifecycle instead of returning to the ECC square FSM.
+                    vv33_sq_phase_n=VV33_SQ_PENDING;
+                    ecc_sqr_repeat_n=ecc_sqr_repeat_q - 7'd1;
+                end else begin
+                    vv33_sq_phase_n=VV33_SQ_DONE;
                 end
-                hmatch_update_n = 1'b0;
-                hsim_total_n    = '0;
             end
             vrf_req.ra=uop_p0_q.src0_addr;
             st_n=S_UOP_P1_RD0_WAIT;
@@ -2817,7 +3226,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             // HPERM's second row is known when the first row is issued.
             // Launch it one cycle earlier so the registered VRF output is
             // ready when the HPERM payload enters P2.
-            if (uop_p0_q.op_type == UOP_HPERM_CHUNK)
+            if ((uop_p0_q.op_type == UOP_HPERM_CHUNK)
+             || uop_p0_use_paired_sources)
                 vrf_req.ra=uop_p0_q.src1_addr;
             st_n=S_UOP_P1_RD0_WAIT2;
         end
@@ -2828,55 +3238,62 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         end
 
         S_UOP_P1_RD1: begin
-            uop_p2_n       = uop_p0_q;
-            p2_is_pop_n    = (uop_p0_q.op_type == UOP_HSIM_CHUNK)
-                           || (uop_p0_q.op_type == UOP_HMATCH_CHUNK);
-            p2_is_hbind_n  = (uop_p0_q.op_type == UOP_HBIND_CHUNK);
-            uop_p0_n.valid = 1'b0;
-            if ((uop_p0_q.op_type == UOP_HPERM_CHUNK)
+            if (uop_p0_use_paired_sources) begin
+                // The registered public return holds source A while the raw
+                // early return holds source B.  Launch the shared matrix now;
+                // P3 captures its count on the following cycle.
+                uop_p3_n=uop_p0_q;
+                uop_p0_n.valid=1'b0;
+                st_n=S_UOP_P3_GLOBAL;
+            end else if ((uop_p0_q.op_type == UOP_HPERM_CHUNK)
              || (uop_p0_q.op_type == UOP_HCNTADD_SUBGROUP)
              || (uop_p0_q.op_type == UOP_HBIND_CHUNK)
-             || (uop_p0_q.op_type == UOP_HSIM_CHUNK)
-             || (uop_p0_q.op_type == UOP_HMATCH_CHUNK))
+             )
             begin
                 hdc_src0_n = vrf_rd;
                 hdc_src0_we=1'b1;
-            end
-            else if (uop_p0_q.op_type == UOP_HCNTCLIP_READ) begin
+                vrf_req.ra=uop_p0_q.src1_addr;
+                if (uop_p0_q.op_type == UOP_HPERM_CHUNK)
+                    st_n=S_UOP_P2_LANE;
+                else
+                    st_n=S_UOP_P1_RD1_WAIT;
+            end else if (uop_p0_q.op_type == UOP_HCNTCLIP_READ) begin
                 hdc_src0_n = '0;
                 hdc_src0_we=1'b1;
-            end
-            vrf_req.ra=uop_p0_q.src1_addr;
-            if (uop_p0_q.op_type == UOP_HPERM_CHUNK)
-                st_n=S_UOP_P2_LANE;
-            else
+                vrf_req.ra=uop_p0_q.src1_addr;
                 st_n=S_UOP_P1_RD1_WAIT;
+            end else begin
+                st_n=S_UOP_P1_RD1_WAIT;
+            end
         end
 
         S_UOP_P1_RD1_WAIT: begin
-            p2_lane_compute_n = uop_p2_q.valid;
+            if (VV33_FINE_INTERLEAVE
+             && (vv33_sq_phase_q == VV33_SQ_PENDING)) begin
+                vrf_req.ra=ecc_dst_q;
+                vv33_sq_phase_n=VV33_SQ_ISSUED;
+                vv33_sq_read_fire=1'b1;
+            end
             st_n=S_UOP_P2_LANE;
         end
 
         S_UOP_P2_LANE: begin
-            uop_p3_n           = uop_p2_q;
-            uop_p2_n.valid     = 1'b0;
-            p2_is_pop_n        = 1'b0;
-            p2_is_hbind_n      = 1'b0;
+            uop_p3_n           = uop_p0_q;
+            uop_p0_n.valid     = 1'b0;
 `ifndef SYNTHESIS
             assert ($onehot0({
-                    ((uop_p2_q.op_type == UOP_HSIM_CHUNK)
-                  || (uop_p2_q.op_type == UOP_HMATCH_CHUNK)),
-                    uop_p2_use_counter,
-                    uop_p2_use_shift,
-                    uop_p2_use_clip,
-                    (uop_p2_q.op_type == UOP_HBIND_CHUNK)
+                    ((uop_p0_q.op_type == UOP_HSIM_CHUNK)
+                  || (uop_p0_q.op_type == UOP_HMATCH_CHUNK)),
+                    uop_p0_use_counter,
+                    uop_p0_use_shift,
+                    uop_p0_use_clip,
+                    (uop_p0_q.op_type == UOP_HBIND_CHUNK)
                 }))
                 else $error("HDEC P2 invalid compute mode flags: op_type=%0d",
-                            uop_p2_q.op_type);
+                            uop_p0_q.op_type);
 `endif
-            if (uop_p2_use_shift) begin
-                vrf_req.ra = uop_p2_q.src1_addr;
+            if (uop_p0_use_shift) begin
+                vrf_req.ra = uop_p0_q.src1_addr;
                 hperm_lane_slot_n = 2'd0;
                 hperm_lane_phase_n = 1'b0;
                 hperm_lane_clear = 1'b1;
@@ -2889,21 +3306,28 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         S_HPERM_LANE64: begin
             vrf_req.ra = uop_p3_q.src1_addr;
             lane_shift_bit = {uop_p3_q.perm_nibble, hperm_bit_low_q};
-            hperm_word_sel = {1'b0, hperm_lane_base_q} + {1'b0, hperm_lane_slot_q};
+            // Keep one physical byte-window cone.  slot_q always names the
+            // window prepared in this cycle; once primed, the previous stage
+            // retires concurrently to slot_q-1.  The wrapped slot zero is the
+            // final drain cycle.
+            hperm_word_sel = {1'b0, hperm_lane_base_q}
+                           + {1'b0, hperm_lane_slot_q};
             hperm_next_sel = hperm_word_sel + 3'd1;
             hperm_wide_word = {
                 hperm_pick_word(hperm_next_sel, hdc_src0_q, vrf_rd),
                 hperm_pick_word(hperm_word_sel,  hdc_src0_q, vrf_rd)
             };
+            hperm_stage_n = hperm_byte_window(
+                hperm_wide_word, lane_shift_bit[5:3]);
+            hperm_stage_we = 1'b1;
             if (!hperm_lane_phase_q) begin
-                hperm_stage_n = hperm_byte_window(hperm_wide_word, lane_shift_bit[5:3]);
-                hperm_stage_we = 1'b1;
                 hperm_lane_phase_n = 1'b1;
+                hperm_lane_slot_n = hperm_lane_slot_q + 2'd1;
             end else begin
                 hperm_lane_word = hperm_low_shift(hperm_stage_q, lane_shift_bit[2:0]);
                 hperm_lane_we = 1'b1;
-                hperm_lane_phase_n = 1'b0;
-                if (hperm_lane_slot_q == 2'd3) begin
+                if (hperm_lane_slot_q == 2'd0) begin
+                    hperm_lane_phase_n = 1'b0;
                     st_n = S_UOP_P3_GLOBAL;
                 end else begin
                     hperm_lane_slot_n = hperm_lane_slot_q + 2'd1;
@@ -2913,6 +3337,9 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
 
         S_UOP_P3_GLOBAL: begin
             uop_p3_n.valid  = 1'b0;
+            if (VV33_FINE_INTERLEAVE
+             && (vv33_sq_phase_q == VV33_SQ_ISSUED))
+                vv33_sq_commit_n=1'b1;
             if (uop_p3_q.op_type == UOP_HBIND_CHUNK) begin
                 vrf_req.wa = uop_p3_q.dst_addr;
                 vrf_req.wd = vec_payload_q;
@@ -2924,7 +3351,74 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             unique case (uop_p3_q.op_type)
             UOP_HBIND_CHUNK, UOP_HPERM_CHUNK: begin
                 if (uop_p3_q.chunk_idx == 2'd3) begin
-                    st_n = S_UOP_P4_RESP;
+                    if ((uop_p3_q.op_type == UOP_HBIND_CHUNK)
+                      && uop_p3_q.is_last_class
+                      && vv33_hinfer_active) begin
+                        // The encoded query is now architectural in the VRF.
+                        // Keep the external macro request alive, then resume
+                        // the PMUL from its narrow continuation while the
+                        // matching work waits for a compatible diagonal slot.
+                        if (ecc_job_bg_q && ecc_job_active_q) begin
+                            // A single pending bit retains the completed query.
+                            // Clearing the descriptor here prevents the macro
+                            // lifetime from entering the shared payload cone.
+                            vv33_hinfer_pending_n=1'b1;
+                            a_n[63]=1'b0;
+                            if (vv33_hinfer_resume_step_q) begin
+                                vv33_hinfer_resume_step_n=1'b0;
+                                st_n=S_ECC_PMUL_STEP_NEXT;
+                            end else if (vv33_sq_phase_q == VV33_SQ_ISSUED) begin
+                                // The final HBIND chunk has just consumed the
+                                // square result.  Use the existing response
+                                // slot only as a conflict-free square commit;
+                                // the external inference response remains
+                                // owned by the later paired HMATCH.
+                                st_n=S_UOP_P4_RESP;
+                            end else if (vv33_sq_phase_q == VV33_SQ_DONE) begin
+                                vv33_sq_phase_n=VV33_SQ_IDLE;
+                                if (ecc_sqr_repeat_q != 7'd0) begin
+                                    hperm_spread_n=1'b1;
+                                    ecc_src_a_n=ecc_dst_q;
+                                    ecc_autoreduce_n=1'b1;
+                                    ecc_sqr_repeat_n=ecc_sqr_repeat_q-7'd1;
+                                    vrf_req.ra=ecc_dst_q;
+                                    st_n=S_RD_WAIT;
+                                end else if (ecc_job_phase_q == ECC_PHASE_INV_SQR) begin
+                                    st_n=S_ECC_INV_AFTER_SQR;
+                                end else begin
+                                    ecc_job_phase_n=ECC_PHASE_NONE;
+                                    st_n=S_ECC_PMUL_STEP_NEXT;
+                                end
+                            end else begin
+                                st_n=S_ECC_BG_DISPATCH;
+                            end
+                        end else begin
+                            vv33_hinfer_pending_n=1'b0;
+                            a_n[63]=1'b0;
+                            hsim_src0_base_n=VV33_HINFER_QUERY_BASE;
+                            hsim_src1_base_n=VV33_HINFER_PROTO_BASE;
+                            hmatch_class_slot_n=VV33_HINFER_PROTO_BASE[5:2];
+                            hmatch_last_idx_n=VV33_HINFER_LAST_CLASS;
+                            st_n=S_HMATCH_INIT;
+                        end
+                    end else if ((uop_p3_q.op_type == UOP_HPERM_CHUNK)
+                              && uop_p3_q.is_last_class
+                              && vv33_hinfer_active) begin
+                        // The role permutation has reached the resident query
+                        // slot.  Continue the same external macro request by
+                        // launching the existing four-chunk HBIND pipeline.
+                        uop_p0_n='0;
+                        uop_p0_n.valid=1'b1;
+                        uop_p0_n.op_type=UOP_HBIND_CHUNK;
+                        uop_p0_n.src0_addr=VV33_HINFER_QUERY_BASE;
+                        uop_p0_n.src1_addr=VV33_HINFER_INPUT_BASE;
+                        uop_p0_n.dst_addr=VV33_HINFER_QUERY_BASE;
+                        uop_p0_n.chunk_idx=2'd0;
+                        uop_p0_n.is_last_class=1'b1;
+                        st_n=S_UOP_P1_RD0;
+                    end else begin
+                        st_n = S_UOP_P4_RESP;
+                    end
                 end
                 else begin
                     uop_p0_n = uop_p3_q; uop_p0_n.valid = 1'b1;
@@ -2953,13 +3447,12 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             UOP_HCNTADD_SUBGROUP: begin
                 if (uop_p3_q.subgroup_idx < 2'd3) begin
                     vrf_req.ra=uop_p3_q.dst_addr + 6'd1;
-                    // Advance uop to P2 directly (skip P1_RD0/P1_RD1)
-                    uop_p2_n = uop_p3_q; uop_p2_n.valid = 1'b1;
-                    p2_is_pop_n = 1'b0; p2_is_hbind_n = 1'b0;
-                    uop_p2_n.subgroup_idx = uop_p3_q.subgroup_idx + 2'd1;
-                    uop_p2_n.src1_addr = uop_p3_q.dst_addr + 6'd1;
-                    uop_p2_n.dst_addr = uop_p3_q.dst_addr + 6'd1;
-                    uop_p0_n.valid = 1'b0;
+                    // Advance the retained P0 uop directly to the next P2
+                    // subgroup, skipping the full P1 two-source read sequence.
+                    uop_p0_n = uop_p3_q; uop_p0_n.valid = 1'b1;
+                    uop_p0_n.subgroup_idx = uop_p3_q.subgroup_idx + 2'd1;
+                    uop_p0_n.src1_addr = uop_p3_q.dst_addr + 6'd1;
+                    uop_p0_n.dst_addr = uop_p3_q.dst_addr + 6'd1;
                     st_n = S_UOP_P3_VRF_WAIT;
                 end else if (uop_p3_q.chunk_idx < 2'd3) begin
                     uop_p0_n = uop_p3_q; uop_p0_n.valid = 1'b1;
@@ -2981,10 +3474,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                 hdc_src0_we=1'b1;
                 if (uop_p3_q.subgroup_idx < 2'd3) begin
                     vrf_req.ra=hcntclip_acc_base+{2'b00,uop_p3_q.chunk_idx,2'b00}+{4'b0,(uop_p3_q.subgroup_idx + 2'd1)};
-                    uop_p2_n = uop_p3_q; uop_p2_n.valid = 1'b1;
-                    p2_is_pop_n = 1'b0; p2_is_hbind_n = 1'b0;
-                    uop_p2_n.subgroup_idx = uop_p3_q.subgroup_idx + 2'd1;
-                    uop_p0_n.valid = 1'b0;
+                    uop_p0_n = uop_p3_q; uop_p0_n.valid = 1'b1;
+                    uop_p0_n.subgroup_idx = uop_p3_q.subgroup_idx + 2'd1;
                     st_n = S_UOP_P3_VRF_WAIT;
                 end else begin
                     // word complete; go to dedicated write state
@@ -3001,11 +3492,29 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         end
 
         S_UOP_P3_VRF_WAIT2: begin
-            p2_lane_compute_n = uop_p2_q.valid;
             st_n=S_UOP_P2_LANE;
         end
 
         S_UOP_P3_POP_CAPTURE: begin
+            if (VV33_FINE_INTERLEAVE && vv33_sq_commit_q) begin
+                vrf_req.wa=ecc_dst_q;
+                vrf_req.wd=ecc_square_reduce_word;
+                vv33_sq_write_fire=1'b1;
+                vv33_sq_commit_n=1'b0;
+                if ((ecc_sqr_repeat_q != 7'd0)
+                 && ((uop_p3_q.chunk_idx != 2'd3)
+                  || ((uop_p3_q.op_type == UOP_HMATCH_CHUNK)
+                   && !uop_p3_q.is_last_class))) begin
+                    // Similarity and matching naturally revisit the same
+                    // four-chunk pipeline.  Re-arm the narrow square token
+                    // while another chunk remains, without adding a new data
+                    // path or square-result register.
+                    vv33_sq_phase_n=VV33_SQ_PENDING;
+                    ecc_sqr_repeat_n=ecc_sqr_repeat_q - 7'd1;
+                end else begin
+                    vv33_sq_phase_n=VV33_SQ_DONE;
+                end
+            end
             group_dist_n = group_dist_sum;
             st_n=S_UOP_P3_ACCUM;
         end
@@ -3014,10 +3523,14 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             hsim_total_n = hsim_total_step;
             if (uop_p3_q.chunk_idx == 2'd3) begin
                 if (uop_p3_q.op_type == UOP_HMATCH_CHUNK) begin
-                    hmatch_update_n = (hsim_total_step > hmatch_best_dist_q);
+                    if (hsim_total_step > hmatch_best_dist_q) begin
+                        hmatch_best_dist_n = hsim_total_step;
+                        hmatch_best_idx_n  = uop_p3_q.class_idx;
+                    end
                     if (uop_p3_q.is_last_class) begin
                         st_n = S_UOP_P4_RESP;
                     end else begin
+                        hsim_total_n = '0;
                         hmatch_class_slot_n = hmatch_class_slot_q + 4'd1;
                         uop_p0_n = uop_p3_q; uop_p0_n.valid = 1'b1;
                         uop_p0_n.chunk_idx   = 2'd0;
@@ -3045,7 +3558,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         end
 
         S_UOP_CLIP_WRITE: begin
-            vrf_req.wa=hcntclip_dst_base_q+hcntclip_chunk_q;
+            vrf_req.wa={1'b0,hcntclip_dst_base_q[4:0]}+hcntclip_chunk_q;
             vrf_req.wd = hdc_src0_q;
             if (hcntclip_chunk_q == 2'd3) st_n = S_UOP_P4_RESP;
             else begin
@@ -3062,20 +3575,41 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         end
 
         S_UOP_P4_RESP: begin
+            if (VV33_FINE_INTERLEAVE && vv33_sq_commit_q) begin
+                // HBIND writes its final vector chunk in P3.  P4 is the first
+                // conflict-free slot in which the accompanying ECC square can
+                // commit through the existing 1R1W VRF interface.
+                vrf_req.wa=ecc_dst_q;
+                vrf_req.wd=ecc_square_reduce_word;
+                vv33_sq_phase_n=VV33_SQ_DONE;
+                vv33_sq_write_fire=1'b1;
+                vv33_sq_commit_n=1'b0;
+            end
             res_n = '0;
-            if (uop_p3_q.op_type == UOP_HSIM_CHUNK) begin
+            if (vv33_hinfer_active
+             && (uop_p3_q.op_type == UOP_HBIND_CHUNK)
+             && uop_p3_q.is_last_class
+             && vv33_sq_commit_q) begin
+                // Finish the square lifecycle without exposing an early HDC
+                // response.  Any remaining serial squares return to the
+                // original ECC path before PMUL advances.
+                vv33_sq_phase_n=VV33_SQ_IDLE;
+                if (ecc_sqr_repeat_q != 7'd0) begin
+                    hperm_spread_n=1'b1;
+                    ecc_src_a_n=ecc_dst_q;
+                    ecc_autoreduce_n=1'b1;
+                    ecc_sqr_repeat_n=ecc_sqr_repeat_q-7'd1;
+                    vrf_req.ra=ecc_dst_q;
+                    st_n=S_RD_WAIT;
+                end else begin
+                    ecc_job_phase_n=ECC_PHASE_NONE;
+                    st_n=S_ECC_PMUL_STEP_NEXT;
+                end
+            end else if (uop_p3_q.op_type == UOP_HSIM_CHUNK) begin
                 res_n = {53'b0, hsim_total_q};
                 st_n = S_RESULT;
             end else if (uop_p3_q.op_type == UOP_HMATCH_CHUNK) begin
-                hmatch_update_n = 1'b0;
-                if (hmatch_update_q) begin
-                    hmatch_best_dist_n = hsim_total_q;
-                    hmatch_best_idx_n  = uop_p3_q.class_idx;
-                end
-                if (hmatch_update_q)
-                    res_n = {50'b0, uop_p3_q.class_idx, hsim_total_q};
-                else
-                    res_n = {50'b0, hmatch_best_idx_q, hmatch_best_dist_q};
+                res_n = {50'b0, hmatch_best_idx_q, hmatch_best_dist_q};
                 st_n = S_RESULT;
             end else if (ecc_mac_q) begin
                 ecc_mac_n = 1'b0;
@@ -3088,7 +3622,42 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         end
 
         S_RESULT: begin
-            st_n=(ecc_job_bg_q && ecc_job_active_q) ? S_ECC_BG_DISPATCH : S_IDLE;
+            if (VV33_FINE_INTERLEAVE
+             && ecc_job_bg_q
+             && ecc_job_active_q
+             && (vv33_sq_phase_q == VV33_SQ_DONE)) begin
+                vv33_sq_phase_n=VV33_SQ_IDLE;
+                if (ecc_sqr_repeat_q != 7'd0) begin
+                    // Resume the deterministic square chain.  This path is
+                    // shared by a completed overlapped square and a parked
+                    // non-overlap HDC instruction.
+                    hperm_spread_n=1'b1;
+                    ecc_src_a_n=ecc_dst_q;
+                    ecc_autoreduce_n=1'b1;
+                    ecc_sqr_repeat_n=ecc_sqr_repeat_q - 7'd1;
+                    vrf_req.ra=ecc_dst_q;
+                    st_n=S_RD_WAIT;
+                end else if (ecc_job_phase_q == ECC_PHASE_INV_SQR) begin
+                    st_n=S_ECC_INV_AFTER_SQR;
+                end else begin
+                    ecc_job_phase_n=ECC_PHASE_NONE;
+                    st_n=S_ECC_PMUL_STEP_NEXT;
+                end
+            end else if (VV33_FINE_INTERLEAVE
+                      && ecc_job_bg_q
+                      && ecc_job_active_q
+                      && (vv33_sq_phase_q != VV33_SQ_IDLE)) begin
+                // Invalid HMATCH parameters take this exact-square replay.
+                vv33_sq_phase_n=VV33_SQ_IDLE;
+                hperm_spread_n=1'b1;
+                ecc_src_a_n=ecc_dst_q;
+                ecc_autoreduce_n=1'b1;
+                vrf_req.ra=ecc_dst_q;
+                st_n=S_RD_WAIT;
+            end else begin
+                st_n=(ecc_job_bg_q && ecc_job_active_q)
+                   ? S_ECC_BG_DISPATCH : S_IDLE;
+            end
         end
 
         S_ECC_BG_DISPATCH: begin
@@ -3132,6 +3701,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         // equivalent while giving the interleaving scheduler a single broker
         // point for future HDC foreground / ECC background arbitration.
         vrf_ra = vrf_req.ra;
+        for (int unsigned bid = 0; bid < LANE_NUM; bid++)
+            vrf_bank_ra[bid] = vrf_ra_q;
         vrf_we = vrf_we_direct;
         vrf_wa = vrf_req.wa;
         vrf_wd = vrf_req.wd;
@@ -3163,7 +3734,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     logic [2:0] vv31_evt_vrf_write_owner;
 
     always_comb begin
-        vv31_evt_hdc_matrix = hdc_pop_product_issue;
+        vv31_evt_hdc_matrix = hdc_pop_product_issue
+                           || vv33_pair_product_fire;
         vv31_evt_ecc_matrix = ecc_diag_product_issue;
         vv31_evt_hdc_xor0   = hdc_xor_issue;
         vv31_evt_ecc_xor0   = hdc_src0_acc_we;
@@ -3210,7 +3782,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
              && !(ecc_job_active_q
                && (ecc_job_phase_q == ECC_PHASE_PMUL_ADD));
         S_UOP_P2_LANE:
-            vv31_evt_hdc_vrf_read = uop_p2_use_shift;
+            vv31_evt_hdc_vrf_read = uop_p0_use_shift;
         S_UOP_P3_GLOBAL:
             vv31_evt_hdc_vrf_read =
                 (uop_p3_q.op_type == UOP_HCNTADD_SUBGROUP)
@@ -3265,6 +3837,35 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
          && (vv31_evt_vrf_read_owner == VV31_VRF_OWNER_NONE)
          && (vv31_evt_vrf_write_owner == VV31_VRF_OWNER_NONE);
     end
+
+    // The low-area deferred-square implementation intentionally does not add
+    // a global write-address selector.  Prove that its token can be consumed
+    // only by the two foreground phases that provide the compatible 1R1W slot.
+    always_ff @(posedge clk_i) begin
+        if (rst_ni && vv33_pair_active_q) begin
+            assert (VV31_SCHED_ENABLE)
+                else $error("VV33 paired search active without scheduler support");
+            assert (ecc_job_bg_q && ecc_job_active_q
+                    && (ecc_job_kind_q == ECC_JOB_PMUL))
+                else $error("VV33 paired search escaped the background PMUL lifetime");
+            assert (vv33_pair_class_idx_q <= 2'd2)
+                else $error("VV33 paired search escaped the reserved HDC VRF partition");
+        end
+        if (rst_ni && (vv33_pair_product_fire || vv33_pair_pop_fire
+                    || vv33_pair_fold_launch)) begin
+            assert (ecc_diag_sub_shadow_mode
+                    && (ecc_job_phase_q == ECC_PHASE_PMUL_FIELD))
+                else $error("VV33 paired data event escaped a compatible diagonal lifecycle");
+        end
+        if (rst_ni && VV33_FINE_INTERLEAVE && vv33_sq_commit_q) begin
+            assert (st_q inside {S_UOP_P1_RD0,
+                                 S_UOP_P3_POP_CAPTURE,
+                                 S_UOP_P4_RESP})
+                else $error("VV33 deferred square escaped compatible phase: st=%0d", st_q);
+            assert (!$isunknown({vrf_req.wa, vrf_req.wd, vrf_we_direct}))
+                else $error("VV33 deferred square attempted an unknown VRF write");
+        end
+    end
 `endif
 
     // ── Sequential ──────────────────────────────────────────────────────────
@@ -3280,15 +3881,13 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             st_q<=S_IDLE;res_q<='0;op_q<=HDEC_VWR64;a_q<='0;
             vaddr_bank_q<='0;vaddr_idx_q<='0;clr_cnt_q<='0;clr_base_q<='0;
             hsim_src0_base_q<='0;hsim_src1_base_q<='0;hsim_total_q<='0;group_dist_q<='0;
-            hmatch_last_idx_q<='0;hmatch_best_idx_q<='0;hmatch_class_slot_q<='0;hmatch_best_dist_q<='0;hmatch_update_q<=1'b0;
-            hperm_dst_base_q<='0;hperm_bit_low_q<='0;hperm_spread_q<=1'b0;hperm_lane_base_q<='0;
+            hmatch_last_idx_q<='0;hmatch_best_idx_q<='0;hmatch_class_slot_q<='0;hmatch_best_dist_q<='0;
+            hperm_bit_low_q<='0;hperm_spread_q<=1'b0;hperm_lane_base_q<='0;
             hperm_lane_slot_q<='0;hperm_lane_phase_q<=1'b0;hperm_stage_q<='0;
             hcntclip_dst_base_q<='0;hcntclip_acc_sel_q<='0;hcntclip_chunk_q<='0;
             vrf_ra_q<='0;
-            uop_p0_q<='0;uop_p2_q<='0;uop_p3_q<='0;
-            p2_is_pop_q<=1'b0;p2_is_hbind_q<=1'b0;
+            uop_p0_q<='0;uop_p3_q<='0;
             hdc_src0_q<='0;
-            p2_lane_compute_q<=1'b0;
             ecc_src_a_q<='0;ecc_src_b_q<='0;ecc_dst_q<='0;ecc_acc_dst_q<='0;
             ecc_leaf_a_q<='0;ecc_leaf_b_q<='0;ecc_leaf_prod_q<='0;ecc_leaf_path_q<='0;ecc_fold_word_q<='0;
             ecc_leaf_xor_a_q<='0;ecc_leaf_xor_b_q<='0;ecc_leaf128_prod_q<='0;ecc_kpd64_sub_q<='0;
@@ -3296,19 +3895,32 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             ecc_job_kind_q<=ECC_JOB_NONE;ecc_job_phase_q<=ECC_PHASE_NONE;ecc_job_active_q<=1'b0;ecc_job_done_q<=1'b0;ecc_job_bg_q<=1'b0;ecc_job_cycle_q<='0;ecc_inv_step_q<='0;ecc_job_src_q<='0;ecc_job_dst_q<='0;
             ecc_pmul_subop_q<=ECC_PMUL_SUB_NONE;ecc_pmul_step_q<='0;ecc_pmul_bit_q<='0;ecc_pmul_scalar_bit_q<=1'b0;
             ecc_pmul_r0_inf_q<=1'b1;ecc_pmul_result_q<='0;ecc_pmul_point_q<='0;
+            vv33_sq_phase_q<=VV33_SQ_IDLE;
+            vv33_sq_commit_q<=1'b0;
+            vv33_pair_active_q<=1'b0;vv33_pair_a_sent_q<=1'b0;
+            vv33_pair_next_q<=1'b0;vv33_pair_read_ready_q<=1'b0;
+            vv33_pair_product_q<=1'b0;vv33_pair_pop_q<=1'b0;
+            vv33_pair_sum_q<=1'b0;
+            vv33_pair_finish_q<=1'b0;
+            vv33_pair_resp_q<=1'b0;
+            vv33_pair_class_idx_q<='0;
+            vv33_pair_chunk_q<='0;vv33_pair_total_q<='0;
+            vv33_pair_best_q<='0;vv33_pair_best_idx_q<='0;
+            vv33_hinfer_pending_q<=1'b0;
+            vv33_hinfer_rot_q<='0;
+            vv33_hinfer_resume_step_q<=1'b0;
         end
         else begin
             st_q<=st_n;res_q<=res_n;op_q<=op_n;a_q<=a_n;
             vaddr_bank_q<=vaddr_bank_n;vaddr_idx_q<=vaddr_idx_n;clr_cnt_q<=clr_cnt_n;clr_base_q<=clr_base_n;
             hsim_src0_base_q<=hsim_src0_base_n;hsim_src1_base_q<=hsim_src1_base_n;hsim_total_q<=hsim_total_n;group_dist_q<=group_dist_n;
-            hmatch_last_idx_q<=hmatch_last_idx_n;hmatch_best_idx_q<=hmatch_best_idx_n;hmatch_class_slot_q<=hmatch_class_slot_n;hmatch_best_dist_q<=hmatch_best_dist_n;hmatch_update_q<=hmatch_update_n;
-            hperm_dst_base_q<=hperm_dst_base_n;hperm_bit_low_q<=hperm_bit_low_n;hperm_spread_q<=hperm_spread_n;hperm_lane_base_q<=hperm_lane_base_n;
+            hmatch_last_idx_q<=hmatch_last_idx_n;hmatch_best_idx_q<=hmatch_best_idx_n;hmatch_class_slot_q<=hmatch_class_slot_n;hmatch_best_dist_q<=hmatch_best_dist_n;
+            hperm_bit_low_q<=hperm_bit_low_n;hperm_spread_q<=hperm_spread_n;hperm_lane_base_q<=hperm_lane_base_n;
             hperm_lane_slot_q<=hperm_lane_slot_n;hperm_lane_phase_q<=hperm_lane_phase_n;
             if (hperm_stage_we) hperm_stage_q<=hperm_stage_n;
             hcntclip_dst_base_q<=hcntclip_dst_base_n;hcntclip_acc_sel_q<=hcntclip_acc_sel_n;hcntclip_chunk_q<=hcntclip_chunk_n;
             vrf_ra_q<=vrf_ra;
-            uop_p0_q<=uop_p0_n;uop_p2_q<=uop_p2_n;uop_p3_q<=uop_p3_n;
-            p2_is_pop_q<=p2_is_pop_n;p2_is_hbind_q<=p2_is_hbind_n;
+            uop_p0_q<=uop_p0_n;uop_p3_q<=uop_p3_n;
             if (hdc_src0_acc_we) begin
                 hdc_src0_q[0]<=xor0_field_packet[63:0];
                 hdc_src0_q[1]<=xor0_field_packet[127:64];
@@ -3317,7 +3929,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             end else if (hdc_src0_we) begin
                 hdc_src0_q<=hdc_src0_n;
             end
-            p2_lane_compute_q<=p2_lane_compute_n;
             ecc_src_a_q<=ecc_src_a_n;ecc_src_b_q<=ecc_src_b_n;ecc_dst_q<=ecc_dst_n;ecc_acc_dst_q<=ecc_acc_dst_n;
             ecc_leaf_a_q<=ecc_leaf_a_n;ecc_leaf_b_q<=ecc_leaf_b_n;
             ecc_leaf_prod_q<=ecc_leaf_prod_n;ecc_leaf_path_q<=ecc_leaf_path_n;ecc_fold_word_q<=ecc_fold_word_n;
@@ -3328,6 +3939,25 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             ecc_job_kind_q<=ecc_job_kind_n;ecc_job_phase_q<=ecc_job_phase_n;ecc_job_active_q<=ecc_job_active_n;ecc_job_done_q<=ecc_job_done_n;ecc_job_bg_q<=ecc_job_bg_n;ecc_job_cycle_q<=ecc_job_cycle_n;ecc_inv_step_q<=ecc_inv_step_n;ecc_job_src_q<=ecc_job_src_n;ecc_job_dst_q<=ecc_job_dst_n;
             ecc_pmul_subop_q<=ecc_pmul_subop_n;ecc_pmul_step_q<=ecc_pmul_step_n;ecc_pmul_bit_q<=ecc_pmul_bit_n;ecc_pmul_scalar_bit_q<=ecc_pmul_scalar_bit_n;
             ecc_pmul_r0_inf_q<=ecc_pmul_r0_inf_n;ecc_pmul_result_q<=ecc_pmul_result_n;ecc_pmul_point_q<=ecc_pmul_point_n;
+            vv33_sq_phase_q<=vv33_sq_phase_n;
+            vv33_sq_commit_q<=vv33_sq_commit_n;
+            vv33_pair_active_q<=vv33_pair_active_n;
+            vv33_pair_a_sent_q<=vv33_pair_a_sent_n;
+            vv33_pair_next_q<=vv33_pair_next_n;
+            vv33_pair_read_ready_q<=vv33_pair_read_ready_n;
+            vv33_pair_product_q<=vv33_pair_product_n;
+            vv33_pair_pop_q<=vv33_pair_pop_n;
+            vv33_pair_sum_q<=vv33_pair_sum_n;
+            vv33_pair_finish_q<=vv33_pair_finish_n;
+            vv33_pair_resp_q<=vv33_pair_resp_n;
+            vv33_pair_class_idx_q<=vv33_pair_class_idx_n;
+            vv33_pair_chunk_q<=vv33_pair_chunk_n;
+            vv33_pair_total_q<=vv33_pair_total_n;
+            vv33_pair_best_q<=vv33_pair_best_n;
+            vv33_pair_best_idx_q<=vv33_pair_best_idx_n;
+            vv33_hinfer_pending_q<=vv33_hinfer_pending_n;
+            vv33_hinfer_rot_q<=vv33_hinfer_rot_n;
+            vv33_hinfer_resume_step_q<=vv33_hinfer_resume_step_n;
         end
     end
 

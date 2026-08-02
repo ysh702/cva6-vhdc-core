@@ -85,9 +85,11 @@ module hdec_vv31_system_harness;
     wire hdc_visible_compute_event =
         dut.hdc_pop_product_issue
         || dut.hdc_xor_issue
-        || dut.uop_p2_use_counter
-        || dut.uop_p2_use_clip
-        || dut.uop_p2_use_shift;
+        || ((dut.st_q == dut.S_UOP_P2_LANE)
+            && dut.uop_p0_q.valid
+            && (dut.uop_p0_use_counter
+             || dut.uop_p0_use_clip
+             || dut.uop_p0_use_shift));
 
     initial begin
         clk_i = 1'b0;

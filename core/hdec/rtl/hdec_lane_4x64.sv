@@ -321,8 +321,6 @@ module hdec_xor1_shared_8x32
     logic [223:0] legacy_lhs;
     logic [223:0] legacy_rhs;
     logic [223:0] xor_node;
-    logic [223:0] native_lhs;
-    logic [223:0] native_rhs;
     logic [127:0] legacy_acc_rhs;
 
     logic [HDEC_VV25_XOR_NODE_COUNT-1:0] diag_node_lhs;
@@ -341,7 +339,6 @@ module hdec_xor1_shared_8x32
             legacy_lhs[bit_idx] = legacy_sub_product_i[bit_idx];
             legacy_rhs[bit_idx] = legacy_sub_product_i[32 + bit_idx];
         end
-
         unique case (legacy_sub_idx_i)
             2'd0: legacy_acc_rhs = {
                 32'b0, legacy_sub_product_i[63:32], xor_node[31:0],
@@ -459,21 +456,21 @@ module hdec_xor1_shared_8x32
         end
     end
 
-    // Only fourteen native nodes receive diagonal operands.  They occupy an
-    // idle part of the middle-XOR bank; the original leaf-A/leaf-B low-XOR
-    // nodes therefore remain live in the same cycle and can prepare the next
-    // Karatsuba operand pair.
-    always_comb begin
-        native_lhs = legacy_lhs;
-        native_rhs = legacy_rhs;
-        for (int logical_node = 0;
-             logical_node < HDEC_VV25_XOR_NODE_COUNT;
-             logical_node++) begin
-            if (diag_mode_i) begin
-                native_lhs[logical_node] = diag_node_lhs[logical_node];
-                native_rhs[logical_node] = diag_node_rhs[logical_node];
-            end
-        end
+    // Only fourteen native nodes receive diagonal operands.  Fold their mode
+    // selection into the same XOR equation instead of constructing separate
+    // lhs/rhs mux banks in front of the shared array.
+    for (genvar logical_node = 0;
+         logical_node < HDEC_VV25_XOR_NODE_COUNT;
+         logical_node++) begin : gen_mode_xor_node
+        assign xor_node[logical_node] = diag_mode_i
+            ? (diag_node_lhs[logical_node] ^ diag_node_rhs[logical_node])
+            : (legacy_lhs[logical_node] ^ legacy_rhs[logical_node]);
+    end
+    for (genvar native_node = HDEC_VV25_XOR_NODE_COUNT;
+         native_node < 224;
+         native_node++) begin : gen_legacy_xor_node
+        assign xor_node[native_node] =
+            legacy_lhs[native_node] ^ legacy_rhs[native_node];
     end
 
     for (genvar logical_node = 0;
@@ -481,12 +478,6 @@ module hdec_xor1_shared_8x32
          logical_node++) begin : gen_live_node_map
         assign diag_node[logical_node] = xor_node[logical_node];
     end
-
-    hdec_xor1_native_224 i_native_xor1 (
-        .lhs_i  (native_lhs),
-        .rhs_i  (native_rhs),
-        .node_o (xor_node)
-    );
 
     assign legacy_accum_o   = xor_node[159:32];
     assign legacy_lowxor_a_o = xor_node[191:160];
@@ -655,6 +646,8 @@ module hdec_vector_payload_4x64
 
     input  logic [LANE_NUM-1:0][LANE_WIDTH-1:0] bool_src_a_i,
     input  logic [LANE_NUM-1:0][LANE_WIDTH-1:0] bool_src_b_i,
+    input  logic [LANE_NUM-1:0][LANE_WIDTH-1:0] hdc_pair_src_a_i,
+    input  logic [LANE_NUM-1:0][LANE_WIDTH-1:0] hdc_pair_src_b_i,
     input  logic [15:0]                         bitmatrix_src_a_i,
     input  logic [15:0]                         bitmatrix_src_b_i,
     input  logic                                xor1_diag_mode_i,
@@ -816,10 +809,21 @@ module hdec_vector_payload_4x64
     for (genvar lid = 0; lid < LANE_NUM; lid++) begin : gen_payload_slice
         localparam int ROW_LO = lid * 2;
         localparam int ROW_HI = lid * 2 + 1;
-        assign matrix_src_a[ROW_LO] = payload_bitband_i ? diag16_matrix_src_a[ROW_LO] : bool_src_a_i[lid][31:0];
-        assign matrix_src_b[ROW_LO] = payload_bitband_i ? diag16_matrix_src_b[ROW_LO] : bool_src_b_i[lid][31:0];
-        assign matrix_src_a[ROW_HI] = payload_bitband_i ? diag16_matrix_src_a[ROW_HI] : bool_src_a_i[lid][63:32];
-        assign matrix_src_b[ROW_HI] = payload_bitband_i ? diag16_matrix_src_b[ROW_HI] : bool_src_b_i[lid][63:32];
+        // All HDC similarity products use the two consecutive VRF return
+        // stages.  ECC keeps the original diagonal-input branch.  Keeping the
+        // choice binary avoids a third 256-bit matrix-input mux.
+        assign matrix_src_a[ROW_LO] = payload_bitband_i
+                                    ? diag16_matrix_src_a[ROW_LO]
+                                    : hdc_pair_src_a_i[lid][31:0];
+        assign matrix_src_b[ROW_LO] = payload_bitband_i
+                                    ? diag16_matrix_src_b[ROW_LO]
+                                    : hdc_pair_src_b_i[lid][31:0];
+        assign matrix_src_a[ROW_HI] = payload_bitband_i
+                                    ? diag16_matrix_src_a[ROW_HI]
+                                    : hdc_pair_src_a_i[lid][63:32];
+        assign matrix_src_b[ROW_HI] = payload_bitband_i
+                                    ? diag16_matrix_src_b[ROW_HI]
+                                    : hdc_pair_src_b_i[lid][63:32];
         assign matrix_product_q[ROW_LO] = payload_q[lid][31:0];
         assign matrix_product_q[ROW_HI] = payload_q[lid][63:32];
         assign tile_product_word[lid] = {matrix_product[ROW_HI], matrix_product[ROW_LO]};
