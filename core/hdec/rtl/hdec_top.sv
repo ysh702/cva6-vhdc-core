@@ -305,47 +305,29 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     logic                 vv33_pair_sum_q, vv33_pair_sum_n;
     logic                 vv33_pair_finish_q, vv33_pair_finish_n;
     logic                 vv33_pair_resp_q, vv33_pair_resp_n;
-    logic [1:0]           vv33_pair_class_idx_q, vv33_pair_class_idx_n;
+    logic [5:0]           vv33_pair_query_base_q, vv33_pair_query_base_n;
+    logic [3:0]           vv33_pair_class_slot_q, vv33_pair_class_slot_n;
+    logic [2:0]           vv33_pair_class_idx_q, vv33_pair_class_idx_n;
+    logic [2:0]           vv33_pair_last_idx_q, vv33_pair_last_idx_n;
     logic [1:0]           vv33_pair_chunk_q, vv33_pair_chunk_n;
     logic [10:0]          vv33_pair_total_q, vv33_pair_total_n;
     logic [10:0]          vv33_pair_best_q, vv33_pair_best_n;
-    logic [1:0]           vv33_pair_best_idx_q, vv33_pair_best_idx_n;
-    logic                 vv33_pair_start;
+    logic [2:0]           vv33_pair_best_idx_q, vv33_pair_best_idx_n;
+    logic                 vv33_pair_ready;
+    logic                 vv33_pair_accept;
+    logic                 vv33_pair_req_invalid;
     logic                 vv33_pair_product_fire;
     logic                 vv33_pair_pop_fire;
     logic                 vv33_pair_fold_launch;
     logic                 vv33_pair_has_next;
     logic [1:0]           vv33_pair_next_chunk;
-    logic [1:0]           vv33_pair_next_class_idx;
+    logic [3:0]           vv33_pair_next_class_slot;
+    logic [2:0]           vv33_pair_next_class_idx;
     logic [5:0]           vv33_pair_src_a_addr;
     logic [5:0]           vv33_pair_src_b_addr;
     logic [5:0]           vv33_pair_next_src_a_addr;
     logic [5:0]           vv33_pair_next_src_b_addr;
     logic [10:0]          vv33_pair_score;
-    logic                 vv33_hinfer_pair_launch;
-    logic                 vv33_hinfer_active;
-    logic                 vv33_hinfer_request;
-    logic                 vv33_hinfer_invalid;
-    logic                 vv33_hinfer_field_ready;
-    logic                 vv33_hinfer_field_accept;
-    logic                 vv33_hinfer_pending_q, vv33_hinfer_pending_n;
-    logic [9:0]           vv33_hinfer_rot_q, vv33_hinfer_rot_n;
-    logic                 vv33_hinfer_resume_step_q, vv33_hinfer_resume_step_n;
-`ifndef SYNTHESIS
-    // Stable observation alias retained for the VV33 full-inference monitor.
-    // The fixed resident path accepts a paired search exactly when it launches
-    // at the first compatible diagonal slot.
-    logic                 vv33_pair_accept;
-`endif
-
-    // The interleaved inference macro uses a compile-time resident partition.
-    // Fixing these bases removes a runtime wide address-selection cone while
-    // ordinary programmable HPERM, HBIND, and HMATCH remain unchanged.
-    localparam logic [5:0] VV33_HINFER_ROLE_BASE  = 6'd8;
-    localparam logic [5:0] VV33_HINFER_QUERY_BASE = 6'd12;
-    localparam logic [5:0] VV33_HINFER_PROTO_BASE = 6'd16;
-    localparam logic [5:0] VV33_HINFER_INPUT_BASE = 6'd28;
-    localparam logic [2:0] VV33_HINFER_LAST_CLASS = 3'd2;
 
     // ── Combinational helpers ───────────────────────────────────────────────
     // Capture the counter-bank epoch when HCNTCLR starts.  A background PMUL
@@ -364,77 +346,64 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     assign vv33_hdc_request_valid = valid_i
                                   && (operator_i >= HDEC_HCLR)
                                   && (operator_i <= HDEC_HMATCH);
-    assign vv33_hinfer_request = (operator_i == HDEC_HMATCH)
-                               && operand_a_i[63];
-    assign vv33_hinfer_active = vv33_hinfer_pending_q;
     assign vv33_hdc_square_overlap = (operator_i == HDEC_HBIND)
                                     || (operator_i == HDEC_HSIM)
-                                    || ((operator_i == HDEC_HMATCH)
-                                     && !operand_a_i[63]);
-    assign vv33_hinfer_invalid = (|vv33_hinfer_rot_q[1:0])
-                               || (ecc_job_active_q
-                                && (ecc_job_kind_q != ECC_JOB_PMUL));
-    // One narrow pending bit retains the encoded inference after the descriptor
-    // is released. Its paired context is initialized only at the existing
-    // first-diagonal entry, preserving a single write point for all pair state.
-    assign vv33_hinfer_pair_launch = vv33_hinfer_pending_q
-                                   && VV33_PAIRED_HMATCH
-                                   && VV31_SCHED_ENABLE
-                                   && ecc_diag_sub_shadow_mode
-                                   && !vv33_pair_active_q
-                                   && !vv33_pair_resp_q
-                                   && (vv33_sq_phase_q == VV33_SQ_IDLE)
-                                   && ecc_job_bg_q
-                                   && ecc_job_active_q
-                                   && (ecc_job_phase_q == ECC_PHASE_PMUL_FIELD)
-                                   && (st_q == S_ECC_DIAG_ISSUE)
-                                   && (ecc_leaf_path_q == 4'b00_00)
-                                   && (ecc_kpd64_sub_q == 2'd0);
-    // A completed field product has already committed its 233-bit residue to
-    // the VRF.  At this point hdc_src0_q and the shared payload no longer carry
-    // live field state, so a fused HDC job can borrow the complete shared path
-    // without a 233-bit checkpoint or a second compute core.
-    assign vv33_hinfer_field_ready = valid_i
-                                   && vv33_hinfer_request
-                                   && !ECC_DEBUG_FIELD_OPS
-                                   && !(|operand_a_i[9:8])
-                                   && VV33_FINE_INTERLEAVE
-                                   && !vv33_hinfer_active
-                                   && !vv33_pair_active_q
-                                   && !vv33_pair_resp_q
-                                   && ecc_job_bg_q
-                                   && ecc_job_active_q
-                                   && (ecc_job_kind_q == ECC_JOB_PMUL)
-                                   && (ecc_job_phase_q == ECC_PHASE_PMUL_FIELD)
-                                   && (((st_q == S_ECC_WRITE_PAIR)
-                                     && ecc_autoreduce_q
-                                     && !ecc_pmul_add_t1_prefetch
-                                     && !ecc_pmul_residue_seed_one)
-                                    || (st_q == S_ECC_WRITE_DRAIN));
-    assign vv33_hinfer_field_accept = valid_i && vv33_hinfer_field_ready;
-    assign vv33_pair_start = vv33_hinfer_pair_launch;
-`ifndef SYNTHESIS
-    assign vv33_pair_accept = vv33_hinfer_pair_launch;
-`endif
+                                    || (operator_i == HDEC_HMATCH);
+    assign vv33_pair_req_invalid = (operand_a_i[15:8] == 8'd0)
+                                 || (|operand_a_i[15:12])
+                                 || operand_a_i[7]
+                                 || (operand_a_i[11:8]
+                                   > (4'd8 - operand_a_i[7:4]));
+    // A four-class search is admitted only at the first diagonal issue of a
+    // field multiply.  The remaining 18 sub0/sub1 CAP2 windows are then enough
+    // to retire all 16 query/prototype chunks before the multiply ends.
+    assign vv33_pair_ready = valid_i
+                           && VV33_PAIRED_HMATCH
+                           && VV31_SCHED_ENABLE
+                           && ecc_diag_sub_shadow_mode
+                           && !vv33_pair_active_q
+                           && !vv33_pair_resp_q
+                           && (vv33_sq_phase_q == VV33_SQ_IDLE)
+                           && ecc_job_bg_q
+                           && ecc_job_active_q
+                           && (ecc_job_phase_q == ECC_PHASE_PMUL_FIELD)
+                           && (st_q == S_ECC_DIAG_ISSUE)
+                           && (ecc_leaf_path_q == 4'b00_00)
+                           && (ecc_kpd64_sub_q == 2'd0)
+                           && (operator_i == HDEC_HMATCH)
+                           // The concurrent path uses the fixed HDC inference
+                           // partition: query slot 3, prototype slots 4--7.
+                           // Other legal HMATCH layouts remain supported by
+                           // the ordinary foreground path.
+                           && (operand_a_i[3:0] == 4'd3)
+                           && (operand_a_i[7:4] == 4'd4)
+                           && (operand_a_i[11:8] <= 4'd4)
+                           && !vv33_pair_req_invalid;
+    assign vv33_pair_accept = valid_i && vv33_pair_ready;
     assign vv33_pair_product_fire = vv33_pair_active_q
                                   && vv33_pair_read_ready_q
                                   && (st_q == S_ECC_DIAG_CAPTURE2);
     assign vv33_pair_pop_fire = vv33_pair_active_q
                               && vv33_pair_product_q
                               && (st_q == S_ECC_DIAG_FOLD_ISSUE);
-    assign vv33_pair_has_next = !((vv33_pair_class_idx_q == 2'd2)
+    assign vv33_pair_has_next = !((vv33_pair_class_idx_q == vv33_pair_last_idx_q)
                                && (vv33_pair_chunk_q == 2'd3));
     assign vv33_pair_next_chunk = (vv33_pair_chunk_q == 2'd3)
                                 ? 2'd0 : (vv33_pair_chunk_q + 2'd1);
+    assign vv33_pair_next_class_slot = (vv33_pair_chunk_q == 2'd3)
+                                     ? (vv33_pair_class_slot_q + 4'd1)
+                                     : vv33_pair_class_slot_q;
     assign vv33_pair_next_class_idx = (vv33_pair_chunk_q == 2'd3)
-                                    ? (vv33_pair_class_idx_q + 2'd1)
+                                    ? (vv33_pair_class_idx_q + 3'd1)
                                     : vv33_pair_class_idx_q;
-    assign vv33_pair_src_a_addr = {4'b0011, vv33_pair_chunk_q};
-    assign vv33_pair_src_b_addr = {2'b01, vv33_pair_class_idx_q,
-                                   vv33_pair_chunk_q};
-    assign vv33_pair_next_src_a_addr = {4'b0011, vv33_pair_next_chunk};
-    assign vv33_pair_next_src_b_addr = {2'b01, vv33_pair_next_class_idx,
-                                        vv33_pair_next_chunk};
+    assign vv33_pair_src_a_addr = vv33_pair_query_base_q
+                                + {4'b0, vv33_pair_chunk_q};
+    assign vv33_pair_src_b_addr = {vv33_pair_class_slot_q, 2'b00}
+                                + {4'b0, vv33_pair_chunk_q};
+    assign vv33_pair_next_src_a_addr = vv33_pair_query_base_q
+                                     + {4'b0, vv33_pair_next_chunk};
+    assign vv33_pair_next_src_b_addr = {vv33_pair_next_class_slot, 2'b00}
+                                     + {4'b0, vv33_pair_next_chunk};
     assign vv33_pair_score = vv33_pair_total_q + {2'b00, group_dist_q};
     // Only folds that already launch a following CAP0 and do not consume the
     // VRF read port for next-leaf A are paired-read launch points.
@@ -1538,9 +1507,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         .payload_cnt_i((st_q == S_UOP_P2_LANE) && uop_p0_q.valid && uop_p0_use_counter),
         .payload_clip_i((st_q == S_UOP_P2_LANE) && uop_p0_q.valid && uop_p0_use_clip),
         .hperm_we_i(hperm_lane_we),
-        // During the overlapped HPERM phase slot_q names the window being
-        // prepared, while the registered previous window retires to slot-1.
-        .hperm_slot_i(hperm_lane_slot_q - 2'd1),
+        .hperm_slot_i(hperm_lane_slot_q),
         .hperm_word_i(hperm_lane_word),
         .bool_src_a_i(hdc_src0_q),
         .bool_src_b_i(vrf_rd),
@@ -1578,8 +1545,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     // ── Main FSM ────────────────────────────────────────────────────────────
     always_comb begin
         st_n=st_q;
-        ready_o=((st_q==S_IDLE) && !vv33_pair_active_q
-              && !vv33_hinfer_active) || vv33_hinfer_field_ready;
+        ready_o=((st_q==S_IDLE) && !vv33_pair_active_q) || vv33_pair_ready;
         valid_o=(st_q==S_RESULT) || vv33_pair_resp_q;
         result_o=res_q;
         res_n=res_q; op_n=op_q; a_n=a_q; vaddr_bank_n=vaddr_bank_q; vaddr_idx_n=vaddr_idx_q;
@@ -1642,14 +1608,14 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         vv33_pair_sum_n=vv33_pair_sum_q;
         vv33_pair_finish_n=vv33_pair_finish_q;
         vv33_pair_resp_n=1'b0;
+        vv33_pair_query_base_n=vv33_pair_query_base_q;
+        vv33_pair_class_slot_n=vv33_pair_class_slot_q;
         vv33_pair_class_idx_n=vv33_pair_class_idx_q;
+        vv33_pair_last_idx_n=vv33_pair_last_idx_q;
         vv33_pair_chunk_n=vv33_pair_chunk_q;
         vv33_pair_total_n=vv33_pair_total_q;
         vv33_pair_best_n=vv33_pair_best_q;
         vv33_pair_best_idx_n=vv33_pair_best_idx_q;
-        vv33_hinfer_pending_n=vv33_hinfer_pending_q;
-        vv33_hinfer_rot_n=vv33_hinfer_rot_q;
-        vv33_hinfer_resume_step_n=vv33_hinfer_resume_step_q;
         lane_shift_bit='0;
         vrf_req.ra='0; vrf_req.wa='x; vrf_req.wd='x;
         // The deferred square token is created only for the two compatible
@@ -1662,13 +1628,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         case(st_q)
         S_IDLE: begin
             if(valid_i&&ready_o)begin
-                op_n=operator_i;a_n=operand_a_i;
-                if (vv33_hinfer_request) begin
-                    vv33_hinfer_pending_n=1'b1;
-                    vv33_hinfer_rot_n=operand_a_i[17:8];
-                    a_n[63]=1'b0;
-                end
-                st_n=S_EXEC;
+                op_n=operator_i;a_n=operand_a_i;st_n=S_EXEC;
             end
         end
 
@@ -1861,45 +1821,14 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             end
 
             HDEC_HMATCH: begin
-                if (vv33_hinfer_active) begin
-                    if (vv33_hinfer_invalid) begin
-                        vv33_hinfer_pending_n=1'b0;
-                        res_n={62'b0,STATUS_ERROR};st_n=S_RESULT;
-                    end else begin
-                        // The resident role, query, input, and three prototype
-                        // bases are fixed. Bits [17:8] carry the runtime HPERM
-                        // rotation used by this inference instance.
-                        hperm_bit_low_n=vv33_hinfer_rot_q[1:0];
-                        hperm_spread_n=1'b0;
-                        hperm_lane_base_n=vv33_hinfer_rot_q[7:6];
-                        uop_p0_n.valid       = 1'b1;
-                        // The macro reuses the ordinary HPERM uop encoding;
-                        // op_q plus bit63 retain its lifecycle without a new
-                        // payload mode or a separate macro FSM.
-                        uop_p0_n.op_type     = UOP_HPERM_CHUNK;
-                        uop_p0_n.chunk_idx   = 2'd0;
-                        uop_p0_n.src0_addr   = VV33_HINFER_ROLE_BASE
-                                             + {4'b0,vv33_hinfer_rot_q[9:8]};
-                        uop_p0_n.src1_addr   = VV33_HINFER_ROLE_BASE
-                                             + {4'b0,vv33_hinfer_rot_q[9:8] + 2'd1};
-                        uop_p0_n.dst_addr    = VV33_HINFER_QUERY_BASE;
-                        uop_p0_n.perm_nibble = vv33_hinfer_rot_q[5:2];
-                        // Reuse an existing uop bit that is inactive for
-                        // HPERM/HBIND as the macro-chain tag. No new state bit
-                        // or wide address comparator is required.
-                        uop_p0_n.is_last_class = 1'b1;
-                        st_n=S_UOP_P1_RD0;
-                    end
+                hsim_src0_base_n={a_q[3:0],2'b00};
+                hsim_src1_base_n={a_q[7:4],2'b00};
+                hmatch_class_slot_n=a_q[7:4];
+                hmatch_last_idx_n=a_q[10:8] - 3'd1;
+                if(hmatch_req_invalid)begin
+                    res_n={62'b0,STATUS_ERROR};st_n=S_RESULT;
                 end else begin
-                    hsim_src0_base_n={a_q[3:0],2'b00};
-                    hsim_src1_base_n={a_q[7:4],2'b00};
-                    hmatch_class_slot_n=a_q[7:4];
-                    hmatch_last_idx_n=a_q[10:8] - 3'd1;
-                    if(hmatch_req_invalid)begin
-                        res_n={62'b0,STATUS_ERROR};st_n=S_RESULT;
-                    end else begin
-                        st_n=S_HMATCH_INIT;
-                    end
+                    st_n=S_HMATCH_INIT;
                 end
             end
 
@@ -2131,7 +2060,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                 && (ecc_kpd64_sub_q == 2'd2)) begin
                 vrf_req.ra=ecc_src_a_q;
             end
-            if (vv33_pair_start) begin
+            if (vv33_pair_accept) begin
                 vv33_pair_active_n=1'b1;
                 vv33_pair_a_sent_n=1'b1;
                 vv33_pair_next_n=1'b0;
@@ -2140,12 +2069,15 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                 vv33_pair_pop_n=1'b0;
                 vv33_pair_sum_n=1'b0;
                 vv33_pair_finish_n=1'b0;
-                vv33_pair_class_idx_n=2'd0;
+                vv33_pair_query_base_n={operand_a_i[3:0],2'b00};
+                vv33_pair_class_slot_n=operand_a_i[7:4];
+                vv33_pair_class_idx_n=3'd0;
+                vv33_pair_last_idx_n=operand_a_i[10:8]-3'd1;
                 vv33_pair_chunk_n=2'd0;
                 vv33_pair_total_n='0;
                 vv33_pair_best_n='0;
                 vv33_pair_best_idx_n='0;
-                vrf_req.ra=VV33_HINFER_QUERY_BASE;
+                vrf_req.ra={operand_a_i[3:0],2'b00};
             end
             st_n=S_ECC_DIAG_CAPTURE0;
         end
@@ -2294,7 +2226,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                         vv33_pair_best_n=vv33_pair_score;
                         vv33_pair_best_idx_n=vv33_pair_class_idx_q;
                     end
-                    if (vv33_pair_class_idx_q == 2'd2) begin
+                    if (vv33_pair_class_idx_q == vv33_pair_last_idx_q) begin
                         // Commit the winning score first.  Response packing is
                         // deferred one cycle so the score add/compare chain
                         // never terminates directly at the broad res_q mux.
@@ -2305,7 +2237,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                     end else begin
                         vv33_pair_total_n='0;
                         vv33_pair_chunk_n=2'd0;
-                        vv33_pair_class_idx_n=vv33_pair_class_idx_q+2'd1;
+                        vv33_pair_class_slot_n=vv33_pair_class_slot_q+4'd1;
+                        vv33_pair_class_idx_n=vv33_pair_class_idx_q+3'd1;
                     end
                 end else begin
                     vv33_pair_total_n=vv33_pair_score;
@@ -2353,12 +2286,10 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                 vv33_pair_product_n=1'b1;
             end
             if (vv33_pair_finish_q) begin
-                res_n={51'b0, vv33_pair_best_idx_q, vv33_pair_best_q};
+                res_n={50'b0, vv33_pair_best_idx_q, vv33_pair_best_q};
                 vv33_pair_resp_n=1'b1;
                 vv33_pair_finish_n=1'b0;
                 vv33_pair_active_n=1'b0;
-                if (vv33_hinfer_active)
-                    vv33_hinfer_pending_n=1'b0;
             end
             st_n=S_ECC_DIAG_FOLD_ISSUE;
         end
@@ -2444,28 +2375,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                 ecc_autoreduce_n=1'b0;
                 if (ecc_mac_q)
                     ecc_mac_n=1'b0;
-                if (vv33_hinfer_field_accept) begin
-                    // The write above commits the complete field result.  This
-                    // is the highest-frequency safe boundary in PMUL: all wide
-                    // residue state is now architectural, while the original
-                    // continuation is the narrow STEP_NEXT transition.
-                    op_n=HDEC_HMATCH;
-                    vv33_hinfer_pending_n=1'b1;
-                    vv33_hinfer_rot_n=operand_a_i[17:8];
-                    if (ecc_sqr_repeat_q != 7'd0) begin
-                        // Keep one square live across the query encoder.  The
-                        // HPERM phase leaves it pending; the existing HBIND
-                        // read/compute/write lifecycle then issues and commits
-                        // the square without a second wide result path.
-                        vv33_sq_phase_n=VV33_SQ_PENDING;
-                        ecc_sqr_repeat_n=ecc_sqr_repeat_q-7'd1;
-                        vv33_hinfer_resume_step_n=1'b0;
-                    end else begin
-                        ecc_job_phase_n=ECC_PHASE_NONE;
-                        vv33_hinfer_resume_step_n=1'b1;
-                    end
-                    st_n=S_EXEC;
-                end else if (ecc_sqr_repeat_q == 7'd0) begin
+                if (ecc_sqr_repeat_q == 7'd0) begin
                     res_n={56'b0, ecc_dst_q, STATUS_OK};
                     if (ecc_job_active_q && (ecc_job_phase_q == ECC_PHASE_INV_SQR)) begin
                         st_n=S_ECC_INV_AFTER_SQR;
@@ -2523,31 +2433,13 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
 
         // ── S_CLR: shared by HCLR (4 entries) and HCNTCLR (16 entries) ──────
         S_ECC_WRITE_DRAIN: begin
-            if (vv33_hinfer_field_accept) begin
-                // The field result is architectural at this boundary.  Retire
-                // the PMUL microstep now, keep only a one-bit continuation, and
-                // execute the fused inference through the normal HDC decode.
-                op_n=HDEC_HMATCH;
-                vv33_hinfer_pending_n=1'b1;
-                vv33_hinfer_rot_n=operand_a_i[17:8];
-                if (ecc_sqr_repeat_q != 7'd0) begin
-                    vv33_sq_phase_n=VV33_SQ_PENDING;
-                    ecc_sqr_repeat_n=ecc_sqr_repeat_q-7'd1;
-                    vv33_hinfer_resume_step_n=1'b0;
-                end else begin
-                    ecc_job_phase_n=ECC_PHASE_NONE;
-                    vv33_hinfer_resume_step_n=1'b1;
-                end
-                st_n=S_EXEC;
-            end else if (ECC_DEBUG_FIELD_OPS && ecc_autoreduce_q) begin
+            if (ECC_DEBUG_FIELD_OPS && ecc_autoreduce_q) begin
                 vrf_req.ra=ecc_src_a_q;
                 st_n=S_ECC_REDUCE_LOAD_LO_WAIT;
             end else if (ecc_sqr_repeat_q != 7'd0) begin
                 if (VV33_FINE_INTERLEAVE
                  && ecc_job_bg_q
                  && vv33_hdc_request_valid
-                 && !vv33_hinfer_active
-                 && !vv33_pair_active_q
                  && ((ecc_job_phase_q == ECC_PHASE_PMUL_FIELD)
                   || (ecc_job_phase_q == ECC_PHASE_INV_SQR))) begin
                     // A dual-source Boolean operation carries one square
@@ -3104,9 +2996,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                 ECC_PMUL_SUB_DBL: begin
                     if (ecc_pmul_bit_q == 8'd0) begin
                         ecc_pmul_subop_n=ecc_pmul_r0_inf_n ? ECC_PMUL_SUB_ZERO_OUT : ECC_PMUL_SUB_AFFINE;
-                        st_n=(ecc_job_bg_q && valid_i
-                           && !vv33_hinfer_active && !vv33_pair_active_q)
-                           ? S_IDLE : S_ECC_PMUL_STEP;
+                        st_n=(ecc_job_bg_q && valid_i) ? S_IDLE : S_ECC_PMUL_STEP;
                     end else begin
                         ecc_pmul_bit_n=ecc_pmul_bit_q - 8'd1;
                         vrf_req.ra=ecc_job_src_q;
@@ -3118,19 +3008,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                     ecc_job_done_n=1'b1;
                     ecc_job_bg_n=1'b0;
                     ecc_job_phase_n=ECC_PHASE_NONE;
-                    if (ecc_job_bg_q && vv33_hinfer_active) begin
-                        // No compatible diagonal lifecycle remains. Complete
-                        // the retained resident query on the ordinary shared
-                        // HMATCH path before returning the macro response.
-                        vv33_pair_active_n=1'b0;
-                        vv33_hinfer_pending_n=1'b0;
-                        a_n[63]=1'b0;
-                        hsim_src0_base_n=VV33_HINFER_QUERY_BASE;
-                        hsim_src1_base_n=VV33_HINFER_PROTO_BASE;
-                        hmatch_class_slot_n=VV33_HINFER_PROTO_BASE[5:2];
-                        hmatch_last_idx_n=VV33_HINFER_LAST_CLASS;
-                        st_n=S_HMATCH_INIT;
-                    end else if (ecc_job_bg_q) begin
+                    if (ecc_job_bg_q) begin
                         st_n=S_IDLE;
                     end else begin
                         res_n={32'b0, ecc_job_cycle_status, 6'b0, ecc_pmul_result_q, 2'b10, STATUS_OK};
@@ -3306,28 +3184,21 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         S_HPERM_LANE64: begin
             vrf_req.ra = uop_p3_q.src1_addr;
             lane_shift_bit = {uop_p3_q.perm_nibble, hperm_bit_low_q};
-            // Keep one physical byte-window cone.  slot_q always names the
-            // window prepared in this cycle; once primed, the previous stage
-            // retires concurrently to slot_q-1.  The wrapped slot zero is the
-            // final drain cycle.
-            hperm_word_sel = {1'b0, hperm_lane_base_q}
-                           + {1'b0, hperm_lane_slot_q};
+            hperm_word_sel = {1'b0, hperm_lane_base_q} + {1'b0, hperm_lane_slot_q};
             hperm_next_sel = hperm_word_sel + 3'd1;
             hperm_wide_word = {
                 hperm_pick_word(hperm_next_sel, hdc_src0_q, vrf_rd),
                 hperm_pick_word(hperm_word_sel,  hdc_src0_q, vrf_rd)
             };
-            hperm_stage_n = hperm_byte_window(
-                hperm_wide_word, lane_shift_bit[5:3]);
-            hperm_stage_we = 1'b1;
             if (!hperm_lane_phase_q) begin
+                hperm_stage_n = hperm_byte_window(hperm_wide_word, lane_shift_bit[5:3]);
+                hperm_stage_we = 1'b1;
                 hperm_lane_phase_n = 1'b1;
-                hperm_lane_slot_n = hperm_lane_slot_q + 2'd1;
             end else begin
                 hperm_lane_word = hperm_low_shift(hperm_stage_q, lane_shift_bit[2:0]);
                 hperm_lane_we = 1'b1;
-                if (hperm_lane_slot_q == 2'd0) begin
-                    hperm_lane_phase_n = 1'b0;
+                hperm_lane_phase_n = 1'b0;
+                if (hperm_lane_slot_q == 2'd3) begin
                     st_n = S_UOP_P3_GLOBAL;
                 end else begin
                     hperm_lane_slot_n = hperm_lane_slot_q + 2'd1;
@@ -3351,74 +3222,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             unique case (uop_p3_q.op_type)
             UOP_HBIND_CHUNK, UOP_HPERM_CHUNK: begin
                 if (uop_p3_q.chunk_idx == 2'd3) begin
-                    if ((uop_p3_q.op_type == UOP_HBIND_CHUNK)
-                      && uop_p3_q.is_last_class
-                      && vv33_hinfer_active) begin
-                        // The encoded query is now architectural in the VRF.
-                        // Keep the external macro request alive, then resume
-                        // the PMUL from its narrow continuation while the
-                        // matching work waits for a compatible diagonal slot.
-                        if (ecc_job_bg_q && ecc_job_active_q) begin
-                            // A single pending bit retains the completed query.
-                            // Clearing the descriptor here prevents the macro
-                            // lifetime from entering the shared payload cone.
-                            vv33_hinfer_pending_n=1'b1;
-                            a_n[63]=1'b0;
-                            if (vv33_hinfer_resume_step_q) begin
-                                vv33_hinfer_resume_step_n=1'b0;
-                                st_n=S_ECC_PMUL_STEP_NEXT;
-                            end else if (vv33_sq_phase_q == VV33_SQ_ISSUED) begin
-                                // The final HBIND chunk has just consumed the
-                                // square result.  Use the existing response
-                                // slot only as a conflict-free square commit;
-                                // the external inference response remains
-                                // owned by the later paired HMATCH.
-                                st_n=S_UOP_P4_RESP;
-                            end else if (vv33_sq_phase_q == VV33_SQ_DONE) begin
-                                vv33_sq_phase_n=VV33_SQ_IDLE;
-                                if (ecc_sqr_repeat_q != 7'd0) begin
-                                    hperm_spread_n=1'b1;
-                                    ecc_src_a_n=ecc_dst_q;
-                                    ecc_autoreduce_n=1'b1;
-                                    ecc_sqr_repeat_n=ecc_sqr_repeat_q-7'd1;
-                                    vrf_req.ra=ecc_dst_q;
-                                    st_n=S_RD_WAIT;
-                                end else if (ecc_job_phase_q == ECC_PHASE_INV_SQR) begin
-                                    st_n=S_ECC_INV_AFTER_SQR;
-                                end else begin
-                                    ecc_job_phase_n=ECC_PHASE_NONE;
-                                    st_n=S_ECC_PMUL_STEP_NEXT;
-                                end
-                            end else begin
-                                st_n=S_ECC_BG_DISPATCH;
-                            end
-                        end else begin
-                            vv33_hinfer_pending_n=1'b0;
-                            a_n[63]=1'b0;
-                            hsim_src0_base_n=VV33_HINFER_QUERY_BASE;
-                            hsim_src1_base_n=VV33_HINFER_PROTO_BASE;
-                            hmatch_class_slot_n=VV33_HINFER_PROTO_BASE[5:2];
-                            hmatch_last_idx_n=VV33_HINFER_LAST_CLASS;
-                            st_n=S_HMATCH_INIT;
-                        end
-                    end else if ((uop_p3_q.op_type == UOP_HPERM_CHUNK)
-                              && uop_p3_q.is_last_class
-                              && vv33_hinfer_active) begin
-                        // The role permutation has reached the resident query
-                        // slot.  Continue the same external macro request by
-                        // launching the existing four-chunk HBIND pipeline.
-                        uop_p0_n='0;
-                        uop_p0_n.valid=1'b1;
-                        uop_p0_n.op_type=UOP_HBIND_CHUNK;
-                        uop_p0_n.src0_addr=VV33_HINFER_QUERY_BASE;
-                        uop_p0_n.src1_addr=VV33_HINFER_INPUT_BASE;
-                        uop_p0_n.dst_addr=VV33_HINFER_QUERY_BASE;
-                        uop_p0_n.chunk_idx=2'd0;
-                        uop_p0_n.is_last_class=1'b1;
-                        st_n=S_UOP_P1_RD0;
-                    end else begin
-                        st_n = S_UOP_P4_RESP;
-                    end
+                    st_n = S_UOP_P4_RESP;
                 end
                 else begin
                     uop_p0_n = uop_p3_q; uop_p0_n.valid = 1'b1;
@@ -3586,26 +3390,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                 vv33_sq_commit_n=1'b0;
             end
             res_n = '0;
-            if (vv33_hinfer_active
-             && (uop_p3_q.op_type == UOP_HBIND_CHUNK)
-             && uop_p3_q.is_last_class
-             && vv33_sq_commit_q) begin
-                // Finish the square lifecycle without exposing an early HDC
-                // response.  Any remaining serial squares return to the
-                // original ECC path before PMUL advances.
-                vv33_sq_phase_n=VV33_SQ_IDLE;
-                if (ecc_sqr_repeat_q != 7'd0) begin
-                    hperm_spread_n=1'b1;
-                    ecc_src_a_n=ecc_dst_q;
-                    ecc_autoreduce_n=1'b1;
-                    ecc_sqr_repeat_n=ecc_sqr_repeat_q-7'd1;
-                    vrf_req.ra=ecc_dst_q;
-                    st_n=S_RD_WAIT;
-                end else begin
-                    ecc_job_phase_n=ECC_PHASE_NONE;
-                    st_n=S_ECC_PMUL_STEP_NEXT;
-                end
-            end else if (uop_p3_q.op_type == UOP_HSIM_CHUNK) begin
+            if (uop_p3_q.op_type == UOP_HSIM_CHUNK) begin
                 res_n = {53'b0, hsim_total_q};
                 st_n = S_RESULT;
             end else if (uop_p3_q.op_type == UOP_HMATCH_CHUNK) begin
@@ -3843,19 +3628,14 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     // only by the two foreground phases that provide the compatible 1R1W slot.
     always_ff @(posedge clk_i) begin
         if (rst_ni && vv33_pair_active_q) begin
-            assert (VV31_SCHED_ENABLE)
-                else $error("VV33 paired search active without scheduler support");
+            assert (VV31_SCHED_ENABLE && ecc_diag_sub_shadow_mode)
+                else $error("VV33 paired search active without the supported diagonal schedule");
             assert (ecc_job_bg_q && ecc_job_active_q
-                    && (ecc_job_kind_q == ECC_JOB_PMUL))
-                else $error("VV33 paired search escaped the background PMUL lifetime");
-            assert (vv33_pair_class_idx_q <= 2'd2)
-                else $error("VV33 paired search escaped the reserved HDC VRF partition");
-        end
-        if (rst_ni && (vv33_pair_product_fire || vv33_pair_pop_fire
-                    || vv33_pair_fold_launch)) begin
-            assert (ecc_diag_sub_shadow_mode
                     && (ecc_job_phase_q == ECC_PHASE_PMUL_FIELD))
-                else $error("VV33 paired data event escaped a compatible diagonal lifecycle");
+                else $error("VV33 paired search escaped the background PMUL field lifetime");
+            assert ((vv33_pair_query_base_q == 6'd12)
+                    && (vv33_pair_class_slot_q inside {[4'd4:4'd7]}))
+                else $error("VV33 paired search escaped the reserved HDC VRF partition");
         end
         if (rst_ni && VV33_FINE_INTERLEAVE && vv33_sq_commit_q) begin
             assert (st_q inside {S_UOP_P1_RD0,
@@ -3903,12 +3683,10 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             vv33_pair_sum_q<=1'b0;
             vv33_pair_finish_q<=1'b0;
             vv33_pair_resp_q<=1'b0;
-            vv33_pair_class_idx_q<='0;
+            vv33_pair_query_base_q<='0;vv33_pair_class_slot_q<='0;
+            vv33_pair_class_idx_q<='0;vv33_pair_last_idx_q<='0;
             vv33_pair_chunk_q<='0;vv33_pair_total_q<='0;
             vv33_pair_best_q<='0;vv33_pair_best_idx_q<='0;
-            vv33_hinfer_pending_q<=1'b0;
-            vv33_hinfer_rot_q<='0;
-            vv33_hinfer_resume_step_q<=1'b0;
         end
         else begin
             st_q<=st_n;res_q<=res_n;op_q<=op_n;a_q<=a_n;
@@ -3950,14 +3728,14 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             vv33_pair_sum_q<=vv33_pair_sum_n;
             vv33_pair_finish_q<=vv33_pair_finish_n;
             vv33_pair_resp_q<=vv33_pair_resp_n;
+            vv33_pair_query_base_q<=vv33_pair_query_base_n;
+            vv33_pair_class_slot_q<=vv33_pair_class_slot_n;
             vv33_pair_class_idx_q<=vv33_pair_class_idx_n;
+            vv33_pair_last_idx_q<=vv33_pair_last_idx_n;
             vv33_pair_chunk_q<=vv33_pair_chunk_n;
             vv33_pair_total_q<=vv33_pair_total_n;
             vv33_pair_best_q<=vv33_pair_best_n;
             vv33_pair_best_idx_q<=vv33_pair_best_idx_n;
-            vv33_hinfer_pending_q<=vv33_hinfer_pending_n;
-            vv33_hinfer_rot_q<=vv33_hinfer_rot_n;
-            vv33_hinfer_resume_step_q<=vv33_hinfer_resume_step_n;
         end
     end
 
