@@ -155,6 +155,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     logic [VRF_IDX_W-1:0] ecc_acc_dst_q, ecc_acc_dst_n;
     logic [31:0]          ecc_leaf_a_q, ecc_leaf_a_n;
     logic [31:0]          ecc_leaf_b_q, ecc_leaf_b_n;
+    logic                 ecc_leaf_b_capture_we;
+    logic                 ecc_leaf_b_transform_we;
     logic [63:0]          ecc_leaf_prod_q, ecc_leaf_prod_n;
     logic [31:0]          ecc_leaf_xor_a_q, ecc_leaf_xor_a_n;
     logic [31:0]          ecc_leaf_xor_b_q, ecc_leaf_xor_b_n;
@@ -310,9 +312,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     logic [2:0]           vv33_pair_class_idx_q, vv33_pair_class_idx_n;
     logic [2:0]           vv33_pair_last_idx_q, vv33_pair_last_idx_n;
     logic [1:0]           vv33_pair_chunk_q, vv33_pair_chunk_n;
-    logic [10:0]          vv33_pair_total_q, vv33_pair_total_n;
-    logic [10:0]          vv33_pair_best_q, vv33_pair_best_n;
-    logic [2:0]           vv33_pair_best_idx_q, vv33_pair_best_idx_n;
     logic                 vv33_pair_ready;
     logic                 vv33_pair_accept;
     logic                 vv33_pair_req_invalid;
@@ -404,7 +403,9 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                                      + {4'b0, vv33_pair_next_chunk};
     assign vv33_pair_next_src_b_addr = {vv33_pair_next_class_slot, 2'b00}
                                      + {4'b0, vv33_pair_next_chunk};
-    assign vv33_pair_score = vv33_pair_total_q + {2'b00, group_dist_q};
+    // Ordinary HSIM/HMATCH and the paired sidecar are mutually exclusive.
+    // The sidecar therefore reuses the ordinary running-total adder/state.
+    assign vv33_pair_score = hsim_total_step;
     // Only folds that already launch a following CAP0 and do not consume the
     // VRF read port for next-leaf A are paired-read launch points.
     assign vv33_pair_fold_launch = vv33_pair_active_q
@@ -547,6 +548,16 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         && ecc_autoreduce_fast
         && !ecc_mac_q
         && !ecc_pmul_residue_seed_vrf;
+    // Leaf-B has two disjoint update classes.  VRF capture also updates its
+    // paired low-XOR word, while CAP2 locally transforms only the primary word.
+    assign ecc_leaf_b_capture_we =
+        (st_q == S_ECC_LOAD_B)
+        || ((st_q == S_ECC_LOAD_B_WAIT) && ecc_diag_early_b_load)
+        || ecc_diag_next_leaf_b_capture
+        || ((st_q == S_ECC_LEAF_FOLD) && !ecc_leaf_last
+            && (ecc_diag_sub_shadow_mode || (ecc_fold_word_q == 2'd3)));
+    assign ecc_leaf_b_transform_we =
+        (st_q == S_ECC_DIAG_CAPTURE2) && (ecc_kpd64_sub_q < 2'd2);
     assign ecc_diag_product_issue =
         (st_q == S_ECC_DIAG_ISSUE)
         || (st_q == S_ECC_DIAG_CAPTURE0)
@@ -1613,9 +1624,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
         vv33_pair_class_idx_n=vv33_pair_class_idx_q;
         vv33_pair_last_idx_n=vv33_pair_last_idx_q;
         vv33_pair_chunk_n=vv33_pair_chunk_q;
-        vv33_pair_total_n=vv33_pair_total_q;
-        vv33_pair_best_n=vv33_pair_best_q;
-        vv33_pair_best_idx_n=vv33_pair_best_idx_q;
         lane_shift_bit='0;
         vrf_req.ra='0; vrf_req.wa='x; vrf_req.wd='x;
         // The deferred square token is created only for the two compatible
@@ -2074,9 +2082,9 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                 vv33_pair_class_idx_n=3'd0;
                 vv33_pair_last_idx_n=operand_a_i[10:8]-3'd1;
                 vv33_pair_chunk_n=2'd0;
-                vv33_pair_total_n='0;
-                vv33_pair_best_n='0;
-                vv33_pair_best_idx_n='0;
+                hsim_total_n='0;
+                hmatch_best_dist_n='0;
+                hmatch_best_idx_n='0;
                 vrf_req.ra={operand_a_i[3:0],2'b00};
             end
             st_n=S_ECC_DIAG_CAPTURE0;
@@ -2222,9 +2230,9 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             if (vv33_pair_sum_q) begin
                 vv33_pair_sum_n=1'b0;
                 if (vv33_pair_chunk_q == 2'd3) begin
-                    if (vv33_pair_score > vv33_pair_best_q) begin
-                        vv33_pair_best_n=vv33_pair_score;
-                        vv33_pair_best_idx_n=vv33_pair_class_idx_q;
+                    if (vv33_pair_score > hmatch_best_dist_q) begin
+                        hmatch_best_dist_n=vv33_pair_score;
+                        hmatch_best_idx_n=vv33_pair_class_idx_q;
                     end
                     if (vv33_pair_class_idx_q == vv33_pair_last_idx_q) begin
                         // Commit the winning score first.  Response packing is
@@ -2233,15 +2241,15 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                         vv33_pair_finish_n=1'b1;
                         vv33_pair_read_ready_n=1'b0;
                         vv33_pair_product_n=1'b0;
-                        vv33_pair_total_n='0;
+                        hsim_total_n='0;
                     end else begin
-                        vv33_pair_total_n='0;
+                        hsim_total_n='0;
                         vv33_pair_chunk_n=2'd0;
                         vv33_pair_class_slot_n=vv33_pair_class_slot_q+4'd1;
                         vv33_pair_class_idx_n=vv33_pair_class_idx_q+3'd1;
                     end
                 end else begin
-                    vv33_pair_total_n=vv33_pair_score;
+                    hsim_total_n=vv33_pair_score;
                     vv33_pair_chunk_n=vv33_pair_chunk_q+2'd1;
                 end
             end
@@ -2286,7 +2294,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                 vv33_pair_product_n=1'b1;
             end
             if (vv33_pair_finish_q) begin
-                res_n={50'b0, vv33_pair_best_idx_q, vv33_pair_best_q};
+                res_n={50'b0, hmatch_best_idx_q, hmatch_best_dist_q};
                 vv33_pair_resp_n=1'b1;
                 vv33_pair_finish_n=1'b0;
                 vv33_pair_active_n=1'b0;
@@ -3685,8 +3693,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             vv33_pair_resp_q<=1'b0;
             vv33_pair_query_base_q<='0;vv33_pair_class_slot_q<='0;
             vv33_pair_class_idx_q<='0;vv33_pair_last_idx_q<='0;
-            vv33_pair_chunk_q<='0;vv33_pair_total_q<='0;
-            vv33_pair_best_q<='0;vv33_pair_best_idx_q<='0;
+            vv33_pair_chunk_q<='0;
         end
         else begin
             st_q<=st_n;res_q<=res_n;op_q<=op_n;a_q<=a_n;
@@ -3708,9 +3715,13 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                 hdc_src0_q<=hdc_src0_n;
             end
             ecc_src_a_q<=ecc_src_a_n;ecc_src_b_q<=ecc_src_b_n;ecc_dst_q<=ecc_dst_n;ecc_acc_dst_q<=ecc_acc_dst_n;
-            ecc_leaf_a_q<=ecc_leaf_a_n;ecc_leaf_b_q<=ecc_leaf_b_n;
+            ecc_leaf_a_q<=ecc_leaf_a_n;
+            if (ecc_leaf_b_capture_we || ecc_leaf_b_transform_we)
+                ecc_leaf_b_q<=ecc_leaf_b_n;
             ecc_leaf_prod_q<=ecc_leaf_prod_n;ecc_leaf_path_q<=ecc_leaf_path_n;ecc_fold_word_q<=ecc_fold_word_n;
-            ecc_leaf_xor_a_q<=ecc_leaf_xor_a_n;ecc_leaf_xor_b_q<=ecc_leaf_xor_b_n;
+            ecc_leaf_xor_a_q<=ecc_leaf_xor_a_n;
+            if (ecc_leaf_b_capture_we)
+                ecc_leaf_xor_b_q<=ecc_leaf_xor_b_n;
             ecc_leaf128_prod_q<=ecc_leaf128_prod_n;ecc_kpd64_sub_q<=ecc_kpd64_sub_n;
             ecc_autoreduce_q<=ecc_autoreduce_n;ecc_raw_product_q<=ecc_raw_product_n;
             ecc_mac_q<=ecc_mac_n;ecc_sqr_repeat_q<=ecc_sqr_repeat_n;
@@ -3733,9 +3744,6 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             vv33_pair_class_idx_q<=vv33_pair_class_idx_n;
             vv33_pair_last_idx_q<=vv33_pair_last_idx_n;
             vv33_pair_chunk_q<=vv33_pair_chunk_n;
-            vv33_pair_total_q<=vv33_pair_total_n;
-            vv33_pair_best_q<=vv33_pair_best_n;
-            vv33_pair_best_idx_q<=vv33_pair_best_idx_n;
         end
     end
 
