@@ -583,6 +583,13 @@ module tb_vv33_bank_episode_interleave;
         longint unsigned mixed_foreground_only_cycles;
         longint unsigned mixed_start_cycle;
         longint unsigned mixed_wall_cycles;
+        longint unsigned standalone_hdc_batch_start;
+        longint unsigned standalone_hdc_batch_cycles;
+        longint unsigned serial_start_cycle;
+        longint unsigned serial_end_cycle;
+        longint unsigned serial_measured_cycles;
+        longint unsigned serial_calc_cycles;
+        longint signed   serial_transition_cycles;
         longint unsigned completed_work_cycles;
         longint unsigned serial_baseline_cycles;
         longint unsigned ideal_dual_cycles;
@@ -736,8 +743,67 @@ module tb_vv33_bank_episode_interleave;
 
         completed_work_cycles =
             completed_episodes_at_pmul_done * standalone_inference_cycles;
-        serial_baseline_cycles =
-            standalone_pmul_cycles + completed_work_cycles;
+
+        // Directly replay the exact number of completed searches outside ECC.
+        // This confirms that the matched HDC component is not inferred from a
+        // single short sample alone.
+        h.reset_dut();
+        h.validate_vector_contract();
+        h.bus.write_hv(VV33_QUERY_SLOT, inference_query);
+        h.bus.write_hv(VV33_PROTO_BASE_SLOT + 4'd0, inference_proto0);
+        h.bus.write_hv(VV33_PROTO_BASE_SLOT + 4'd1, inference_proto1);
+        h.bus.write_hv(VV33_PROTO_BASE_SLOT + 4'd2, inference_proto2);
+        h.bus.write_hv(VV33_PROTO_BASE_SLOT + 4'd3, inference_proto3);
+        standalone_hdc_batch_start = h.bus.cycle_count;
+        for (int unsigned inference_index = 0;
+             inference_index < completed_episodes_at_pmul_done;
+             inference_index++) begin
+            run_one_inference(episode_completed);
+            if (!episode_completed)
+                $fatal(
+                    1,
+                    "[VV33:BANK_EPISODE] standalone batch stopped at index=%0d",
+                    inference_index
+                );
+        end
+        standalone_hdc_batch_cycles =
+            h.bus.cycle_count - standalone_hdc_batch_start;
+
+        // Measure the same work as an actual strict-serial HDEC execution.
+        // Query and prototypes are resident before t0.  PMUL completes first,
+        // after which exactly N four-class searches are issued.
+        h.reset_dut();
+        h.validate_vector_contract();
+        h.prepare_ecc_case(0);
+        h.bus.write_hv(VV33_QUERY_SLOT, inference_query);
+        h.bus.write_hv(VV33_PROTO_BASE_SLOT + 4'd0, inference_proto0);
+        h.bus.write_hv(VV33_PROTO_BASE_SLOT + 4'd1, inference_proto1);
+        h.bus.write_hv(VV33_PROTO_BASE_SLOT + 4'd2, inference_proto2);
+        h.bus.write_hv(VV33_PROTO_BASE_SLOT + 4'd3, inference_proto3);
+        h.start_background_pmul(0, start_timing);
+        serial_start_cycle = start_timing.response_cycle;
+        h.wait_background_done_no_poll();
+        for (int unsigned inference_index = 0;
+             inference_index < completed_episodes_at_pmul_done;
+             inference_index++) begin
+            run_one_inference(episode_completed);
+            if (!episode_completed)
+                $fatal(
+                    1,
+                    "[VV33:BANK_EPISODE] strict serial stopped at index=%0d",
+                    inference_index
+                );
+        end
+        serial_end_cycle = h.bus.cycle_count;
+        serial_measured_cycles = serial_end_cycle - serial_start_cycle;
+        h.check_background_pmul(0, 1'b1);
+        h.check_ecc_guards(0);
+
+        serial_calc_cycles =
+            standalone_pmul_cycles + standalone_hdc_batch_cycles;
+        serial_transition_cycles =
+            $signed(serial_measured_cycles) - $signed(serial_calc_cycles);
+        serial_baseline_cycles = serial_measured_cycles;
         ideal_dual_cycles = (standalone_pmul_cycles > completed_work_cycles)
             ? standalone_pmul_cycles : completed_work_cycles;
         serial_gap_cycles = serial_baseline_cycles - ideal_dual_cycles;
@@ -783,7 +849,7 @@ module tb_vv33_bank_episode_interleave;
         end
 
         $display(
-            "[VV33:INFERENCE_STREAM_METRIC] K=%064h weight=%0d prototype_construction=%0d standalone_pmul=%0d standalone_inference=%0d standalone_repeat_count=4 standalone_repeat_mismatch=%0d completed_inferences=%0d completed_work=%0d unfinished_stage=%0d unfinished_active=%0d completed_stages=%0d completed_hdc_ops=%0d mixed_wall=%0d mixed_pmul_service=%0d mixed_pmul_stretch=%0d mixed_foreground_only=%0d serial_baseline=%0d ideal_dual=%0d serial_gap=%0d saved=%0d gap_closure_bp=%0d data_overlap=%0d control_overlap=%0d resource_pair=%0d pair_matrix=%0d pair_pop=%0d pair_accept=%0d pair_response=%0d vrf_read_conflict=%0d matrix_conflict=%0d xor0_conflict=%0d popcount_conflict=%0d payload_conflict=%0d unknown=%0d errors=%0d",
+            "[VV33:INFERENCE_STREAM_METRIC] K=%064h weight=%0d prototype_construction=%0d standalone_pmul=%0d standalone_inference=%0d standalone_repeat_count=4 standalone_repeat_mismatch=%0d completed_inferences=%0d completed_work=%0d standalone_hdc_batch=%0d unfinished_stage=%0d unfinished_active=%0d completed_stages=%0d completed_hdc_ops=%0d mixed_wall=%0d mixed_pmul_service=%0d mixed_pmul_stretch=%0d mixed_foreground_only=%0d serial_baseline=%0d serial_calc=%0d serial_transition=%0d ideal_dual=%0d serial_gap=%0d saved=%0d gap_closure_bp=%0d data_overlap=%0d control_overlap=%0d resource_pair=%0d pair_matrix=%0d pair_pop=%0d pair_accept=%0d pair_response=%0d vrf_read_conflict=%0d matrix_conflict=%0d xor0_conflict=%0d popcount_conflict=%0d payload_conflict=%0d unknown=%0d errors=%0d",
             h.scalar_inputs[0],
             vv31_hamming_weight256(h.scalar_inputs[0]),
             prototype_construction_cycles,
@@ -792,6 +858,7 @@ module tb_vv33_bank_episode_interleave;
             standalone_repeat_mismatches,
             completed_episodes_at_pmul_done,
             completed_work_cycles,
+            standalone_hdc_batch_cycles,
             unfinished_stage_at_pmul_done,
             unfinished_stage_active_at_pmul_done,
             completed_stages_at_pmul_done,
@@ -801,6 +868,8 @@ module tb_vv33_bank_episode_interleave;
             mixed_pmul_stretch_cycles,
             mixed_foreground_only_cycles,
             serial_baseline_cycles,
+            serial_calc_cycles,
+            serial_transition_cycles,
             ideal_dual_cycles,
             serial_gap_cycles,
             saved_cycles,

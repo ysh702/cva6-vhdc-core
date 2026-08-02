@@ -533,6 +533,9 @@ $pairMatrix = 0
 $pairPop = 0
 $pairAccept = 0
 $pairResponse = 0
+$standaloneHdcBatch = 0
+$serialCalc = 0
+$serialTransition = 0
 if ($metricMatches.Count -eq 1) {
     $standalonePmul = [long]$fields.standalone_pmul
     $prototypeConstruction = [long]$fields.prototype_construction
@@ -547,8 +550,11 @@ if ($metricMatches.Count -eq 1) {
         [long]$fields.completed_episodes
     }
     $completedWork = [long]$fields.completed_work
+    $standaloneHdcBatch = [long]$fields.standalone_hdc_batch
     $mixedWall = [long]$fields.mixed_wall
     $serialBaseline = [long]$fields.serial_baseline
+    $serialCalc = [long]$fields.serial_calc
+    $serialTransition = [long]$fields.serial_transition
     $idealDual = [long]$fields.ideal_dual
     $serialGap = [long]$fields.serial_gap
     $saved = [long]$fields.saved
@@ -564,15 +570,17 @@ if ($metricMatches.Count -eq 1) {
     $pairResponse = [long]$fields.pair_response
 
     $expectedWork = $completedInferences * $standaloneInference
-    $expectedSerial = $standalonePmul + $expectedWork
-    $expectedIdeal = [Math]::Max($standalonePmul, $expectedWork)
-    $expectedGap = $expectedSerial - $expectedIdeal
-    $expectedSaved = $expectedSerial - $mixedWall
+    $expectedSerialCalc = $standalonePmul + $standaloneHdcBatch
+    $expectedIdeal = [Math]::Max($standalonePmul, $standaloneHdcBatch)
+    $expectedGap = $serialBaseline - $expectedIdeal
+    $expectedSaved = $serialBaseline - $mixedWall
     $expectedClosureBp = if ($expectedGap -ne 0) {
         [long][Math]::Truncate(10000.0 * $expectedSaved / $expectedGap)
     } else { 0 }
     $arithmeticOk = ($completedWork -eq $expectedWork) -and
-                    ($serialBaseline -eq $expectedSerial) -and
+                    ($standaloneHdcBatch -eq $expectedWork) -and
+                    ($serialCalc -eq $expectedSerialCalc) -and
+                    ($serialBaseline -eq ($serialCalc + $serialTransition)) -and
                     ($idealDual -eq $expectedIdeal) -and
                     ($serialGap -eq $expectedGap) -and
                     ($saved -eq $expectedSaved) -and
@@ -604,6 +612,8 @@ $contractOk = ($metricMatches.Count -eq 1) -and
               ($standaloneRepeatMismatch -eq 0) -and
               ($mixedPmulService -gt 0) -and
               ($mixedForegroundOnly -ge 0) -and
+              ($standaloneHdcBatch -gt 0) -and
+              ($serialCalc -gt 0) -and
               ([long]$fields.mixed_wall -gt 0) -and
               ([long]$fields.unfinished_stage -ge 0) -and
               ([long]$fields.unfinished_stage -le 16) -and
@@ -638,6 +648,9 @@ $testResult = [ordered]@{
     prototype_construction_cycles = $prototypeConstruction
     standalone_repeat_count = $standaloneRepeatCount
     standalone_repeat_mismatch = $standaloneRepeatMismatch
+    standalone_hdc_batch_cycles = $standaloneHdcBatch
+    serial_calculated_cycles = $serialCalc
+    serial_transition_cycles = $serialTransition
     mixed_pmul_service_cycles = $mixedPmulService
     mixed_pmul_stretch_cycles = $mixedPmulStretch
     mixed_foreground_only_cycles = $mixedForegroundOnly
@@ -676,8 +689,9 @@ $manifest = [ordered]@{
         foreground_search = "four-class highest-overlap prototype search"
         completed_work = "searches retired before PMUL done"
         partial_work = "reported but excluded from matched-prefix arithmetic"
-        serial_formula = "C_pmul + N_complete * C_inference"
-        ideal_formula = "max(C_pmul, N_complete * C_inference)"
+        serial_formula = "measured strict serial PMUL then N complete HMATCH searches"
+        serial_component_formula = "C_pmul + C_hmatch_batch_N"
+        ideal_formula = "max(C_pmul, C_hmatch_batch_N)"
         gap_closure_formula = "(C_serial - C_mixed)/(C_serial - C_ideal)"
     }
     scalar_count = $scalarCount
