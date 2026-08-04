@@ -47,7 +47,10 @@
     "hdc_query_slot": 3,
     "hdc_prototype_base_slot": 4,
     "hdc_prototype_count": 4,
-    "ecc_internal_rows": [32, 63]
+    "ecc_internal_row_range": {
+      "first": 32,
+      "last": 63
+    }
   },
   "workload": {
     "pmul_operations": 1,
@@ -55,7 +58,7 @@
     "preload_in_measurement_window": false,
     "final_status_and_readback_in_measurement_window": false,
     "serial": {
-      "request_policy": "complete background PMUL, then issue all HMATCH requests",
+      "request_policy": "wait exactly pmul_service_contract_cycles after the accepted background PMUL start response, then issue all HMATCH requests",
       "core_reference_cycles": 337853
     },
     "interleaved": {
@@ -66,7 +69,8 @@
   },
   "measurement": {
     "start_event": "first cycle after accepted background PMUL start response",
-    "end_event": "both one PMUL and all 1632 HMATCH operations have completed",
+    "end_event": "the frozen scenario window expires: 337853 cycles for SERIAL or 200144 cycles for INTERLEAVED",
+    "completion_validation": "all 1632 HMATCH responses must occur within the frozen window; PMUL status and result are checked immediately after activity capture stops and are excluded from the measured interval",
     "activity_scope": "hdec_top",
     "exclude": [
       "reset",
