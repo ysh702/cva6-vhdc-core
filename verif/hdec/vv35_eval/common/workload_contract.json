@@ -1,0 +1,108 @@
+{
+  "schema": "hdec-vv35-cross-platform-workload-v1",
+  "design": {
+    "branch": "VV35",
+    "top": "hdec_top",
+    "clock_period_ns": 5.0,
+    "nominal_frequency_mhz": 200.0,
+    "public_interface": [
+      "clk_i",
+      "rst_ni",
+      "valid_i",
+      "ready_o",
+      "operator_i",
+      "operand_a_i",
+      "operand_b_i",
+      "valid_o",
+      "result_o"
+    ]
+  },
+  "vector_bundle": {
+    "path": "verif/hdec/vv35_eval/common/vectors/frozen_lab_20260803",
+    "seed_hex": "5e64d25ad069e9dc110f43a15c2f42df1aac40f9c6f076610578220ee23e8937",
+    "curve": "sect233k1",
+    "field": "GF(2^233)",
+    "reduction_polynomial": "x^233 + x^74 + 1",
+    "scalar_count": 1,
+    "scalar_hamming_weight": 128,
+    "hdc_dimension_bits": 1024,
+    "query_definition": "hdc_train_samples[0] XOR hdc_role_vectors[1]",
+    "prototype_definitions": [
+      "query",
+      "bitwise_not(query)",
+      "query XOR repeat(01,512)",
+      "query XOR repeat(0001,256)"
+    ],
+    "expected_hmatch_class": 0,
+    "expected_hmatch_score": 505,
+    "expected_hmatch_result_hex": "00000000000001f9"
+  },
+  "vrf_layout": {
+    "ecc_point_x_row": 0,
+    "ecc_point_y_row": 1,
+    "ecc_scalar_row": 2,
+    "guard_rows": [3, 6, 7],
+    "ecc_output_x_row": 4,
+    "ecc_output_y_row": 5,
+    "hdc_query_slot": 3,
+    "hdc_prototype_base_slot": 4,
+    "hdc_prototype_count": 4,
+    "ecc_internal_rows": [32, 63]
+  },
+  "workload": {
+    "pmul_operations": 1,
+    "hmatch_operations": 1632,
+    "preload_in_measurement_window": false,
+    "final_status_and_readback_in_measurement_window": false,
+    "serial": {
+      "request_policy": "complete background PMUL, then issue all HMATCH requests",
+      "core_reference_cycles": 337853
+    },
+    "interleaved": {
+      "request_policy": "issue HMATCH requests immediately after background PMUL start response",
+      "core_reference_cycles": 200144
+    },
+    "pmul_service_contract_cycles": 146908
+  },
+  "measurement": {
+    "start_event": "first cycle after accepted background PMUL start response",
+    "end_event": "both one PMUL and all 1632 HMATCH operations have completed",
+    "activity_scope": "hdec_top",
+    "exclude": [
+      "reset",
+      "vector preload",
+      "warm-up",
+      "final status query",
+      "result readback"
+    ],
+    "core_cycle_reference_applies_to": [
+      "RTL public-interface simulation",
+      "FPGA post-route gate simulation",
+      "ASIC gate simulation using the same hdec_top interface"
+    ],
+    "board_rule": "board or CPU-integrated cycles are measured, not forced to the core reference, because wrapper and software overhead are part of that endpoint; the default PMUL wait value requires CPU rdcycle and HDEC to use the same ungated clock and must otherwise be calibrated",
+    "board_energy_window": "integrate physical board energy from marker timestamps only; rdcycle is a separate system-cycle window and is not substituted for marker duration",
+    "board_idle_reference": "CLOCKED_IDLE_SPIN using the same bitstream, firmware, clock settings and named rails"
+  },
+  "comparison_invariants": [
+    "same VV35 RTL or same generated netlist for serial and interleaved runs",
+    "same vector bundle and file hashes",
+    "same PMUL and HMATCH operation counts",
+    "same clock, voltage, process or FPGA image",
+    "same measurement boundary",
+    "only request release timing may differ"
+  ],
+  "formulas": {
+    "time_s": "cycles / frequency_hz",
+    "energy_j": "average_power_w * time_s",
+    "cycle_reduction": "(serial_cycles - interleaved_cycles) / serial_cycles",
+    "speedup": "serial_cycles / interleaved_cycles",
+    "energy_reduction": "(serial_energy - interleaved_energy) / serial_energy"
+  },
+  "evidence_labels": {
+    "fpga_postroute_saif": "activity-based routed FPGA power estimate",
+    "fpga_board": "board-level measured power for the named rails and measurement setup",
+    "asic_dc_power": "synthesis-level pre-layout ASIC power estimate",
+    "asic_postlayout_px": "post-layout ASIC power estimate when extracted parasitics and PrimeTime PX are available"
+  }
+}

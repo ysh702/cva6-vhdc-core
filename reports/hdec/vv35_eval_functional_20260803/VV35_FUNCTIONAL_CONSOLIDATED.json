@@ -1,0 +1,575 @@
+{
+  "active_elapsed_seconds_all_runs": 2414.409,
+  "all_tests_pass_after_repair": true,
+  "git_commit": "ba053f51f26c2be318626ab27a3d830cc5d32a44",
+  "identity_consistent": true,
+  "overall": "PASS",
+  "pmul": {
+    "background_pipeline_records": 16,
+    "consistent": true,
+    "cycle_values": [
+      146908
+    ],
+    "direct_contract_records": 16,
+    "expected_cycles": 146908,
+    "k_records": [
+      {
+        "background_cycles": [
+          146908
+        ],
+        "direct_cycles": [
+          146908
+        ],
+        "k_hex": "00000002cbb5b72719a26f3392bd2e4be5a05b9a35d0c12f52d5ae736209b42f"
+      },
+      {
+        "background_cycles": [
+          146908
+        ],
+        "direct_cycles": [
+          146908
+        ],
+        "k_hex": "000000263f827430c9c533408f4acd864258839f50d41f9b244b386e1b1e2426"
+      },
+      {
+        "background_cycles": [
+          146908
+        ],
+        "direct_cycles": [
+          146908
+        ],
+        "k_hex": "00000027d323201c6facec496387e04cff418e12cdc6d34a25c4409c22a53630"
+      },
+      {
+        "background_cycles": [
+          146908
+        ],
+        "direct_cycles": [
+          146908
+        ],
+        "k_hex": "000000292ac09e5afaf66ceb1ca4604e16fac4c8eb6627ef5973f7be0950be9b"
+      },
+      {
+        "background_cycles": [
+          146908
+        ],
+        "direct_cycles": [
+          146908
+        ],
+        "k_hex": "000000325648ee3ee330960a2305251173ce370ee9ce09beaefebd8057d7657c"
+      },
+      {
+        "background_cycles": [
+          146908
+        ],
+        "direct_cycles": [
+          146908
+        ],
+        "k_hex": "00000034c1c3ee8e52513ab1bedd5f1645d76322a4f269c2696bda81602cc971"
+      },
+      {
+        "background_cycles": [
+          146908
+        ],
+        "direct_cycles": [
+          146908
+        ],
+        "k_hex": "000000372e8514f29afb8dba43a4e94493354d55eb270830b7cd459cba5fa7f4"
+      },
+      {
+        "background_cycles": [
+          146908
+        ],
+        "direct_cycles": [
+          146908
+        ],
+        "k_hex": "00000049a10b6508a48b4ffd7f847e31a269315fdb92f24bb4aee5e413f00e97"
+      },
+      {
+        "background_cycles": [
+          146908
+        ],
+        "direct_cycles": [
+          146908
+        ],
+        "k_hex": "0000004a71c1446cbfee4fb258ff89770211eda36f7d8448ded6fa18eb183de4"
+      },
+      {
+        "background_cycles": [
+          146908
+        ],
+        "direct_cycles": [
+          146908
+        ],
+        "k_hex": "00000058b29e7bd375d30afd57e737889326c2daa8d103350649a6a472ed3e09"
+      },
+      {
+        "background_cycles": [
+          146908
+        ],
+        "direct_cycles": [
+          146908
+        ],
+        "k_hex": "0000005daf16911e773aa93cd47ac2205a072534139d008471d1b933e8f26b7d"
+      },
+      {
+        "background_cycles": [
+          146908
+        ],
+        "direct_cycles": [
+          146908
+        ],
+        "k_hex": "00000063f3a45009331b6807de6f2e3102df8def2342ec59d68103938d37b098"
+      },
+      {
+        "background_cycles": [
+          146908
+        ],
+        "direct_cycles": [
+          146908
+        ],
+        "k_hex": "0000006404271d526a5a5c185be067dd7c770ad4d49b9cb2dd537f617362b985"
+      },
+      {
+        "background_cycles": [
+          146908
+        ],
+        "direct_cycles": [
+          146908
+        ],
+        "k_hex": "00000073ce0e428e846f1718c943a6fb3e21c7b17f09e107eac79e114acfe8b9"
+      },
+      {
+        "background_cycles": [
+          146908
+        ],
+        "direct_cycles": [
+          146908
+        ],
+        "k_hex": "0000007a6aaf53323b8ad85f9b40c7d1d40d37026a8eadf6259176b7cac22825"
+      },
+      {
+        "background_cycles": [
+          146908
+        ],
+        "direct_cycles": [
+          146908
+        ],
+        "k_hex": "0000007fc1c4849b57c8c6f82628400ffd68479dc76322365f4e54632395448c"
+      }
+    ],
+    "unique_random_k": 16
+  },
+  "primary_elapsed_seconds": 2354.851,
+  "primary_infrastructure_failure_preserved": {
+    "classification": "TEST_INFRASTRUCTURE_XELAB_TIMESCALE_STRICTNESS",
+    "original_manifest": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\run_manifest.json",
+    "repair_manifest": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_111906_236\\run_manifest.json",
+    "rtl_failure": false,
+    "test": "hdc_full_flow"
+  },
+  "primary_manifest_status": "FAIL",
+  "rtl_sha256": "cdfdaaa3a379422ea99c4d132070052499f5fc0b2b4d34c6b98d5dee699eafa0",
+  "rtl_unchanged_during_all_runs": true,
+  "schema": "hdec-vv35-functional-consolidated-v1",
+  "seed_hex": "1f8b456739a723782c9cd16c72b7fcdaabd20658252e1eddaefd0a05ce934075",
+  "source_manifests": [
+    "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\run_manifest.json",
+    "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_111906_236\\run_manifest.json",
+    "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_111934_705\\run_manifest.json"
+  ],
+  "test_histories": {
+    "baseline_gap": [
+      {
+        "elapsed_seconds": 59.803,
+        "name": "baseline_gap",
+        "pass_marker_count": 1,
+        "source_manifest": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\run_manifest.json",
+        "status": "PASS",
+        "suite": "full",
+        "xsim_log": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\xsim_baseline_gap\\xsim.log"
+      }
+    ],
+    "diag_native_map": [
+      {
+        "elapsed_seconds": 15.068,
+        "name": "diag_native_map",
+        "pass_marker_count": 1,
+        "source_manifest": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\run_manifest.json",
+        "status": "PASS",
+        "suite": "full",
+        "xsim_log": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\xsim_diag_native_map\\xsim.log"
+      }
+    ],
+    "ecc_add_direct": [
+      {
+        "elapsed_seconds": 13.707,
+        "name": "ecc_add_direct",
+        "pass_marker_count": 1,
+        "source_manifest": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_111934_705\\run_manifest.json",
+        "status": "PASS",
+        "suite": "ecc_direct",
+        "xsim_log": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_111934_705\\xsim_ecc_add_v1\\xsim.log"
+      }
+    ],
+    "ecc_inv_direct": [
+      {
+        "elapsed_seconds": 13.187,
+        "name": "ecc_inv_direct",
+        "pass_marker_count": 1,
+        "source_manifest": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_111934_705\\run_manifest.json",
+        "status": "PASS",
+        "suite": "ecc_direct",
+        "xsim_log": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_111934_705\\xsim_ecc_inv_v17\\xsim.log"
+      }
+    ],
+    "ecc_reduce_direct": [
+      {
+        "elapsed_seconds": 13.853,
+        "name": "ecc_reduce_direct",
+        "pass_marker_count": 1,
+        "source_manifest": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_111934_705\\run_manifest.json",
+        "status": "PASS",
+        "suite": "ecc_direct",
+        "xsim_log": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_111934_705\\xsim_ecc_reduce_v1\\xsim.log"
+      }
+    ],
+    "ecc_schedule_trace": [
+      {
+        "elapsed_seconds": 61.902,
+        "name": "ecc_schedule_trace",
+        "pass_marker_count": 1,
+        "source_manifest": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\run_manifest.json",
+        "status": "PASS",
+        "suite": "full",
+        "xsim_log": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\xsim_ecc_schedule_trace\\xsim.log"
+      }
+    ],
+    "ecc_state_profile": [
+      {
+        "elapsed_seconds": 62.513,
+        "name": "ecc_state_profile",
+        "pass_marker_count": 1,
+        "source_manifest": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\run_manifest.json",
+        "status": "PASS",
+        "suite": "full",
+        "xsim_log": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\xsim_ecc_state_profile\\xsim.log"
+      }
+    ],
+    "fused_map_unit": [
+      {
+        "elapsed_seconds": 14.538,
+        "name": "fused_map_unit",
+        "pass_marker_count": 1,
+        "source_manifest": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\run_manifest.json",
+        "status": "PASS",
+        "suite": "full",
+        "xsim_log": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\xsim_fused_map_unit\\xsim.log"
+      }
+    ],
+    "gfmac_tail_fusion": [
+      {
+        "elapsed_seconds": 403.258,
+        "name": "gfmac_tail_fusion",
+        "pass_marker_count": 1,
+        "source_manifest": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\run_manifest.json",
+        "status": "PASS",
+        "suite": "full",
+        "xsim_log": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\xsim_gfmac_tail_fusion\\xsim.log"
+      }
+    ],
+    "hdc_episode": [
+      {
+        "elapsed_seconds": 17.354,
+        "name": "hdc_episode",
+        "pass_marker_count": 1,
+        "source_manifest": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\run_manifest.json",
+        "status": "PASS",
+        "suite": "full",
+        "xsim_log": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\xsim_hdc_episode\\xsim.log"
+      }
+    ],
+    "hdc_full_flow": [
+      {
+        "elapsed_seconds": 4.924,
+        "name": "hdc_full_flow",
+        "pass_marker_count": 0,
+        "source_manifest": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\run_manifest.json",
+        "status": "FAIL",
+        "suite": "full",
+        "xsim_log": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\xsim_hdc_full_flow_v20\\xsim.log"
+      },
+      {
+        "elapsed_seconds": 13.447,
+        "name": "hdc_full_flow",
+        "pass_marker_count": 1,
+        "source_manifest": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_111906_236\\run_manifest.json",
+        "status": "PASS",
+        "suite": "hdc_direct",
+        "xsim_log": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_111906_236\\xsim_hdc_full_flow_v20_relaxed\\xsim.log"
+      }
+    ],
+    "hperm_contract": [
+      {
+        "elapsed_seconds": 11.748,
+        "name": "hperm_contract",
+        "pass_marker_count": 1,
+        "source_manifest": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\run_manifest.json",
+        "status": "PASS",
+        "suite": "full",
+        "xsim_log": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\xsim_vv30_hperm_contract\\xsim.log"
+      }
+    ],
+    "inv_redirect_contract": [
+      {
+        "elapsed_seconds": 17.989,
+        "name": "inv_redirect_contract",
+        "pass_marker_count": 1,
+        "source_manifest": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\run_manifest.json",
+        "status": "PASS",
+        "suite": "full",
+        "xsim_log": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\xsim_inv_redirect_contract\\xsim.log"
+      }
+    ],
+    "mode_switch": [
+      {
+        "elapsed_seconds": 60.922,
+        "name": "mode_switch",
+        "pass_marker_count": 1,
+        "source_manifest": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\run_manifest.json",
+        "status": "PASS",
+        "suite": "full",
+        "xsim_log": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\xsim_mode_switch\\xsim.log"
+      }
+    ],
+    "pmul_pipeline_contract": [
+      {
+        "elapsed_seconds": 803.565,
+        "name": "pmul_pipeline_contract",
+        "pass_marker_count": 1,
+        "source_manifest": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\run_manifest.json",
+        "status": "PASS",
+        "suite": "full",
+        "xsim_log": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\xsim_pmul_pipeline_contract\\xsim.log"
+      }
+    ],
+    "pmul_random_k": [
+      {
+        "elapsed_seconds": 772.225,
+        "name": "pmul_random_k",
+        "pass_marker_count": 1,
+        "source_manifest": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\run_manifest.json",
+        "status": "PASS",
+        "suite": "full",
+        "xsim_log": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\xsim_pmul_random_k\\xsim.log"
+      }
+    ],
+    "shift_align_basis": [
+      {
+        "elapsed_seconds": 11.336,
+        "name": "shift_align_basis",
+        "pass_marker_count": 1,
+        "source_manifest": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\run_manifest.json",
+        "status": "PASS",
+        "suite": "full",
+        "xsim_log": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\xsim_shift_align_basis\\xsim.log"
+      }
+    ],
+    "square_basis": [
+      {
+        "elapsed_seconds": 14.291,
+        "name": "square_basis",
+        "pass_marker_count": 1,
+        "source_manifest": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\run_manifest.json",
+        "status": "PASS",
+        "suite": "full",
+        "xsim_log": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\xsim_square_basis\\xsim.log"
+      }
+    ],
+    "vrf_roundtrip": [
+      {
+        "elapsed_seconds": 18.2,
+        "name": "vrf_roundtrip",
+        "pass_marker_count": 1,
+        "source_manifest": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\run_manifest.json",
+        "status": "PASS",
+        "suite": "full",
+        "xsim_log": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\xsim_vrf_roundtrip\\xsim.log"
+      }
+    ]
+  },
+  "tests": [
+    {
+      "elapsed_seconds": 59.803,
+      "name": "baseline_gap",
+      "pass_marker_count": 1,
+      "source_manifest": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\run_manifest.json",
+      "status": "PASS",
+      "suite": "full",
+      "xsim_log": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\xsim_baseline_gap\\xsim.log"
+    },
+    {
+      "elapsed_seconds": 15.068,
+      "name": "diag_native_map",
+      "pass_marker_count": 1,
+      "source_manifest": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\run_manifest.json",
+      "status": "PASS",
+      "suite": "full",
+      "xsim_log": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\xsim_diag_native_map\\xsim.log"
+    },
+    {
+      "elapsed_seconds": 13.707,
+      "name": "ecc_add_direct",
+      "pass_marker_count": 1,
+      "source_manifest": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_111934_705\\run_manifest.json",
+      "status": "PASS",
+      "suite": "ecc_direct",
+      "xsim_log": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_111934_705\\xsim_ecc_add_v1\\xsim.log"
+    },
+    {
+      "elapsed_seconds": 13.187,
+      "name": "ecc_inv_direct",
+      "pass_marker_count": 1,
+      "source_manifest": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_111934_705\\run_manifest.json",
+      "status": "PASS",
+      "suite": "ecc_direct",
+      "xsim_log": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_111934_705\\xsim_ecc_inv_v17\\xsim.log"
+    },
+    {
+      "elapsed_seconds": 13.853,
+      "name": "ecc_reduce_direct",
+      "pass_marker_count": 1,
+      "source_manifest": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_111934_705\\run_manifest.json",
+      "status": "PASS",
+      "suite": "ecc_direct",
+      "xsim_log": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_111934_705\\xsim_ecc_reduce_v1\\xsim.log"
+    },
+    {
+      "elapsed_seconds": 61.902,
+      "name": "ecc_schedule_trace",
+      "pass_marker_count": 1,
+      "source_manifest": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\run_manifest.json",
+      "status": "PASS",
+      "suite": "full",
+      "xsim_log": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\xsim_ecc_schedule_trace\\xsim.log"
+    },
+    {
+      "elapsed_seconds": 62.513,
+      "name": "ecc_state_profile",
+      "pass_marker_count": 1,
+      "source_manifest": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\run_manifest.json",
+      "status": "PASS",
+      "suite": "full",
+      "xsim_log": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\xsim_ecc_state_profile\\xsim.log"
+    },
+    {
+      "elapsed_seconds": 14.538,
+      "name": "fused_map_unit",
+      "pass_marker_count": 1,
+      "source_manifest": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\run_manifest.json",
+      "status": "PASS",
+      "suite": "full",
+      "xsim_log": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\xsim_fused_map_unit\\xsim.log"
+    },
+    {
+      "elapsed_seconds": 403.258,
+      "name": "gfmac_tail_fusion",
+      "pass_marker_count": 1,
+      "source_manifest": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\run_manifest.json",
+      "status": "PASS",
+      "suite": "full",
+      "xsim_log": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\xsim_gfmac_tail_fusion\\xsim.log"
+    },
+    {
+      "elapsed_seconds": 17.354,
+      "name": "hdc_episode",
+      "pass_marker_count": 1,
+      "source_manifest": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\run_manifest.json",
+      "status": "PASS",
+      "suite": "full",
+      "xsim_log": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\xsim_hdc_episode\\xsim.log"
+    },
+    {
+      "elapsed_seconds": 13.447,
+      "name": "hdc_full_flow",
+      "pass_marker_count": 1,
+      "source_manifest": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_111906_236\\run_manifest.json",
+      "status": "PASS",
+      "suite": "hdc_direct",
+      "xsim_log": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_111906_236\\xsim_hdc_full_flow_v20_relaxed\\xsim.log"
+    },
+    {
+      "elapsed_seconds": 11.748,
+      "name": "hperm_contract",
+      "pass_marker_count": 1,
+      "source_manifest": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\run_manifest.json",
+      "status": "PASS",
+      "suite": "full",
+      "xsim_log": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\xsim_vv30_hperm_contract\\xsim.log"
+    },
+    {
+      "elapsed_seconds": 17.989,
+      "name": "inv_redirect_contract",
+      "pass_marker_count": 1,
+      "source_manifest": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\run_manifest.json",
+      "status": "PASS",
+      "suite": "full",
+      "xsim_log": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\xsim_inv_redirect_contract\\xsim.log"
+    },
+    {
+      "elapsed_seconds": 60.922,
+      "name": "mode_switch",
+      "pass_marker_count": 1,
+      "source_manifest": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\run_manifest.json",
+      "status": "PASS",
+      "suite": "full",
+      "xsim_log": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\xsim_mode_switch\\xsim.log"
+    },
+    {
+      "elapsed_seconds": 803.565,
+      "name": "pmul_pipeline_contract",
+      "pass_marker_count": 1,
+      "source_manifest": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\run_manifest.json",
+      "status": "PASS",
+      "suite": "full",
+      "xsim_log": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\xsim_pmul_pipeline_contract\\xsim.log"
+    },
+    {
+      "elapsed_seconds": 772.225,
+      "name": "pmul_random_k",
+      "pass_marker_count": 1,
+      "source_manifest": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\run_manifest.json",
+      "status": "PASS",
+      "suite": "full",
+      "xsim_log": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\xsim_pmul_random_k\\xsim.log"
+    },
+    {
+      "elapsed_seconds": 11.336,
+      "name": "shift_align_basis",
+      "pass_marker_count": 1,
+      "source_manifest": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\run_manifest.json",
+      "status": "PASS",
+      "suite": "full",
+      "xsim_log": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\xsim_shift_align_basis\\xsim.log"
+    },
+    {
+      "elapsed_seconds": 14.291,
+      "name": "square_basis",
+      "pass_marker_count": 1,
+      "source_manifest": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\run_manifest.json",
+      "status": "PASS",
+      "suite": "full",
+      "xsim_log": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\xsim_square_basis\\xsim.log"
+    },
+    {
+      "elapsed_seconds": 18.2,
+      "name": "vrf_roundtrip",
+      "pass_marker_count": 1,
+      "source_manifest": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\run_manifest.json",
+      "status": "PASS",
+      "suite": "full",
+      "xsim_log": "E:\\HDEC\\cva6-vhdc-core\\tmp\\hdec_vv35_global_ppa_worktree\\tmp\\hdec_logs\\vv35_eval\\functional_20260803_103819_693\\xsim_vrf_roundtrip\\xsim.log"
+    }
+  ],
+  "unique_tests": 19
+}

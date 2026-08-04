@@ -1,3 +1,5 @@
+`timescale 1ns/1ps
+
 module tb_hdec_hdc_full_flow_v20;
     import hdec_pkg::*;
 
@@ -118,12 +120,15 @@ module tb_hdec_hdc_full_flow_v20;
         bit seen;
         begin
             while (!ready_o) @(posedge clk_i);
-            @(posedge clk_i);
+            // Drive the public request interface half a cycle away from the
+            // active edge so this testbench is valid for SDF timing simulation
+            // as well as RTL simulation.
+            @(negedge clk_i);
             valid_i     <= 1'b1;
             operator_i  <= op;
             operand_a_i <= a;
             operand_b_i <= '0;
-            @(posedge clk_i);
+            @(negedge clk_i);
             valid_i     <= 1'b0;
             operator_i  <= HDEC_VWR64;
             operand_a_i <= '0;
@@ -132,8 +137,10 @@ module tb_hdec_hdc_full_flow_v20;
             result = 'x;
             seen = 1'b0;
             for (int cycles = 0; cycles < 10000 && !seen; cycles++) begin
-                @(posedge clk_i);
-                #1;
+                // Sample returned data at the opposite edge. Post-route output
+                // delay is not constrained by the standalone core's internal
+                // reg-to-reg timing budget and can exceed the RTL-only #1 tap.
+                @(negedge clk_i);
                 if (valid_o) begin
                     result = result_o;
                     seen = 1'b1;
@@ -283,6 +290,7 @@ module tb_hdec_hdc_full_flow_v20;
         rst_ni      = 1'b0;
 
         repeat (8) @(posedge clk_i);
+        @(negedge clk_i);
         rst_ni = 1'b1;
         repeat (40) @(posedge clk_i);
 

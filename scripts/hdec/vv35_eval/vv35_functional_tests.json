@@ -1,0 +1,158 @@
+{
+  "schema": "hdec-vv35-functional-tests-v1",
+  "tests": {
+    "shift_align_basis": {
+      "runner": "vv30_generic",
+      "legacy_name": "shift_align_basis",
+      "pass_marker": "[VV30:shift_align_basis] PASS"
+    },
+    "fused_map_unit": {
+      "runner": "vv30_generic",
+      "legacy_name": "fused_map_unit",
+      "pass_marker": "[VV30:fused_map_unit] PASS"
+    },
+    "diag_native_map": {
+      "runner": "vv30_generic",
+      "legacy_name": "diag_native_map",
+      "pass_marker": "[VV30:diag_native_map] PASS"
+    },
+    "square_basis": {
+      "runner": "vv30_generic",
+      "legacy_name": "square_basis",
+      "pass_marker": "[VV30:square_basis] PASS"
+    },
+    "gfmac_tail_fusion": {
+      "runner": "vv30_generic",
+      "legacy_name": "gfmac_tail_fusion",
+      "pass_marker": "[VV30:gfmac_tail_fusion] PASS"
+    },
+    "inv_redirect_contract": {
+      "runner": "vv30_generic",
+      "legacy_name": "inv_redirect_contract",
+      "pass_marker": "[VV30:inv_redirect_contract] PASS"
+    },
+    "pmul_random_k": {
+      "runner": "vv30_generic",
+      "legacy_name": "pmul_random_k",
+      "pass_marker": "[VV30:pmul_random_k] PASS"
+    },
+    "vrf_roundtrip": {
+      "runner": "vv31_generic",
+      "top": "tb_vv31_vrf_roundtrip",
+      "file": "verif/hdec/vv31/unit/tb_vv31_vrf_roundtrip.sv",
+      "pass_marker": "[VV31:vrf_roundtrip] PASS"
+    },
+    "hdc_episode": {
+      "runner": "vv31_generic",
+      "top": "tb_vv31_hdc_episode",
+      "file": "verif/hdec/vv31/system/tb_vv31_hdc_episode.sv",
+      "pass_marker": "[VV31:hdc_episode] PASS"
+    },
+    "pmul_pipeline_contract": {
+      "runner": "vv31_generic",
+      "top": "tb_vv31_pmul_pipeline_contract",
+      "file": "verif/hdec/vv31/system/tb_vv31_pmul_pipeline_contract.sv",
+      "pass_marker": "[VV31:pmul_pipeline_contract] PASS"
+    },
+    "ecc_schedule_trace": {
+      "runner": "vv31_generic",
+      "top": "tb_vv31_ecc_schedule_trace",
+      "file": "verif/hdec/vv31/system/tb_vv31_ecc_schedule_trace.sv",
+      "pass_marker": "[VV31:ecc_schedule_trace] PASS"
+    },
+    "mode_switch": {
+      "runner": "vv31_generic",
+      "top": "tb_vv31_mode_switch",
+      "file": "verif/hdec/vv31/system/tb_vv31_mode_switch.sv",
+      "pass_marker": "[VV31:mode_switch] PASS"
+    },
+    "ecc_state_profile": {
+      "runner": "vv31_generic",
+      "top": "tb_vv31_ecc_state_profile",
+      "file": "verif/hdec/vv31/system/tb_vv31_ecc_state_profile.sv",
+      "pass_marker": "[VV31:ecc_state_profile] PASS"
+    },
+    "baseline_gap": {
+      "runner": "vv31_generic",
+      "top": "tb_vv31_baseline_gap",
+      "file": "verif/hdec/vv31/system/tb_vv31_baseline_gap.sv",
+      "pass_marker": "[VV31:baseline_gap] PASS"
+    },
+    "hdc_full_flow": {
+      "runner": "dedicated_tcl",
+      "script": "scripts/hdec/vv35_eval/vv35_hdc_full_flow_relaxed.tcl",
+      "result_log": "xsim_hdc_full_flow_v20_relaxed/xsim.log",
+      "pass_marker": "[HDEC_HDC_FULL_FLOW_V20] PASS"
+    },
+    "hperm_contract": {
+      "runner": "dedicated_tcl",
+      "script": "scripts/hdec/vv30/vv30_hperm_contract.tcl",
+      "result_log": "xsim_vv30_hperm_contract/xsim.log",
+      "pass_marker": "[VV30:hperm_contract] PASS"
+    },
+    "ecc_add_direct": {
+      "runner": "dedicated_tcl",
+      "script": "scripts/hdec/xsim_hdec_ecc_add_v1.tcl",
+      "result_log": "xsim_ecc_add_v1/xsim.log",
+      "pass_marker": "[HDEC_ECC_ADD_V1] PASS"
+    },
+    "ecc_reduce_direct": {
+      "runner": "dedicated_tcl",
+      "script": "scripts/hdec/xsim_hdec_ecc_reduce_v1.tcl",
+      "result_log": "xsim_ecc_reduce_v1/xsim.log",
+      "pass_marker": "[HDEC_ECC_REDUCE_V1] PASS"
+    },
+    "ecc_inv_direct": {
+      "runner": "dedicated_tcl",
+      "script": "scripts/hdec/xsim_hdec_ecc_inv_v17.tcl",
+      "result_log": "xsim_ecc_inv_v17/xsim.log",
+      "pass_marker": "[HDEC_ECC_INV_V17] PASS"
+    }
+  },
+  "suites": {
+    "smoke": [
+      "shift_align_basis",
+      "fused_map_unit",
+      "vrf_roundtrip",
+      "hdc_episode"
+    ],
+    "quick": [
+      "shift_align_basis",
+      "fused_map_unit",
+      "square_basis",
+      "gfmac_tail_fusion",
+      "pmul_random_k",
+      "hdc_episode",
+      "mode_switch"
+    ],
+    "full": [
+      "shift_align_basis",
+      "fused_map_unit",
+      "diag_native_map",
+      "square_basis",
+      "gfmac_tail_fusion",
+      "inv_redirect_contract",
+      "pmul_random_k",
+      "vrf_roundtrip",
+      "hdc_episode",
+      "pmul_pipeline_contract",
+      "ecc_schedule_trace",
+      "mode_switch",
+      "ecc_state_profile",
+      "baseline_gap",
+      "ecc_add_direct",
+      "ecc_reduce_direct",
+      "ecc_inv_direct",
+      "hdc_full_flow",
+      "hperm_contract"
+    ],
+    "ecc_direct": [
+      "ecc_add_direct",
+      "ecc_reduce_direct",
+      "ecc_inv_direct"
+    ],
+    "hdc_direct": [
+      "hdc_full_flow"
+    ]
+  }
+}

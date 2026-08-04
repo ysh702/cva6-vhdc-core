@@ -1,0 +1,11 @@
+run_label=vv35_postroute_repair
+vivado_version=2024.2
+input_checkpoint=E:/HDEC/cva6-vhdc-core/tmp/hdec_vv35_global_ppa_worktree/reports/hdec/vv35_eval_route_timing_20260803/dcp/05_route.dcp
+period_ns=5.0
+implementation_strategy=postroute_phys_opt_AggressiveExplore+route_AggressiveExplore
+internal_reg2reg_wns_ns=0.042
+internal_reg2reg_data_delay_ns=4.696
+internal_reg2reg_fmax_est_mhz=201.694
+internal_reg2reg_endpoint=FSM_onehot_st_q_reg[30]/CE
+ooc_io_caveat=Package IO paths are not placement-accurate without HD.PARTPIN_LOCS; use internal reg-to-reg timing as the core timing evidence.
+checkpoint=E:/HDEC/cva6-vhdc-core/tmp/hdec_vv35_global_ppa_worktree/reports/hdec/vv35_eval_postroute_repair_20260803/dcp/02_postroute_repaired.dcp

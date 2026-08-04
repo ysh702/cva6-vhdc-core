@@ -1,0 +1,7 @@
+run_label=gate_interleaved_1632
+vivado_version=2024.2
+checkpoint=E:/HDEC/cva6-vhdc-core/tmp/hdec_vv35_global_ppa_worktree/reports/hdec/vv35_eval_postroute_repair_20260803/dcp/02_postroute_repaired.dcp
+activity_mode=saif
+saif_file=E:/HDEC/cva6-vhdc-core/tmp/hdec_vv35_global_ppa_worktree/tmp/hdec_logs/vv35_eval/gate_saif_full_sdf_20260803/interleaved/interleaved/interleaved_1632_gate_active.saif
+strip_path=tb_vv35_schedule_gate/dut
+power_report=E:/HDEC/cva6-vhdc-core/tmp/hdec_vv35_global_ppa_worktree/reports/hdec/vv35_eval_gate_saif_full_sdf_20260803/interleaved/interleaved/gate_interleaved_1632_power.rpt

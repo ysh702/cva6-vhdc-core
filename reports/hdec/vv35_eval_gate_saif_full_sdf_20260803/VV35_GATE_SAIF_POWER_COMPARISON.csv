@@ -1,0 +1,3 @@
+scenario,cycles,time_ms,total_power_w,dynamic_power_w,static_power_w,total_energy_mj,dynamic_energy_mj,matched_nets,total_nets,annotation_percent,confidence,saif_sha256
+SERIAL,337853,1.689265,0.235,0.130,0.105,0.396977275,0.219604450,4139,7284,57,High,b76fa03c07c9ba429e9926578c77256cdab41777b8dd45a546ee392bf734ed8e
+INTERLEAVED,200144,1.000720,0.285,0.180,0.105,0.285205200,0.180129600,4139,7284,57,High,38af13129f5cec00e0d0c9e55e7680d5392a677d20c2b2f203c9b23bcc4dcb9b

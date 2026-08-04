@@ -1,0 +1,7 @@
+schema_version,scenario,vrf_mode,status,branch,commit,rtl_sha256,ddc_sha256,netlist_sha256,sdf_sha256,saif_sha256,tool,tool_version,technology_nm,library,process_corner,voltage_v,temperature_c,clock_period_ns,frequency_hz,workload_bundle_sha256,pmul_count,hmatch_count,cycles,time_s,saif_duration_ns,saif_annotation_percent,saif_unmatched_objects,combinational_area_um2,sequential_area_um2,memory_area_um2,total_cell_area_um2,cell_count,flop_count,wns_ns,tns_ns,critical_path_ns,unconstrained_endpoints,internal_power_mw,switching_power_mw,dynamic_power_mw,leakage_power_mw,clock_power_mw,memory_power_mw,total_power_mw,total_energy_mj,dynamic_energy_mj,memory_impl,sram_macro,qualification,evidence_path
+v1,SERIAL,REG_VRF,NOT_RUN,,,,,,,,,,,,,,,,,,1,1632,337853,,,,,,,,,,,,,,,,,,,,,,,,register_vrf,,PRE_LAYOUT_COMPLETE_REGISTER_VRF,
+v1,SERIAL,BLACKBOX_VRF,NOT_RUN,,,,,,,,,,,,,,,,,,1,1632,337853,,,,,,,,,,,,,,,,,,,,,,,,excluding_vrf_sram,,PRE_LAYOUT_LOGIC_CORE_EXCLUDING_VRF_SRAM,
+v1,SERIAL,SRAM_MACRO_VRF,NOT_RUN,,,,,,,,,,,,,,,,,,1,1632,337853,,,,,,,,,,,,,,,,,,,,,,,,sram_macro,,PRE_LAYOUT_COMPLETE_SRAM_MACRO_VRF,
+v1,INTERLEAVED,REG_VRF,NOT_RUN,,,,,,,,,,,,,,,,,,1,1632,200144,,,,,,,,,,,,,,,,,,,,,,,,register_vrf,,PRE_LAYOUT_COMPLETE_REGISTER_VRF,
+v1,INTERLEAVED,BLACKBOX_VRF,NOT_RUN,,,,,,,,,,,,,,,,,,1,1632,200144,,,,,,,,,,,,,,,,,,,,,,,,excluding_vrf_sram,,PRE_LAYOUT_LOGIC_CORE_EXCLUDING_VRF_SRAM,
+v1,INTERLEAVED,SRAM_MACRO_VRF,NOT_RUN,,,,,,,,,,,,,,,,,,1,1632,200144,,,,,,,,,,,,,,,,,,,,,,,,sram_macro,,PRE_LAYOUT_COMPLETE_SRAM_MACRO_VRF,

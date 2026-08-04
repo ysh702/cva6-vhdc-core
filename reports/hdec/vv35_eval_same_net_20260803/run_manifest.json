@@ -1,0 +1,99 @@
+{
+  "schema": "hdec-vv35-same-netlist-schedule-evidence-v1",
+  "status": "PASS",
+  "generated_at_local": "2026-08-03T10:46:38+08:00",
+  "branch": "VV35",
+  "commit": "ba053f51f26c2be318626ab27a3d830cc5d32a44",
+  "vivado_xsim_version": "2024.2",
+  "clock_period_ns": 5.0,
+  "same_default_rtl": true,
+  "dut_parameter_override": false,
+  "runtime_selector": "XSim -testplusarg through response file",
+  "compiled_rtl_tree_sha256": "5c1d82f34d45267efcdf1590df5d2fc50b90c236c5853baf11c43d0dfbbb8586",
+  "hdec_top_sha256": "562e221b70d38ae2c291a0658339c7fbc8329a846cfda0100ab2040d2f753585",
+  "testbench_sha256": "4c73dcd613b72a7157dc8347506d74bd50951855a1250cd6bcb6d6458456d838",
+  "functional_snapshot": {
+    "name": "tb_vv35_schedule_evidence",
+    "xsimk_sha256": "566ff8262e24c20be064036984b799609094f6870d859b74eabf8925cf776a6a",
+    "xsim_mem_sha256": "ad994e36d31b19764701f6a3b02c6818e00ed7fea77e41f4a2b700937fa41782"
+  },
+  "saif_snapshot": {
+    "name": "tb_vv35_schedule_evidence_saif",
+    "elaboration_debug": "typical",
+    "xsimk_sha256": "c2c2afa2bf45c1a02149995c8f5b843f56dc1556ee62b0596f7f2f8f28b88467",
+    "xsim_mem_sha256": "405a713f73b0896bb5f7796dab0c5ccac02e72bf5b78b7840420273ae695f324"
+  },
+  "vectors": {
+    "manifest_sha256": "1a79121c84b9147bdd366d88165cc48df8d9037a283552a3acbfcdc1e4afaa73",
+    "seed_hex": "5e64d25ad069e9dc110f43a15c2f42df1aac40f9c6f076610578220ee23e8937",
+    "k_hex": "0000002fa9f8d054ea7fd4613721adbba762ed34fd11b768a6bff1725e8ce89a",
+    "k_hamming_weight": 128,
+    "task_count": 1632,
+    "task_type": "four-class resident HMATCH"
+  },
+  "results": {
+    "serial": {
+      "status": "PASS",
+      "wall_cycles": 337853,
+      "pmul_wall_cycles": 146908,
+      "hmatch_completed": 1632,
+      "shared_resource_conflicts": 0,
+      "unknown_events": 0,
+      "log_sha256": "892eb24acb481692a373e6310ef0a3dd99f93053335019895f417a0b1d9ad8bb",
+      "response_file_sha256": "b0d57a43b4758be612d37a3c2b58f532e6a35a6e0542ba657e93caf27841240e"
+    },
+    "interleaved": {
+      "status": "PASS",
+      "wall_cycles": 200144,
+      "pmul_wall_cycles": 200144,
+      "hmatch_completed": 1632,
+      "pair_accept": 1177,
+      "pair_product": 18832,
+      "pair_pop": 18832,
+      "pair_response": 1177,
+      "shared_resource_conflicts": 0,
+      "unknown_events": 0,
+      "log_sha256": "9d6c50720d4acb3519d3c85b22cc08fb9558473ecf5c85d255ba36bd72fc3033",
+      "response_file_sha256": "5f4313af756113e7a57ad3848fc91d3b9eb7cddac91c7e02f004d777871e512d"
+    },
+    "comparison": {
+      "saved_cycles": 137709,
+      "makespan_reduction_percent": 40.7600346896431,
+      "speedup": 1.68804960428491
+    }
+  },
+  "saif": {
+    "scope": "tb_vv35_schedule_evidence/h/dut",
+    "activity_source": "RTL timing-free XSim activity, not board measurement and not SDF gate-level activity",
+    "serial": {
+      "duration_ps": 1689270000,
+      "duration_cycles": 337854,
+      "tail_cycles_beyond_strict_makespan": 1,
+      "tail_fraction_percent": 0.0002959861230151271,
+      "bytes": 7084491,
+      "sha256": "f28efaf330f5fe2adc5c33ebbb068137498b8e3d221d82ce9a10a87902231d03",
+      "log_sha256": "f499743d407c12cafe321b27708e83173f1d63d729f910fed9c62077703ad189"
+    },
+    "interleaved": {
+      "duration_ps": 1000735000,
+      "duration_cycles": 200147,
+      "tail_cycles_beyond_strict_makespan": 3,
+      "tail_fraction_percent": 0.0014989208779003117,
+      "bytes": 7064315,
+      "sha256": "51ed112ca3987d21dace576ffdb176bdf0e412abc075a1997ffca075f3e33938",
+      "log_sha256": "9f8f04ebb70a51c44e27a07a692729f90e8bc7f5308a1d3b416a3a1b500c0f4c"
+    },
+    "energy_time_policy": "Use strict wall cycles, 337853 and 200144, at 5 ns per cycle. Do not use the short SAIF bookkeeping tails as task time.",
+    "maximum_average_power_window_error_bound_percent": 0.002
+  },
+  "artifacts": {
+    "serial_log": "tmp/hdec_logs/vv35_eval/schedule_same_net_smoke/serial_1632.log",
+    "interleaved_log": "tmp/hdec_logs/vv35_eval/schedule_same_net_smoke/interleaved_1632.log",
+    "serial_saif_log": "tmp/hdec_logs/vv35_eval/schedule_same_net_smoke/serial_1632_saif.log",
+    "interleaved_saif_log": "tmp/hdec_logs/vv35_eval/schedule_same_net_smoke/interleaved_1632_saif.log",
+    "serial_saif": "tmp/hdec_logs/vv35_eval/schedule_same_net_smoke/serial_1632_active.saif",
+    "interleaved_saif": "tmp/hdec_logs/vv35_eval/schedule_same_net_smoke/interleaved_1632_active.saif",
+    "metrics_csv": "reports/hdec/vv35_eval_same_net_20260803/VV35_SAME_NET_METRICS.csv",
+    "report_md": "reports/hdec/vv35_eval_same_net_20260803/VV35_SAME_NET_SCHEDULING_REPORT.md"
+  }
+}

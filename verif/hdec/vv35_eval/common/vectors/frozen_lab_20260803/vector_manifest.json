@@ -1,0 +1,177 @@
+{
+  "checks": {
+    "hdc_query_noise_has_fixed_weight": true,
+    "hperm_rotations_are_4_bit_aligned": true,
+    "pmul_expected_points_on_curve": true,
+    "pmul_points_on_curve": true,
+    "primary_random_k_excludes_3": true,
+    "scalar_high_23_zero": true,
+    "scalar_range": true,
+    "scalar_unique": true
+  },
+  "counts": {
+    "episodes": 2,
+    "fields": 64,
+    "hdc_noise_weight": 32,
+    "scalars": 1,
+    "training_samples_per_episode": 4
+  },
+  "expander": "SHA-256(seed || domain_length || domain || counter_be64)",
+  "files": {
+    "gf_a_inputs.mem": {
+      "count": 64,
+      "sha256": "917f2859b739f3e49ebbd218906acdff7a5c6016ddc7940a538cd4e9720ac3cc",
+      "width_bits": 256
+    },
+    "gf_b_inputs.mem": {
+      "count": 64,
+      "sha256": "948ce4f8f77f36884783a59927556ad3eff397cbcd79f32cca0883a7210c45cc",
+      "width_bits": 256
+    },
+    "gf_mul_expected.mem": {
+      "count": 64,
+      "sha256": "a4cbd01c2eeb137e9fd329974a03a9848f61c129c5c23dd941c70b109b73f0dc",
+      "width_bits": 256
+    },
+    "hdc_bound_expected.mem": {
+      "count": 8,
+      "sha256": "1f2641a370896acb605a37dd0c0fea786fadc680dba29e426300d0cddee86f5d",
+      "width_bits": 1024
+    },
+    "hdc_episode_count.mem": {
+      "count": 1,
+      "sha256": "129805c9e04279ac36de91e8a541a3b3ff5bdda8542b6e7dec6f7771439362cf",
+      "width_bits": 32
+    },
+    "hdc_hmatch_expected.mem": {
+      "count": 2,
+      "sha256": "7e4124dc23e15ea818e52a5c0a893711c8727ec55264206e2b26628e45ec8419",
+      "width_bits": 64
+    },
+    "hdc_hsim_expected.mem": {
+      "count": 2,
+      "sha256": "936b8ce17c48f5c95c95286b8667618f99538c39a1729a0d529c9176f71e68f3",
+      "width_bits": 32
+    },
+    "hdc_noise_masks.mem": {
+      "count": 2,
+      "sha256": "dddfde6e6747eb35168d0a9049ee5f9b0ec6ca3e4628f3ffc69e1d9e714d41ac",
+      "width_bits": 1024
+    },
+    "hdc_permuted_roles_expected.mem": {
+      "count": 8,
+      "sha256": "316120f435fa1f88df2c0d1f8e8a49f6adb579e1f2b82df43a3e90135c7ea902",
+      "width_bits": 1024
+    },
+    "hdc_prototypes_expected.mem": {
+      "count": 2,
+      "sha256": "c05736982dbae6893a793abc0c74c1f2e6da175571761476e91ada1904c86c0e",
+      "width_bits": 1024
+    },
+    "hdc_query_source.mem": {
+      "count": 2,
+      "sha256": "cef0f1cb5e982dd87fb5220fe77f2a18be3de36609e310b39fcadd04dd5cf91c",
+      "width_bits": 32
+    },
+    "hdc_query_vectors.mem": {
+      "count": 2,
+      "sha256": "58ca89636b97a98045a8f0fd310cb763fd4b44d0b913bc2e40458d452ae4cd45",
+      "width_bits": 1024
+    },
+    "hdc_role_rotations.mem": {
+      "count": 8,
+      "sha256": "d52dd975b7b84f4f34d3d2250c848167c61f57edf6aca04c9cfbc7eea7ea5f55",
+      "width_bits": 32
+    },
+    "hdc_role_vectors.mem": {
+      "count": 8,
+      "sha256": "840741228794907b239210bd0e41f481dc7772b281a70dd413deabdc3fe2e914",
+      "width_bits": 1024
+    },
+    "hdc_train_samples.mem": {
+      "count": 8,
+      "sha256": "58cc9946a9c79660571207a4ce2f07a2eb43c48f2cd6d7c9569e59b89662dfbc",
+      "width_bits": 1024
+    },
+    "master_seed.mem": {
+      "count": 1,
+      "sha256": "c19b108743fcf210ef18b5c65a5a65b33f351a7d6741b398a252852881b23989",
+      "width_bits": 256
+    },
+    "pmul_directed_scalars.mem": {
+      "count": 8,
+      "sha256": "46fc5b449f26d2cd822998bb302e3d586c7310916d169d280e44deab358df374",
+      "width_bits": 256
+    },
+    "pmul_expected_x.mem": {
+      "count": 1,
+      "sha256": "0bc0dbdc420279acbaaa57a7abd775f32d4fb1d7c6a96b3a0debd6e9fbf139a6",
+      "width_bits": 256
+    },
+    "pmul_expected_y.mem": {
+      "count": 1,
+      "sha256": "4b1a4d2929a6719e8d9b43fef6db1ecb92682dc73aef15e918d93a0060ab8c06",
+      "width_bits": 256
+    },
+    "pmul_point_multipliers.mem": {
+      "count": 1,
+      "sha256": "1d0d557f2560ba49f0105a954a3042dd8d7dfc305b4e198844f0ed26a70ef0fd",
+      "width_bits": 256
+    },
+    "pmul_point_x.mem": {
+      "count": 1,
+      "sha256": "a4f31eb0ec45a09b0d183519642648506d4936458bb11b3bb29f2b0bb6270f95",
+      "width_bits": 256
+    },
+    "pmul_point_y.mem": {
+      "count": 1,
+      "sha256": "2878fe148704fae2bdc57080a22379ab021457e44bcf4a193acc08c4d19f8276",
+      "width_bits": 256
+    },
+    "pmul_scalars.mem": {
+      "count": 1,
+      "sha256": "6daa640a207dc2509d691f48b3362a73862ee3ae2caba056fe942695dbed8251",
+      "width_bits": 256
+    },
+    "scalar_count.mem": {
+      "count": 1,
+      "sha256": "4f12fa9e685428bcf226169192fb132acdfe38da0785eda1a6bbb137c51d4976",
+      "width_bits": 32
+    },
+    "square_expected.mem": {
+      "count": 64,
+      "sha256": "4afe3273053d64bd30b3c2a5d95a18edddd993de6af9580388760f21155411fe",
+      "width_bits": 256
+    },
+    "square_inputs.mem": {
+      "count": 64,
+      "sha256": "c3f267d25165a772da72173fde17bc42397784b2ee0d175517c8b963f0867552",
+      "width_bits": 256
+    }
+  },
+  "hdc_episode_contract": {
+    "binding": "sample XOR ROTR1024(role, rotation)",
+    "clip_semantics": "bitwise OR of four encoded samples",
+    "match_candidates": 1,
+    "similarity_semantics": "popcount(query AND prototype)",
+    "training_samples": 4
+  },
+  "profile": "quick",
+  "scalars": [
+    {
+      "hamming_weight": 128,
+      "hex": "0000002fa9f8d054ea7fd4613721adbba762ed34fd11b768a6bff1725e8ce89a"
+    }
+  ],
+  "schema": "hdec-vv31-vectors-v1",
+  "sect233k1_order_hex": "0000008000000000000000000000000000069d5bb915bcd46efb1ad5f173abdf",
+  "seed_hex": "5e64d25ad069e9dc110f43a15c2f42df1aac40f9c6f076610578220ee23e8937",
+  "seed_source": "windows_os_csprng",
+  "suite": "quick",
+  "system_pmul_random_k": {
+    "expected_generation": "K*P=(K*t mod n)*G",
+    "point_generation": "P=t*G with random unique 1<=t<n",
+    "primary_k3_policy": "excluded; present only in directed vectors",
+    "status": "READY"
+  }
+}

@@ -1,0 +1,4 @@
+probe,clock_model,physical_strategy,logic_lut,ff,bram,dsp,internal_wns_ns,estimated_fmax_mhz,total_power_w,dynamic_power_w,static_power_w,power_confidence
+default_ooc,missing_HD_CLK_SRC,default_place_route,4688,1513,4,0,-0.254,190.331,0.310,0.204,0.106,Medium
+methodology_corrected,BUFGCTRL_X0Y0,phys_opt_Explore_route_Explore,4694,1513,4,0,-0.054,197.863,0.312,0.206,0.106,Medium
+postroute_repair,BUFGCTRL_X0Y0,postroute_phys_opt_AggressiveExplore_route_AggressiveExplore,4694,1513,4,0,0.042,201.694,0.312,0.206,0.106,Medium

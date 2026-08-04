@@ -1,0 +1,2 @@
+﻿"scenario","task_count","wall_cycles","total_power_w","dynamic_power_w","total_energy_mj","dynamic_energy_mj","matched_nets_percent","matched_nets","design_nets","power_confidence","use_sdf"
+"SERIAL","1632","337853","0.235","0.13","0.396977275","0.21960445","57","4139","7284","High","True"

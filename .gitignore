@@ -22,6 +22,7 @@ build/
 *.fsdb
 *.log
 *.out
+/out/hdec_vv35_asic/
 *.jou
 *.o
 uart
