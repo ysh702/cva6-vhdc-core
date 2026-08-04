@@ -1,0 +1,5 @@
+internal_power_mw=26.6568
+switching_power_mw=2.4552
+leakage_power_mw=0.1774459
+dynamic_power_mw=29.112
+total_power_mw=29.2894459

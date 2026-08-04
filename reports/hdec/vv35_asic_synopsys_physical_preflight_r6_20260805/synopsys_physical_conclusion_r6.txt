@@ -1,0 +1,15 @@
+r5_manifest_binding_status=PASS
+safe_native_parse=0
+shell_marker_pass_count=0
+physical_implementation_shell_pass_count=0
+primetime_db_parse_pass_count=0
+all_db_parse_pass_count=0
+milkyway_native_parse_pass_count=0
+ndm_readonly_parse_pass_count=0
+starrc_runtime_pass_count=0
+matched_rc_technology_count=0
+physical_flow_status=BLOCKED_NO_NATIVE_PHYSICAL_IMPLEMENTATION_SHELL
+server_roots_modified=0
+gpdk045_used=0
+place_and_route_executed=0
+diagnostic_execution_status=PASS

@@ -1,0 +1,77 @@
+Information: Updating design information... (UID-85)
+Warning: Design 'hdec_top' contains 1 high-fanout nets. A fanout number of 1000 will be used for delay calculations involving these nets. (TIM-134)
+Warning: There are 1 switching activity information conflicts. (PWR-19)
+Information: Propagating switching activity (high effort zero delay simulation). (PWR-6)
+ 
+****************************************
+Report : power
+        -analysis_effort high
+        -verbose
+Design : hdec_top
+Version: T-2022.03-SP5-2
+Date   : Wed Aug  5 02:59:46 2026
+****************************************
+
+
+Library(s) Used:
+
+    CORE65LPSVT (File: /data/65nmlib/CORE65LPSVT_SNPS-AVT-CDS_4.1/CORE65LPSVT_SNPS-AVT-CDS_4.1/CORE65LPSVT_SNPS-AVT-CDS_4.1/libs/CORE65LPSVT_wc_1.00V_125C.db)
+
+
+Operating Conditions: wc_1.00V_125C   Library: CORE65LPSVT
+Wire Load Model Mode: enclosed
+
+Design        Wire Load Model            Library
+------------------------------------------------
+hdec_top               area_234Kto312K   CORE65LPSVT
+hdec_vrf_64x256        area_234Kto312K   CORE65LPSVT
+hdec_vector_payload_4x64_1
+                       area_12Kto18K     CORE65LPSVT
+hdec_cnt_array_3       area_0Kto1K       CORE65LPSVT
+hdec_lane_clip_3       area_0Kto1K       CORE65LPSVT
+hdec_cnt_array_2       area_0Kto1K       CORE65LPSVT
+hdec_lane_clip_2       area_0Kto1K       CORE65LPSVT
+hdec_cnt_array_1       area_0Kto1K       CORE65LPSVT
+hdec_lane_clip_1       area_0Kto1K       CORE65LPSVT
+hdec_cnt_array_0       area_0Kto1K       CORE65LPSVT
+hdec_lane_clip_0       area_0Kto1K       CORE65LPSVT
+hdec_gf2_contribution_row_tile_8x32
+                       area_4Kto5K       CORE65LPSVT
+hdec_xor1_shared_8x32  area_0Kto1K       CORE65LPSVT
+
+
+Global Operating Voltage = 1    
+Power-specific unit information :
+    Voltage Units = 1V
+    Capacitance Units = 1.000000pf
+    Time Units = 1ns
+    Dynamic Power Units = 1mW    (derived from V,C,T units)
+    Leakage Power Units = 1mW
+
+
+Attributes
+----------
+i - Including register clock pin internal power
+
+
+  Cell Internal Power  =  26.2045 mW   (92%)
+  Net Switching Power  =   2.2056 mW    (8%)
+                         ---------
+Total Dynamic Power    =  28.4100 mW  (100%)
+
+Cell Leakage Power     = 177.4186 uW
+
+                 Internal         Switching           Leakage            Total                         Cell
+Power Group      Power            Power               Power              Power   (   %    )  Attrs  Count
+---------------------------------------------------------------------------------------------------------
+io_pad             0.0000            0.0000            0.0000            0.0000  (   0.00%)            0
+memory             0.0000            0.0000            0.0000            0.0000  (   0.00%)            0
+black_box          0.0000            0.0000            0.0000            0.0000  (   0.00%)            0
+clock_network     24.4859            0.0000            0.0000           24.4859  (  85.65%)            0
+                                                                                             i
+register           0.3300            0.2478        9.2551e-02            0.6704  (   2.34%)            18082
+sequential         0.0000            0.0000            0.0000            0.0000  (   0.00%)            0
+combinational      1.3900            1.9578        8.4867e-02            3.4325  (  12.01%)            37825
+---------------------------------------------------------------------------------------------------------
+Total             26.2059 mW         2.2056 mW         0.1774 mW        28.5888 mW
+1

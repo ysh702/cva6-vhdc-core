@@ -1,0 +1,296 @@
+
+                           Design Compiler Graphical 
+                                 DC Ultra (TM)
+                                  DFTMAX (TM)
+                              Power Compiler (TM)
+                                 DesignWare (R)
+                                 DC Expert (TM)
+                               Design Vision (TM)
+                               HDL Compiler (TM)
+                               VHDL Compiler (TM)
+                                  DFT Compiler
+                               Design Compiler(R)
+
+              Version T-2022.03-SP5-2 for linux64 - Jan 31, 2023 
+
+                    Copyright (c) 1988 - 2023 Synopsys, Inc.
+   This software and the associated documentation are proprietary to Synopsys,
+ Inc. This software may only be used in accordance with the terms and conditions
+ of a written license agreement with Synopsys, Inc. All other use, reproduction,
+   or distribution of this software is strictly prohibited.  Licensed Products
+     communicate with Synopsys servers for the purpose of providing software
+    updates, detecting software piracy and verifying that customers are using
+    Licensed Products in conformity with the applicable License Key for such
+  Licensed Products. Synopsys will use information gathered in connection with
+    this process to deliver software updates and pursue software pirates and
+                                   infringers.
+
+ Inclusivity & Diversity - Visit SolvNetPlus to read the "Synopsys Statement on
+            Inclusivity and Diversity" (Refer to article 000036315 at
+                        https://solvnetplus.synopsys.com)
+Initializing...
+proc required_env {name} {
+    if {![info exists ::env($name)] || [string trim $::env($name)] eq ""} {
+        error "Required environment variable $name is not set"
+    }
+    return [string trim $::env($name)]
+}
+proc optional_env {name default_value} {
+    if {[info exists ::env($name)] && [string trim $::env($name)] ne ""} {
+        return [string trim $::env($name)]
+    }
+    return $default_value
+}
+proc fatal {message} {
+    puts stderr "FATAL: $message"
+    exit 2
+}
+proc annotation_percent_from_verbose_report {text} {
+    # Preserve the R13 read_saif -verbose parser as an independent lower-bound
+    # signal when that report contains machine-readable percentages.
+    # Use the minimum reported positive annotation/coverage value; choosing the
+    # maximum could hide a poorly annotated material sub-block behind a 100%
+    # top-level line.  Explicit "not annotated" percentages are excluded
+    # because they are complements, not coverage values.
+    set worst -1.0
+    foreach line [split $text "\n"] {
+        if {![regexp -nocase {(annotat|coverage)} $line]} { continue }
+        if {[regexp -nocase {(not[ _-]*annotated|unannotated)} $line]} { continue }
+        if {[regexp -nocase {([0-9]+[.]?[0-9]*)[ \t]*%} $line -> value]} {
+            set numeric [expr {double($value)}]
+            if {$numeric <= 0.0} { continue }
+            if {$worst < 0.0 || $numeric < $worst} { set worst $numeric }
+        }
+    }
+    return $worst
+}
+proc key_value_from_text {text wanted} {
+    set value ""
+    foreach line [split $text "\n"] {
+        if {[regexp {^([^=]+)=(.*)$} $line -> key candidate] &&
+            [string trim $key] eq $wanted} {
+            set value [string trim $candidate]
+        }
+    }
+    return $value
+}
+set ddc_file [file normalize [required_env HDEC_DDC]]
+/data/home/2024student143/vv35_asic_final_20260804/out/hdec_vv35_asic_wc_1p00v_125c_r13/reg_vrf/synth/netlist/hdec_top.ddc
+set saif_file [file normalize [required_env HDEC_SAIF]]
+/data/home/2024student143/vv35_asic_final_20260804/out/hdec_vv35_asic_wc_1p00v_125c_r13/reg_vrf/gate_serial_sdf/serial_sdf.saif
+set out_dir [file normalize [required_env HDEC_POWER_OUT]]
+/data/home/2024student143/vv35_asic_final_20260804/out/hdec_vv35_asic_power_only_r16/reg_vrf/power_serial
+set instance_name [optional_env HDEC_SAIF_INSTANCE tb_vv35_schedule_gate/dut]
+tb_vv35_schedule_gate/dut
+set table_parser [file normalize [required_env HDEC_SAIF_TABLE_PARSER]]
+/data/home/2024student143/vv35_asic_final_20260804/out/vv35_r16_workspace/scripts/hdec/vv35_eval/asic/parse_report_saif_table.awk
+if {![file isfile $table_parser]} {
+    fatal "Strict report_saif table parser does not exist: $table_parser"
+}
+file mkdir $out_dir
+set target_libs [required_env HDEC_TARGET_LIBS]
+/data/65nmlib/CORE65LPSVT_SNPS-AVT-CDS_4.1/CORE65LPSVT_SNPS-AVT-CDS_4.1/CORE65LPSVT_SNPS-AVT-CDS_4.1/libs/CORE65LPSVT_wc_1.00V_125C.db
+set link_libs [optional_env HDEC_LINK_LIBS $target_libs]
+/data/65nmlib/CORE65LPSVT_SNPS-AVT-CDS_4.1/CORE65LPSVT_SNPS-AVT-CDS_4.1/CORE65LPSVT_SNPS-AVT-CDS_4.1/libs/CORE65LPSVT_wc_1.00V_125C.db
+set search_dirs {}
+foreach lib [concat $target_libs $link_libs] {
+    lappend search_dirs [file dirname [file normalize $lib]]
+}
+set_app_var search_path [concat $search_path $search_dirs]
+. /data/synopsys/syn/T-2022.03-SP5-2/libraries/syn /data/synopsys/syn/T-2022.03-SP5-2/dw/syn_ver /data/synopsys/syn/T-2022.03-SP5-2/dw/sim_ver /data/65nmlib/CORE65LPSVT_SNPS-AVT-CDS_4.1/CORE65LPSVT_SNPS-AVT-CDS_4.1/CORE65LPSVT_SNPS-AVT-CDS_4.1/libs /data/65nmlib/CORE65LPSVT_SNPS-AVT-CDS_4.1/CORE65LPSVT_SNPS-AVT-CDS_4.1/CORE65LPSVT_SNPS-AVT-CDS_4.1/libs
+set_app_var target_library $target_libs
+/data/65nmlib/CORE65LPSVT_SNPS-AVT-CDS_4.1/CORE65LPSVT_SNPS-AVT-CDS_4.1/CORE65LPSVT_SNPS-AVT-CDS_4.1/libs/CORE65LPSVT_wc_1.00V_125C.db
+set_app_var link_library [concat "*" $target_libs $link_libs]
+* /data/65nmlib/CORE65LPSVT_SNPS-AVT-CDS_4.1/CORE65LPSVT_SNPS-AVT-CDS_4.1/CORE65LPSVT_SNPS-AVT-CDS_4.1/libs/CORE65LPSVT_wc_1.00V_125C.db /data/65nmlib/CORE65LPSVT_SNPS-AVT-CDS_4.1/CORE65LPSVT_SNPS-AVT-CDS_4.1/CORE65LPSVT_SNPS-AVT-CDS_4.1/libs/CORE65LPSVT_wc_1.00V_125C.db
+read_ddc $ddc_file
+Loading db file '/data/65nmlib/CORE65LPSVT_SNPS-AVT-CDS_4.1/CORE65LPSVT_SNPS-AVT-CDS_4.1/CORE65LPSVT_SNPS-AVT-CDS_4.1/libs/CORE65LPSVT_wc_1.00V_125C.db'
+Loading db file '/data/synopsys/syn/T-2022.03-SP5-2/libraries/syn/gtech.db'
+Loading db file '/data/synopsys/syn/T-2022.03-SP5-2/libraries/syn/standard.sldb'
+  Loading link library 'CORE65LPSVT'
+  Loading link library 'gtech'
+Reading ddc file '/data/home/2024student143/vv35_asic_final_20260804/out/hdec_vv35_asic_wc_1p00v_125c_r13/reg_vrf/synth/netlist/hdec_top.ddc'.
+Information: Checking out the license 'DesignWare'. (SEC-104)
+Loaded 13 designs.
+Current design is 'hdec_top'.
+hdec_top hdec_vrf_64x256 hdec_vector_payload_4x64_1 hdec_cnt_array_3 hdec_lane_clip_3 hdec_cnt_array_2 hdec_lane_clip_2 hdec_cnt_array_1 hdec_cnt_array_0 hdec_gf2_contribution_row_tile_8x32 hdec_xor1_shared_8x32 hdec_lane_clip_0 hdec_lane_clip_1
+current_design hdec_top
+Current design is 'hdec_top'.
+{hdec_top}
+if {![link]} {
+    fatal "Link failed for hdec_top power analysis"
+}
+
+  Linking design 'hdec_top'
+  Using the following designs and libraries:
+  --------------------------------------------------------------------------
+  * (13 designs)              /data/home/2024student143/vv35_asic_final_20260804/out/hdec_vv35_asic_wc_1p00v_125c_r13/reg_vrf/synth/netlist/hdec_top.ddc, etc
+  CORE65LPSVT (library)       /data/65nmlib/CORE65LPSVT_SNPS-AVT-CDS_4.1/CORE65LPSVT_SNPS-AVT-CDS_4.1/CORE65LPSVT_SNPS-AVT-CDS_4.1/libs/CORE65LPSVT_wc_1.00V_125C.db
+
+catch {reset_switching_activity}
+0
+set read_report_text ""
+set read_status [catch {
+    redirect -variable read_report_text {
+        read_saif -input $saif_file -instance_name $instance_name -verbose
+    }
+} read_message]
+0
+set read_report [open [file join $out_dir read_saif_verbose.rpt] w]
+file13
+puts $read_report $read_report_text
+close $read_report
+set read_log [open [file join $out_dir read_saif_status.txt] w]
+file13
+puts $read_log "status=$read_status"
+puts $read_log "instance_name=$instance_name"
+puts $read_log "message=$read_message"
+close $read_log
+if {$read_status != 0} {
+    fatal "read_saif failed: $read_message"
+}
+# Design Compiler T-2022.03-SP5-2 does not expose update_power (CMD-005).
+# report_power evaluates power from the linked DDC and the activity already
+# loaded by read_saif, so invoking that unsupported command is neither needed
+# nor a valid prerequisite for these reports.
+if {[catch {
+    redirect -file [file join $out_dir power.rpt] {
+        report_power -analysis_effort high -verbose
+    }
+} power_error]} {
+    fatal "High-effort report_power is unavailable or failed: $power_error"
+}
+if {[catch {
+    redirect -file [file join $out_dir power_hierarchy.rpt] {
+        report_power -analysis_effort high -hierarchy -levels 6 -verbose
+    }
+} hierarchy_error]} {
+    fatal "High-effort hierarchical report_power failed: $hierarchy_error"
+}
+redirect -file [file join $out_dir timing.rpt] {report_timing -delay_type max -max_paths 50}
+redirect -file [file join $out_dir area.rpt] {report_area -hierarchy}
+set saif_audit [open [file join $out_dir saif_annotation_audit.rpt] w]
+file13
+set minimum_coverage [expr {double([optional_env HDEC_MIN_SAIF_ANNOTATION_PERCENT 99.0])}]
+99.0
+set verbose_coverage [annotation_percent_from_verbose_report $read_report_text]
+-1.0
+puts $saif_audit "read_saif_verbose_coverage_percent=$verbose_coverage"
+puts $saif_audit "report_saif_table_parser=$table_parser"
+if {[llength [info commands report_saif]] == 0} {
+    puts $saif_audit "report_saif_table_status=FAIL reason=command_not_installed"
+    close $saif_audit
+    fatal "report_saif is required for strict SAIF table audit"
+} elseif {[catch {redirect -variable report_text {report_saif -hierarchy}} report_error]} {
+    puts $saif_audit "report_saif_table_status=FAIL message=$report_error"
+    close $saif_audit
+    fatal "report_saif -hierarchy failed: $report_error"
+} else {
+    puts $saif_audit "report_saif_hierarchy=PASS"
+    puts $saif_audit $report_text
+}
+set report_file [file join $out_dir report_saif_hierarchy.rpt]
+/data/home/2024student143/vv35_asic_final_20260804/out/hdec_vv35_asic_power_only_r16/reg_vrf/power_serial/report_saif_hierarchy.rpt
+set report_handle [open $report_file w]
+file14
+puts $report_handle $report_text
+close $report_handle
+set parser_status [catch {exec awk -f $table_parser $report_file} parser_output]
+0
+puts $saif_audit "report_saif_table_parser_rc=$parser_status"
+puts $saif_audit $parser_output
+if {$parser_status != 0} {
+    puts $saif_audit "report_saif_table_status=FAIL reason=strict_parser_rejected_table"
+    close $saif_audit
+    fatal "Strict report_saif table parser rejected the table: $parser_output"
+}
+set table_status [key_value_from_text $parser_output table_status]
+PASS
+set report_coverage [key_value_from_text $parser_output user_annotated_min_percent]
+100.00
+set default_activity [key_value_from_text $parser_output default_activity_max_percent]
+0.00
+set propagated_activity [key_value_from_text $parser_output propagated_activity_max_percent]
+0.00
+if {$table_status ne "PASS" ||
+    ![string is double -strict $report_coverage] ||
+    ![string is double -strict $default_activity] ||
+    ![string is double -strict $propagated_activity]} {
+    puts $saif_audit "report_saif_table_status=FAIL reason=missing_machine_fields"
+    close $saif_audit
+    fatal "Strict report_saif table parser did not return required fields"
+}
+if {double($default_activity) != 0.0 || double($propagated_activity) != 0.0} {
+    puts $saif_audit "report_saif_table_status=FAIL reason=default_or_propagated_activity_nonzero"
+    close $saif_audit
+    fatal "Default and propagated SAIF activity must both be zero"
+}
+set annotation_coverage [expr {double($report_coverage)}]
+100.0
+if {$verbose_coverage >= 0.0 && $verbose_coverage < $annotation_coverage} {
+    set annotation_coverage $verbose_coverage
+}
+puts $saif_audit "report_saif_table_status=PASS"
+puts $saif_audit "report_saif_user_annotated_min_percent=$report_coverage"
+puts $saif_audit "report_saif_default_activity_max_percent=$default_activity"
+puts $saif_audit "report_saif_propagated_activity_max_percent=$propagated_activity"
+if {[llength [info commands report_switching_activity]] == 0} {
+    puts $saif_audit "optional_not_annotated_report=UNAVAILABLE reason=command_not_installed"
+} elseif {[catch {redirect -variable missing_text {report_switching_activity -list_not_annotated}} missing_error]} {
+    puts $saif_audit "optional_not_annotated_report=UNAVAILABLE message=$missing_error"
+} else {
+    puts $saif_audit "optional_not_annotated_report=PASS"
+    puts $saif_audit $missing_text
+}
+puts $saif_audit "annotation_coverage_percent=$annotation_coverage"
+puts $saif_audit "minimum_annotation_coverage_percent=$minimum_coverage"
+puts $saif_audit "coverage_reduction_rule=minimum_of_strict_Nets_Ports_Pins_user_annotated_and_machine_readable_read_saif_verbose"
+if {$annotation_coverage < 0.0} {
+    puts $saif_audit "audit_status=REVIEW_REQUIRED reason=coverage_not_machine_readable"
+} elseif {$annotation_coverage < $minimum_coverage} {
+    puts $saif_audit "audit_status=FAIL reason=coverage_below_threshold"
+} else {
+    puts $saif_audit "audit_status=PASS"
+}
+close $saif_audit
+if {$annotation_coverage < $minimum_coverage} {
+    fatal "SAIF annotation coverage $annotation_coverage is below required $minimum_coverage; inspect saif_annotation_audit.rpt"
+}
+set context [open [file join $out_dir power_context.txt] w]
+file13
+puts $context "ddc=$ddc_file"
+puts $context "saif=$saif_file"
+puts $context "saif_instance=$instance_name"
+puts $context "saif_annotation_percent=$annotation_coverage"
+puts $context "saif_annotation_minimum_percent=$minimum_coverage"
+puts $context "expected_saif_duration_ns=[optional_env HDEC_EXPECTED_SAIF_DURATION_NS NOT_SET]"
+puts $context "scenario=[optional_env HDEC_SCENARIO NOT_SET]"
+puts $context "vrf_mode=[optional_env HDEC_VRF_MODE NOT_SET]"
+set vrf_mode [string toupper [optional_env HDEC_VRF_MODE NOT_SET]]
+REG_VRF
+if {$vrf_mode eq "REG_VRF"} {
+    puts $context "qualification=PRE_LAYOUT_COMPLETE_REGISTER_VRF"
+} elseif {$vrf_mode eq "SRAM_MACRO_VRF"} {
+    puts $context "qualification=PRE_LAYOUT_COMPLETE_SRAM_MACRO_VRF"
+} else {
+    puts $context "qualification=PRE_LAYOUT_LOGIC_CORE_EXCLUDING_VRF_SRAM"
+}
+puts $context "saif_structural_coverage_requires_review=false"
+puts $context "saif_report_table_objects=Nets,Ports,Pins"
+puts $context "saif_default_activity_percent=$default_activity"
+puts $context "saif_propagated_activity_percent=$propagated_activity"
+close $context
+set execution_status [open [file join $out_dir power_execution_status.rpt] w]
+file13
+puts $execution_status "audit_status=PASS"
+puts $execution_status "required_power_report=power.rpt"
+puts $execution_status "required_hierarchy_report=power_hierarchy.rpt"
+puts $execution_status "activity_source=READ_SAIF_FROM_SDF_GATE_VCD"
+close $execution_status
+quit
+
+Memory usage for this session 286 Mbytes.
+Memory usage for this session including child processes 286 Mbytes.
+CPU usage for this session 10 seconds ( 0.00 hours ).
+Elapsed time for this session 11 seconds ( 0.00 hours ).
+
+Thank you...

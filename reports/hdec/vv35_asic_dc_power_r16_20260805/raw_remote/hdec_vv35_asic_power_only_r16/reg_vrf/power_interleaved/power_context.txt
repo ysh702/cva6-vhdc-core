@@ -1,0 +1,13 @@
+ddc=/data/home/2024student143/vv35_asic_final_20260804/out/hdec_vv35_asic_wc_1p00v_125c_r13/reg_vrf/synth/netlist/hdec_top.ddc
+saif=/data/home/2024student143/vv35_asic_final_20260804/out/hdec_vv35_asic_wc_1p00v_125c_r13/reg_vrf/gate_interleaved_sdf/interleaved_sdf.saif
+saif_instance=tb_vv35_schedule_gate/dut
+saif_annotation_percent=100.0
+saif_annotation_minimum_percent=99.0
+expected_saif_duration_ns=1000720
+scenario=INTERLEAVED
+vrf_mode=REG_VRF
+qualification=PRE_LAYOUT_COMPLETE_REGISTER_VRF
+saif_structural_coverage_requires_review=false
+saif_report_table_objects=Nets,Ports,Pins
+saif_default_activity_percent=0.00
+saif_propagated_activity_percent=0.00

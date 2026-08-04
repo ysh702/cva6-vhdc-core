@@ -1,0 +1,4 @@
+archive_status=PASS
+archive=/data/home/2024student143/vv35_asic_final_20260804/out/vv35_asic_power_only_r16.tar.gz
+archive_sha256=8943ae6caf52f55ab0bab45f1f33193222cbc1b68d1120c5bcce489ce5c34a2f
+final_exit_code=0

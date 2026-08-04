@@ -1,0 +1,75 @@
+ 
+****************************************
+Report : power
+        -hier
+        -analysis_effort high
+        -verbose
+Design : hdec_top
+Version: T-2022.03-SP5-2
+Date   : Wed Aug  5 03:00:07 2026
+****************************************
+
+
+Library(s) Used:
+
+    CORE65LPSVT (File: /data/65nmlib/CORE65LPSVT_SNPS-AVT-CDS_4.1/CORE65LPSVT_SNPS-AVT-CDS_4.1/CORE65LPSVT_SNPS-AVT-CDS_4.1/libs/CORE65LPSVT_wc_1.00V_125C.db)
+
+
+Operating Conditions: wc_1.00V_125C   Library: CORE65LPSVT
+Wire Load Model Mode: enclosed
+
+Design        Wire Load Model            Library
+------------------------------------------------
+hdec_top               area_234Kto312K   CORE65LPSVT
+hdec_vrf_64x256        area_234Kto312K   CORE65LPSVT
+hdec_vector_payload_4x64_1
+                       area_12Kto18K     CORE65LPSVT
+hdec_cnt_array_3       area_0Kto1K       CORE65LPSVT
+hdec_lane_clip_3       area_0Kto1K       CORE65LPSVT
+hdec_cnt_array_2       area_0Kto1K       CORE65LPSVT
+hdec_lane_clip_2       area_0Kto1K       CORE65LPSVT
+hdec_cnt_array_1       area_0Kto1K       CORE65LPSVT
+hdec_lane_clip_1       area_0Kto1K       CORE65LPSVT
+hdec_cnt_array_0       area_0Kto1K       CORE65LPSVT
+hdec_lane_clip_0       area_0Kto1K       CORE65LPSVT
+hdec_gf2_contribution_row_tile_8x32
+                       area_4Kto5K       CORE65LPSVT
+hdec_xor1_shared_8x32  area_0Kto1K       CORE65LPSVT
+
+
+Global Operating Voltage = 1    
+Power-specific unit information :
+    Voltage Units = 1V
+    Capacitance Units = 1.000000pf
+    Time Units = 1ns
+    Dynamic Power Units = 1mW    (derived from V,C,T units)
+    Leakage Power Units = 1mW
+
+
+--------------------------------------------------------------------------------
+                                       Switch   Int      Leak     Total
+Hierarchy                              Power    Power    Power    Power    %
+--------------------------------------------------------------------------------
+hdec_top                                  2.455   26.657    0.177   29.289 100.0
+  i_vec (hdec_vector_payload_4x64_1)      0.619    1.109 6.97e-03    1.735   5.9
+    i_gf2_contribution_row_tile (hdec_gf2_contribution_row_tile_8x32)
+                                          0.124    0.161 1.68e-03    0.287   1.0
+      i_xor1 (hdec_xor1_shared_8x32)   1.30e-02 1.81e-02 3.14e-04 3.14e-02   0.1
+    gen_payload_slice_3__i_clip (hdec_lane_clip_0)
+                                       4.71e-04 1.15e-03 3.61e-05 1.65e-03   0.0
+    gen_payload_slice_3__i_cnt_array (hdec_cnt_array_0)
+                                       9.65e-03 9.73e-03 1.89e-04 1.96e-02   0.1
+    gen_payload_slice_2__i_clip (hdec_lane_clip_1)
+                                       1.30e-04 3.15e-04 2.61e-05 4.71e-04   0.0
+    gen_payload_slice_2__i_cnt_array (hdec_cnt_array_1)
+                                       1.13e-02 1.18e-02 1.89e-04 2.33e-02   0.1
+    gen_payload_slice_1__i_clip (hdec_lane_clip_2)
+                                       1.64e-04 3.91e-04 2.55e-05 5.80e-04   0.0
+    gen_payload_slice_1__i_cnt_array (hdec_cnt_array_2)
+                                       1.11e-02 1.18e-02 1.89e-04 2.30e-02   0.1
+    gen_payload_slice_0__i_clip (hdec_lane_clip_3)
+                                       1.70e-04 4.11e-04 2.38e-05 6.05e-04   0.0
+    gen_payload_slice_0__i_cnt_array (hdec_cnt_array_3)
+                                       1.21e-02 1.29e-02 1.89e-04 2.52e-02   0.1
+  i_vrf (hdec_vrf_64x256)                 0.791   23.673    0.154   24.617  84.0
+1

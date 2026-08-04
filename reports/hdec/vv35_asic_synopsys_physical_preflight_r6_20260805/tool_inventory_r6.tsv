@@ -1,0 +1,2 @@
+tool	wrapper	canonical	wrapper_sha256	canonical_sha256	file_identity
+dc_shell	/data/synopsys/syn/T-2022.03-SP5-2/bin/dc_shell	/data/synopsys/syn/T-2022.03-SP5-2/bin/snps_shell	23a4101c711fdb4747a57e6f9524d4989eb76a2b3120f0fa9766f4b25ae8e6d2	23a4101c711fdb4747a57e6f9524d4989eb76a2b3120f0fa9766f4b25ae8e6d2	POSIX shell script, ASCII text executable

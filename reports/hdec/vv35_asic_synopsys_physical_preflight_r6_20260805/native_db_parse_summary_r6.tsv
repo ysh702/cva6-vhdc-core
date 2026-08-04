@@ -1,0 +1,4 @@
+tool	wrapper	rc	status	cell_count	lm_db_sha256	setup_db_hash_match
+pt_shell	NOT_FOUND	NA	NOT_FOUND	NA	4dc81c2098fe93da228d7ddfba5d27b08eeb7e8ac42443cb83e338059dd9461a	0
+dc_shell	/data/synopsys/syn/T-2022.03-SP5-2/bin/dc_shell	NA	SHELL_MARKER_NOT_PASS	NA	4dc81c2098fe93da228d7ddfba5d27b08eeb7e8ac42443cb83e338059dd9461a	0
+lc_shell	NOT_FOUND	NA	NOT_FOUND	NA	4dc81c2098fe93da228d7ddfba5d27b08eeb7e8ac42443cb83e338059dd9461a	0

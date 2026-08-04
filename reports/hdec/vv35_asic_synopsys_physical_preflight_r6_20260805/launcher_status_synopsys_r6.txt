@@ -1,0 +1,8 @@
+submit_utc=2026-08-04T17:26:30Z
+root=/data/home/2024student143/vv35_asic_final_20260804
+diagnostic_mode=READ_ONLY_SYNOPSYS_NATIVE_FORMAT_PREFLIGHT
+remote_execution=NOT_STARTED_UNTIL_BSUB_ACCEPTS
+job_script_sha256=dfc60dfc4011e5e768c3e5957c8f1a599932bda27b9c644dcf0760369624db0a
+payload_manifest_sha256=4125886c4f1e9847f995b06d69c332f8b6fc1beb905dfd9617891bf45044ddb9
+submit_status=PASS
+lsf_job_id=10910

@@ -1,0 +1,7 @@
+scenario,total_power_mw,dynamic_power_mw,cycles,time_s,total_energy_mj,dynamic_energy_mj
+serial,28.5874186,28.41,337853,0.001689265,0.0482917256813,0.04799201865
+interleaved,29.2894459,29.112,200144,0.00100072,0.029310534301,0.02913296064
+cycle_reduction_percent,40.760034690
+speedup,1.688049604
+total_energy_reduction_percent,39.305266301
+dynamic_energy_reduction_percent,39.296238292

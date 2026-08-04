@@ -1,0 +1,7 @@
+r5_manifest_binding_status=PASS
+cel_file_count=0
+fram_file_count=775
+lm_db_count=62
+server_writable_path_count=4
+safe_native_parse=0
+lm_db_matches_setup_db=0

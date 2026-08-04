@@ -1,0 +1,9 @@
+submit_utc=2026-08-04T18:59:21Z
+execution_mode=R13_POWER_ONLY_RECOVERY_NO_VCS
+scenario_order=SERIAL_THEN_INTERLEAVED
+saif_consumer=YES
+vcd_consumer=NO
+vcd_provenance=R13_MANIFEST_HASH_NOT_LIVE_REHASHED
+selftest=PASS
+submit_status=PASS
+lsf_job_id=10912

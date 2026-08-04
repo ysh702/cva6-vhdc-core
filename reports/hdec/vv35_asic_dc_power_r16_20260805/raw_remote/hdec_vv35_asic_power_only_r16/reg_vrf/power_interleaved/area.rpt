@@ -1,0 +1,60 @@
+ 
+****************************************
+Report : area
+Design : hdec_top
+Version: T-2022.03-SP5-2
+Date   : Wed Aug  5 03:00:08 2026
+****************************************
+
+Library(s) Used:
+
+    CORE65LPSVT (File: /data/65nmlib/CORE65LPSVT_SNPS-AVT-CDS_4.1/CORE65LPSVT_SNPS-AVT-CDS_4.1/CORE65LPSVT_SNPS-AVT-CDS_4.1/libs/CORE65LPSVT_wc_1.00V_125C.db)
+
+Number of ports:                         7840
+Number of nets:                         62602
+Number of cells:                        55922
+Number of combinational cells:          37825
+Number of sequential cells:             18082
+Number of macros/black boxes:               0
+Number of buf/inv:                       4356
+Number of references:                     157
+
+Combinational area:             154476.917618
+Buf/Inv area:                     8298.159697
+Noncombinational area:          144123.722771
+Macro/Black Box area:                0.000000
+Net Interconnect area:      undefined  (Wire load has zero net area)
+
+Total cell area:                298600.640388
+Total area:                 undefined
+
+Hierarchical area distribution
+------------------------------
+
+                                  Global cell area              Local cell area
+                                  --------------------  -------------------------------- 
+Hierarchical cell                 Absolute     Percent  Combi-       Noncombi-    Black-
+                                  Total        Total    national     national     boxes   Design
+--------------------------------  -----------  -------  -----------  -----------  ------  -----------------------------------
+hdec_top                          298600.6404    100.0   30068.4797    9173.3197  0.0000  hdec_top
+i_vec                              16044.5998      5.4    6535.3601    3161.5999  0.0000  hdec_vector_payload_4x64_1
+i_vec/gen_payload_slice_0__i_clip     83.2000      0.0      83.2000       0.0000  0.0000  hdec_lane_clip_3
+i_vec/gen_payload_slice_0__i_cnt_array
+                                     485.6800      0.2     485.6800       0.0000  0.0000  hdec_cnt_array_3
+i_vec/gen_payload_slice_1__i_clip     83.2000      0.0      83.2000       0.0000  0.0000  hdec_lane_clip_2
+i_vec/gen_payload_slice_1__i_cnt_array
+                                     485.6800      0.2     485.6800       0.0000  0.0000  hdec_cnt_array_2
+i_vec/gen_payload_slice_2__i_clip     83.2000      0.0      83.2000       0.0000  0.0000  hdec_lane_clip_1
+i_vec/gen_payload_slice_2__i_cnt_array
+                                     485.6800      0.2     485.6800       0.0000  0.0000  hdec_cnt_array_1
+i_vec/gen_payload_slice_3__i_clip     83.2000      0.0      83.2000       0.0000  0.0000  hdec_lane_clip_0
+i_vec/gen_payload_slice_3__i_cnt_array
+                                     485.6800      0.2     485.6800       0.0000  0.0000  hdec_cnt_array_0
+i_vec/i_gf2_contribution_row_tile   4072.1199      1.4    3364.3999       0.0000  0.0000  hdec_gf2_contribution_row_tile_8x32
+i_vec/i_gf2_contribution_row_tile/i_xor1
+                                     707.7200      0.2     707.7200       0.0000  0.0000  hdec_xor1_shared_8x32
+i_vrf                             243314.2412     81.5  111525.4380  131788.8032  0.0000  hdec_vrf_64x256
+--------------------------------  -----------  -------  -----------  -----------  ------  -----------------------------------
+Total                                                   154476.9176  144123.7228  0.0000
+
+1

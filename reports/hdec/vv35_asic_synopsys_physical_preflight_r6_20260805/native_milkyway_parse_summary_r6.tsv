@@ -1,0 +1,9 @@
+tool	wrapper	rc	status	logical_cell_count	mw_library_count	mw_cell_count	physical_text_evidence
+icc_shell	NOT_FOUND	NA	NOT_FOUND	NA	NA	NA	NA
+astro_shell	NOT_FOUND	NA	NOT_FOUND	NA	NA	NA	NA
+psyn_shell	NOT_FOUND	NA	NOT_FOUND	NA	NA	NA	NA
+mw_shell	NOT_FOUND	NA	NOT_FOUND	NA	NA	NA	NA
+dc_shell	/data/synopsys/syn/T-2022.03-SP5-2/bin/dc_shell	NA	SHELL_MARKER_NOT_PASS	NA	NA	NA	NA
+lc_shell	NOT_FOUND	NA	NOT_FOUND	NA	NA	NA	NA
+icc2_shell	NOT_FOUND	NA	NOT_FOUND	NA	NA	NA	NA
+fc_shell	NOT_FOUND	NA	NOT_FOUND	NA	NA	NA	NA

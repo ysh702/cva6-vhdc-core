@@ -1,0 +1,4 @@
+audit_status=PASS
+required_power_report=power.rpt
+required_hierarchy_report=power_hierarchy.rpt
+activity_source=READ_SAIF_FROM_SDF_GATE_VCD

@@ -1,0 +1,60 @@
+read_saif_verbose_coverage_percent=-1.0
+report_saif_table_parser=/data/home/2024student143/vv35_asic_final_20260804/out/vv35_r16_workspace/scripts/hdec/vv35_eval/asic/parse_report_saif_table.awk
+report_saif_hierarchy=PASS
+ 
+****************************************
+Report : saif
+        -hierarchy
+Design : hdec_top
+Version: T-2022.03-SP5-2
+Date   : Wed Aug  5 03:00:09 2026
+****************************************
+
+  
+
+--------------------------------------------------------------------------------
+              User              Default           Propagated
+Object type   Annotated (%)     Activity (%)      Activity (%)       Total
+--------------------------------------------------------------------------------
+  
+ Nets         56212(100.00%)    0(0.00%)          0(0.00%)           56212
+ Ports        201(100.00%)      0(0.00%)          0(0.00%)           201
+ Pins         222686(100.00%)   0(0.00%)          0(0.00%)           222686
+--------------------------------------------------------------------------------
+1
+
+report_saif_table_parser_rc=0
+table_status=PASS
+user_annotated_min_percent=100.00
+default_activity_max_percent=0.00
+propagated_activity_max_percent=0.00
+nets_user_count=56212
+nets_user_percent=100.00
+nets_default_count=0
+nets_default_percent=0.00
+nets_propagated_count=0
+nets_propagated_percent=0.00
+nets_total=56212
+ports_user_count=201
+ports_user_percent=100.00
+ports_default_count=0
+ports_default_percent=0.00
+ports_propagated_count=0
+ports_propagated_percent=0.00
+ports_total=201
+pins_user_count=222686
+pins_user_percent=100.00
+pins_default_count=0
+pins_default_percent=0.00
+pins_propagated_count=0
+pins_propagated_percent=0.00
+pins_total=222686
+report_saif_table_status=PASS
+report_saif_user_annotated_min_percent=100.00
+report_saif_default_activity_max_percent=0.00
+report_saif_propagated_activity_max_percent=0.00
+optional_not_annotated_report=UNAVAILABLE reason=command_not_installed
+annotation_coverage_percent=100.0
+minimum_annotation_coverage_percent=99.0
+coverage_reduction_rule=minimum_of_strict_Nets_Ports_Pins_user_annotated_and_machine_readable_read_saif_verbose
+audit_status=PASS

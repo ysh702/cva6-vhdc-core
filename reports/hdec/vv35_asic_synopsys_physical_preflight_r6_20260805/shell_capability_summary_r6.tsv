@@ -1,0 +1,13 @@
+tool	wrapper	rc	stdout_exact_count	file_exact	status	info_nameofexecutable
+icc_shell	NOT_FOUND	NA	NA	NA	NOT_FOUND	NONE
+icc2_shell	NOT_FOUND	NA	NA	NA	NOT_FOUND	NONE
+fc_shell	NOT_FOUND	NA	NA	NA	NOT_FOUND	NONE
+astro_shell	NOT_FOUND	NA	NA	NA	NOT_FOUND	NONE
+psyn_shell	NOT_FOUND	NA	NA	NA	NOT_FOUND	NONE
+mw_shell	NOT_FOUND	NA	NA	NA	NOT_FOUND	NONE
+pt_shell	NOT_FOUND	NA	NA	NA	NOT_FOUND	NONE
+dc_shell	/data/synopsys/syn/T-2022.03-SP5-2/bin/dc_shell	124	0	0	TIMEOUT	NONE
+lc_shell	NOT_FOUND	NA	NA	NA	NOT_FOUND	NONE
+fm_shell	NOT_FOUND	NA	NA	NA	NOT_FOUND	NONE
+starrc_shell	NOT_FOUND	NA	NA	NA	NOT_FOUND	NONE
+star_shell	NOT_FOUND	NA	NA	NA	NOT_FOUND	NONE

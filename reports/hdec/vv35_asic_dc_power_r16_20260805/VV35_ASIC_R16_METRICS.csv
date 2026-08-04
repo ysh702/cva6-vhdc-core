@@ -1,0 +1,10 @@
+scenario,total_power_mw,dynamic_power_mw,internal_power_mw,switching_power_mw,leakage_power_mw,cycles,time_s,total_energy_mj,dynamic_energy_mj,saif_annotation_percent,timing_worst_displayed_slack_ns,total_cell_area_library_units
+serial,28.5874186,28.4100,26.2045,2.2056,0.1774186,337853,0.001689265,0.0482917256813,0.04799201865,100.0,0.00,298600.640388
+interleaved,29.2894459,29.1120,26.6568,2.4552,0.1774459,200144,0.001000720,0.029310534301,0.02913296064,100.0,0.00,298600.640388
+metric,value
+cycle_reduction_percent,40.760034690
+speedup,1.688049604
+total_power_increase_percent,2.455721203
+dynamic_power_increase_percent,2.470960929
+total_energy_reduction_percent,39.305266301
+dynamic_energy_reduction_percent,39.296238292

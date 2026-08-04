@@ -1,0 +1,8 @@
+r16_power_only_status=PASS
+qualification=MAPPED_GATE_SYNTHESIS_LEVEL_DC_POWER_WITH_R13_SDF_GATE_TB_SAIF_NO_PLACEMENT_ROUTE_PARASITICS
+serial_cycles=337853
+interleaved_cycles=200144
+serial_annotation_percent=100.0
+interleaved_annotation_percent=100.0
+vcs_rerun=0
+r13_inputs_modified=0
