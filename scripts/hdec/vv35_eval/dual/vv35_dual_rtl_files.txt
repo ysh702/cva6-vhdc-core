@@ -1,0 +1,13 @@
+# RTL source list for the VV35 independent HDC + ECC baseline.
+core/hdec/rtl/hdec_pkg.sv
+core/hdec/rtl/hdec_resource_pkg.sv
+core/hdec/rtl/hdec_vrf_64x256.sv
+core/hdec/rtl/hdec_lane_boolean_mask.sv
+core/hdec/rtl/hdec_lane_popcount_compressor.sv
+core/hdec/rtl/hdec_p2_pop_slice.sv
+core/hdec/rtl/hdec_cnt_array.sv
+core/hdec/rtl/hdec_lane_shift_align.sv
+core/hdec/rtl/hdec_lane_clip.sv
+core/hdec/rtl/hdec_lane_4x64.sv
+core/hdec/rtl/hdec_top.sv
+verif/hdec/vv35_eval/dual/vv35_dual_accel_core_top.sv

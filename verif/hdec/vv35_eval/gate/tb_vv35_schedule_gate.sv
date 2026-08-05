@@ -21,6 +21,7 @@ module tb_vv35_schedule_gate;
     localparam int unsigned VV35_DEFAULT_PMUL_WAIT_CYCLES = 146908;
     localparam int unsigned VV35_SERIAL_WINDOW_CYCLES = 337853;
     localparam int unsigned VV35_INTERLEAVED_WINDOW_CYCLES = 200144;
+    localparam int unsigned VV35_INDEPENDENT_WINDOW_CYCLES = 190944;
     localparam int unsigned VV35_REQUEST_TIMEOUT = 2_000_000;
 
     logic        clk_i;
@@ -37,7 +38,11 @@ module tb_vv35_schedule_gate;
     // the measured workload.  Vector preload and result checking are outside.
     logic metric_active;
 
+`ifdef VV35_DUAL_INDEPENDENT_DUT
+    vv35_dual_accel_core_top dut (
+`else
     hdec_top dut (
+`endif
         .clk_i,
         .rst_ni,
         .valid_i,
@@ -514,15 +519,19 @@ module tb_vv35_schedule_gate;
             vector_dir
         );
         serial_mode = (scenario == "SERIAL");
-        if (!serial_mode && (scenario != "INTERLEAVED"))
+        if (!serial_mode && (scenario != "INTERLEAVED")
+                         && (scenario != "INDEPENDENT"))
             $fatal(
                 1,
-                "[VV35:GATE] SCENARIO must be SERIAL or INTERLEAVED, got %0s",
+                "[VV35:GATE] SCENARIO must be SERIAL, INTERLEAVED, or INDEPENDENT, got %0s",
                 scenario
             );
-        window_cycles = serial_mode
-            ? VV35_SERIAL_WINDOW_CYCLES
-            : VV35_INTERLEAVED_WINDOW_CYCLES;
+        if (serial_mode)
+            window_cycles = VV35_SERIAL_WINDOW_CYCLES;
+        else if (scenario == "INDEPENDENT")
+            window_cycles = VV35_INDEPENDENT_WINDOW_CYCLES;
+        else
+            window_cycles = VV35_INTERLEAVED_WINDOW_CYCLES;
         window_arg_seen = $value$plusargs(
             "WINDOW_CYCLES=%d",
             window_cycles

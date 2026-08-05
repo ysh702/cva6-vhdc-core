@@ -1,0 +1,37 @@
+#-----------------------------------------------------------
+# xsim v2024.2 (64-bit)
+# SW Build 5239630 on Fri Nov 08 22:35:27 MST 2024
+# IP Build 5239520 on Sun Nov 10 16:12:51 MST 2024
+# SharedData Build 5239561 on Fri Nov 08 14:39:27 MST 2024
+# Start of session at: Wed Aug  5 10:21:20 2026
+# Process ID         : 19408
+# Current directory  : E:/HDEC/cva6-vhdc-core/tmp/hdec_vv35_ecc_area_worktree/tmp/hdec_logs/vv35_dual_independent_workload_20260805_r2/xsim_dual_independent_workload
+# Command line       : xsim.exe -mode tcl -source {xsim.dir/tb_vv35_schedule_gate/xsim_script.tcl}
+# Log file           : E:/HDEC/cva6-vhdc-core/tmp/hdec_vv35_ecc_area_worktree/tmp/hdec_logs/vv35_dual_independent_workload_20260805_r2/xsim_dual_independent_workload/xsim.log
+# Journal file       : E:/HDEC/cva6-vhdc-core/tmp/hdec_vv35_ecc_area_worktree/tmp/hdec_logs/vv35_dual_independent_workload_20260805_r2/xsim_dual_independent_workload\xsim.jou
+# Running On         : WIN-20240824NZS
+# Platform           : Windows Server 2016 or Windows 10
+# Operating System   : 26100
+# Processor Detail   : 12th Gen Intel(R) Core(TM) i5-12600KF
+# CPU Frequency      : 3686 MHz
+# CPU Physical cores : 10
+# CPU Logical cores  : 16
+# Host memory        : 34125 MB
+# Swap memory        : 3758 MB
+# Total Virtual      : 37883 MB
+# Available Virtual  : 22381 MB
+#-----------------------------------------------------------
+source xsim.dir/tb_vv35_schedule_gate/xsim_script.tcl
+# xsim {tb_vv35_schedule_gate} -testplusarg SCENARIO=INDEPENDENT -testplusarg TASK_COUNT=1632 -testplusarg WINDOW_CYCLES=190944 -testplusarg PMUL_WAIT_CYCLES=146908 -testplusarg VV31_VECTOR_DIR=E:/HDEC/cva6-vhdc-core/tmp/hdec_vv35_global_ppa_worktree/tmp/hdec_logs/vv35_eval/schedule_same_net_smoke -autoloadwcfg -tclbatch {E:/HDEC/cva6-vhdc-core/tmp/hdec_vv35_ecc_area_worktree/tmp/hdec_logs/vv35_dual_independent_workload_20260805_r2/xsim_dual_independent_workload/run_all.tcl}
+Time resolution is 1 ps
+source E:/HDEC/cva6-vhdc-core/tmp/hdec_vv35_ecc_area_worktree/tmp/hdec_logs/vv35_dual_independent_workload_20260805_r2/xsim_dual_independent_workload/run_all.tcl
+## run all
+WARNING: Too many words specified in data file E:/HDEC/cva6-vhdc-core/tmp/hdec_vv35_global_ppa_worktree/tmp/hdec_logs/vv35_eval/schedule_same_net_smoke/hdc_train_samples.mem
+WARNING: Too many words specified in data file E:/HDEC/cva6-vhdc-core/tmp/hdec_vv35_global_ppa_worktree/tmp/hdec_logs/vv35_eval/schedule_same_net_smoke/hdc_role_vectors.mem
+[VV35:GATE_METRIC] scenario=INDEPENDENT scenario_arg=1 task_count_arg=1 window_arg=1 pmul_wait_arg=1 vector_dir_arg=1 K=0000002fa9f8d054ea7fd4613721adbba762ed34fd11b768a6bff1725e8ce89a K_weight=128 task_count=1632 hmatch_completed=1632 expected_class=0 expected_score=505 active_start=834 active_end=191778 window_cycles=190944 last_hmatch=191778 unknown_public=0 errors=0
+[VV35:GATE_SCHEDULE] PASS scenario=INDEPENDENT
+$finish called at time : 959805 ns : File "E:/HDEC/cva6-vhdc-core/tmp/hdec_vv35_ecc_area_worktree/verif/hdec/vv35_eval/gate/tb_vv35_schedule_gate.sv" Line 678
+run: Time (s): cpu = 00:00:00 ; elapsed = 00:00:50 . Memory (MB): peak = 196.914 ; gain = 0.000
+## quit
+INFO: xsimkernel Simulation Memory Usage: 34632 KB (Peak: 34632 KB), Simulation CPU Usage: 49640 ms
+INFO: [Common 17-206] Exiting xsim at Wed Aug  5 10:22:11 2026...

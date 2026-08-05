@@ -1,0 +1,59 @@
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2024 Advanced Micro Devices, Inc. All Rights Reserved.
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2024.2 (win64) Build 5239630 Fri Nov 08 22:35:27 MST 2024
+| Date         : Wed Aug  5 10:24:33 2026
+| Host         : WIN-20240824NZS running 64-bit major release  (build 9200)
+| Command      : report_utilization -hierarchical -file E:/HDEC/cva6-vhdc-core/tmp/hdec_vv35_ecc_area_worktree/reports/hdec/vv35_dual_independent_final_20260805/reports/vv35_dual_independent_utilization_hier.rpt
+| Design       : vv35_dual_accel_core_top
+| Device       : xc7z020clg400-2
+| Speed File   : -2
+| Design State : Synthesized
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Utilization Design Information
+
+Table of Contents
+-----------------
+1. Utilization by Hierarchy
+
+1. Utilization by Hierarchy
+---------------------------
+
++------------------------------------------+-------------------------------------+------------+------------+---------+------+------+--------+--------+------------+
+|                 Instance                 |                Module               | Total LUTs | Logic LUTs | LUTRAMs | SRLs |  FFs | RAMB36 | RAMB18 | DSP Blocks |
++------------------------------------------+-------------------------------------+------------+------------+---------+------+------+--------+--------+------------+
+| vv35_dual_accel_core_top                 |                               (top) |       7089 |       7089 |       0 |    0 | 2594 |      8 |      0 |          0 |
+|   (vv35_dual_accel_core_top)             |                               (top) |        144 |        144 |       0 |    0 |  134 |      0 |      0 |          0 |
+|   u_ecc                                  |                     vv35_ecc_ip_top |       4135 |       4135 |       0 |    0 | 1259 |      4 |      0 |          0 |
+|     (u_ecc)                              |                     vv35_ecc_ip_top |          0 |          0 |       0 |    0 |    0 |      0 |      0 |          0 |
+|     u_core                               |                            hdec_top |       4135 |       4135 |       0 |    0 | 1259 |      4 |      0 |          0 |
+|       (u_core)                           |                            hdec_top |       2661 |       2661 |       0 |    0 |  747 |      0 |      0 |          0 |
+|       i_vec                              |            hdec_vector_payload_4x64 |       1474 |       1474 |       0 |    0 |  256 |      0 |      0 |          0 |
+|         (i_vec)                          |            hdec_vector_payload_4x64 |       1003 |       1003 |       0 |    0 |  256 |      0 |      0 |          0 |
+|         gen_payload_slice[0].i_clip      |                   hdec_lane_clip__1 |         16 |         16 |       0 |    0 |    0 |      0 |      0 |          0 |
+|         gen_payload_slice[1].i_clip      |                   hdec_lane_clip__2 |         16 |         16 |       0 |    0 |    0 |      0 |      0 |          0 |
+|         gen_payload_slice[2].i_clip      |                   hdec_lane_clip__3 |         16 |         16 |       0 |    0 |    0 |      0 |      0 |          0 |
+|         gen_payload_slice[3].i_clip      |                      hdec_lane_clip |         16 |         16 |       0 |    0 |    0 |      0 |      0 |          0 |
+|         i_gf2_contribution_row_tile      | hdec_gf2_contribution_row_tile_8x32 |        407 |        407 |       0 |    0 |    0 |      0 |      0 |          0 |
+|           (i_gf2_contribution_row_tile)  | hdec_gf2_contribution_row_tile_8x32 |        329 |        329 |       0 |    0 |    0 |      0 |      0 |          0 |
+|           i_xor1                         |               hdec_xor1_shared_8x32 |         78 |         78 |       0 |    0 |    0 |      0 |      0 |          0 |
+|       i_vrf                              |                     hdec_vrf_64x256 |          0 |          0 |       0 |    0 |  256 |      4 |      0 |          0 |
+|   u_hdc                                  |                     vv35_hdc_ip_top |       2810 |       2810 |       0 |    0 | 1201 |      4 |      0 |          0 |
+|     (u_hdc)                              |                     vv35_hdc_ip_top |          0 |          0 |       0 |    0 |    0 |      0 |      0 |          0 |
+|     u_core                               |                            hdec_top |       2810 |       2810 |       0 |    0 | 1201 |      4 |      0 |          0 |
+|       (u_core)                           |                            hdec_top |       1415 |       1415 |       0 |    0 |  641 |      0 |      0 |          0 |
+|       i_vec                              |            hdec_vector_payload_4x64 |       1395 |       1395 |       0 |    0 |  304 |      0 |      0 |          0 |
+|         (i_vec)                          |            hdec_vector_payload_4x64 |        519 |        519 |       0 |    0 |  304 |      0 |      0 |          0 |
+|         gen_payload_slice[0].i_clip      |                   hdec_lane_clip__1 |         16 |         16 |       0 |    0 |    0 |      0 |      0 |          0 |
+|         gen_payload_slice[0].i_cnt_array |                   hdec_cnt_array__1 |         48 |         48 |       0 |    0 |    0 |      0 |      0 |          0 |
+|         gen_payload_slice[1].i_clip      |                   hdec_lane_clip__2 |         16 |         16 |       0 |    0 |    0 |      0 |      0 |          0 |
+|         gen_payload_slice[1].i_cnt_array |                   hdec_cnt_array__2 |         48 |         48 |       0 |    0 |    0 |      0 |      0 |          0 |
+|         gen_payload_slice[2].i_clip      |                   hdec_lane_clip__3 |         16 |         16 |       0 |    0 |    0 |      0 |      0 |          0 |
+|         gen_payload_slice[2].i_cnt_array |                   hdec_cnt_array__3 |         48 |         48 |       0 |    0 |    0 |      0 |      0 |          0 |
+|         gen_payload_slice[3].i_clip      |                      hdec_lane_clip |         16 |         16 |       0 |    0 |    0 |      0 |      0 |          0 |
+|         gen_payload_slice[3].i_cnt_array |                      hdec_cnt_array |         48 |         48 |       0 |    0 |    0 |      0 |      0 |          0 |
+|         i_gf2_contribution_row_tile      | hdec_gf2_contribution_row_tile_8x32 |        620 |        620 |       0 |    0 |    0 |      0 |      0 |          0 |
+|       i_vrf                              |                     hdec_vrf_64x256 |          0 |          0 |       0 |    0 |  256 |      4 |      0 |          0 |
++------------------------------------------+-------------------------------------+------------+------------+---------+------+------+--------+--------+------------+
+
+

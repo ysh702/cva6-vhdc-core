@@ -1,0 +1,2 @@
+claim_scope,route_physical_available,total_occupied_physical_luts,ecc_private_strict_physical_luts_lower_bound,shared_only_physical_luts,hdc_private_only_physical_luts,unattributed_only_physical_luts,mixed_ownership_physical_luts,unplaced_logic_lut_cells
+"route_physical_ecc_private_lower_bound","1","4694","538","3375","591","128","62","0"

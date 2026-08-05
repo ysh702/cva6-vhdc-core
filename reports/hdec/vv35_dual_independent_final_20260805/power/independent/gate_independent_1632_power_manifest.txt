@@ -1,0 +1,7 @@
+run_label=gate_independent_1632
+vivado_version=2024.2
+checkpoint=E:/HDEC/cva6-vhdc-core/tmp/hdec_vv35_ecc_area_worktree/tmp/hdec_logs/vv35_dual_independent_impl_timing_20260805/dcp/04_route.dcp
+activity_mode=saif
+saif_file=E:/HDEC/cva6-vhdc-core/tmp/hdec_vv35_ecc_area_worktree/tmp/hdec_logs/vv35_dual_independent_gate_saif_20260805/independent/independent_1632_gate_active.saif
+strip_path=tb_vv35_schedule_gate/dut
+power_report=E:/HDEC/cva6-vhdc-core/tmp/hdec_vv35_ecc_area_worktree/reports/hdec/vv35_dual_independent_final_20260805/power/independent/gate_independent_1632_power.rpt

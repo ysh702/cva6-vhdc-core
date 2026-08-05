@@ -1,0 +1,5 @@
+claim_scope,ownership_bucket,logic_lut_cells,ff_cells,lutram_cells,srl_cells,lutram_including_srl_cells,bram_cells,dsp_cells,carry_cells,mux_cells,other_primitives,total_primitives
+"strict_name_based_ecc_private_lower_bound","ecc_private_strict","621","248","0","0","0","0","0","0","50","0","919"
+"strict_name_based_ecc_private_lower_bound","shared","3661","990","0","0","0","4","0","7","192","4","4858"
+"strict_name_based_ecc_private_lower_bound","hdc_private","692","210","0","0","0","0","0","5","0","0","907"
+"strict_name_based_ecc_private_lower_bound","unattributed","184","65","0","0","0","0","0","0","0","2","251"

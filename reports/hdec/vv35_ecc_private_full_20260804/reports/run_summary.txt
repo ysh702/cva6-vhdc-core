@@ -1,0 +1,17 @@
+run_label=vv35_ecc_private_full
+repo_root=E:/HDEC/cva6-vhdc-core/tmp/hdec_vv35_ecc_area_worktree
+part=xc7z020clg400-2
+top=hdec_top
+period_ns=5
+vivado_version=2024.2
+route_status=
+wns_ns=-0.254
+worst_data_delay_ns=5.210
+fmax_est_mhz=190.331
+top_endpoint=hperm_stage_q_reg[15]/D
+internal_reg2reg_wns_ns=-0.254
+internal_reg2reg_data_delay_ns=5.210
+internal_reg2reg_fmax_est_mhz=190.331
+internal_reg2reg_endpoint=hperm_stage_q_reg[15]/D
+ooc_io_caveat=Package IO paths are not placement-accurate without HD.PARTPIN_LOCS; use internal reg-to-reg timing as the core timing evidence.
+checkpoint=E:/HDEC/cva6-vhdc-core/tmp/hdec_vv35_ecc_area_worktree/reports/hdec/vv35_ecc_private_full_20260804/dcp/04_route.dcp

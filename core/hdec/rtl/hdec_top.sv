@@ -12,7 +12,9 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     parameter bit ECC_PMUL_ADD_Z_FORWARD = 1'b1,
     parameter bit VV31_SCHED_ENABLE = 1'b1,
     parameter bit VV33_FINE_INTERLEAVE = 1'b1,
-    parameter bit VV33_PAIRED_HMATCH = 1'b1
+    parameter bit VV33_PAIRED_HMATCH = 1'b1,
+    parameter bit ENABLE_HDC_OPS = 1'b1,
+    parameter bit ENABLE_ECC_OPS = 1'b1
 ) (
     input logic clk_i, rst_ni, valid_i, output logic ready_o,
     input hdec_op_t operator_i, input logic [63:0] operand_a_i, operand_b_i,
@@ -342,12 +344,16 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     assign hmatch_req_invalid = (a_q[15:8] == 8'd0) || (|a_q[15:12])
                               || hmatch_req_base[3]
                               || (hmatch_req_count_lo > hmatch_req_max_count);
-    assign vv33_hdc_request_valid = valid_i
+    assign vv33_hdc_request_valid = ENABLE_HDC_OPS
+                                  && ENABLE_ECC_OPS
+                                  && valid_i
                                   && (operator_i >= HDEC_HCLR)
                                   && (operator_i <= HDEC_HMATCH);
-    assign vv33_hdc_square_overlap = (operator_i == HDEC_HBIND)
-                                    || (operator_i == HDEC_HSIM)
-                                    || (operator_i == HDEC_HMATCH);
+    assign vv33_hdc_square_overlap = ENABLE_HDC_OPS
+                                    && ENABLE_ECC_OPS
+                                    && ((operator_i == HDEC_HBIND)
+                                     || (operator_i == HDEC_HSIM)
+                                     || (operator_i == HDEC_HMATCH));
     assign vv33_pair_req_invalid = (operand_a_i[15:8] == 8'd0)
                                  || (|operand_a_i[15:12])
                                  || operand_a_i[7]
@@ -357,6 +363,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
     // field multiply.  The remaining 18 sub0/sub1 CAP2 windows are then enough
     // to retire all 16 query/prototype chunks before the multiply ends.
     assign vv33_pair_ready = valid_i
+                           && ENABLE_HDC_OPS
+                           && ENABLE_ECC_OPS
                            && VV33_PAIRED_HMATCH
                            && VV31_SCHED_ENABLE
                            && ecc_diag_sub_shadow_mode
@@ -1507,7 +1515,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
 
     // ── 4× Lane instances ───────────────────────────────────────────────────
     hdec_vector_payload_4x64 #(
-        .ENABLE_ECC_REDUCE(1'b1)
+        .ENABLE_ECC_REDUCE(ENABLE_ECC_OPS)
     ) i_vec (
         .clk_i(clk_i), .rst_ni(rst_ni),
         .payload_xor_i(hdc_xor_issue),
@@ -1646,7 +1654,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             HDEC_VRD64: begin vrf_req.ra=vaddr_idx_q;st_n=S_RD_WAIT;end
 
             HDEC_ECC_MUL: begin
-                if (!ECC_DEBUG_FIELD_OPS) begin
+                if (!ENABLE_ECC_OPS || !ECC_DEBUG_FIELD_OPS) begin
                     res_n={62'b0,STATUS_NOT_IMPLEMENTED};st_n=S_RESULT;
                 end else begin
                     if ((a_q[17:12] == 6'd63)
@@ -1671,7 +1679,9 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             end
 
             HDEC_ECC_STATUS: begin
-                if (a_q[31] && !ECC_DEBUG_FIELD_OPS) begin
+                if (!ENABLE_ECC_OPS) begin
+                    res_n={62'b0,STATUS_NOT_IMPLEMENTED};st_n=S_RESULT;
+                end else if (a_q[31] && !ECC_DEBUG_FIELD_OPS) begin
                     res_n={62'b0,STATUS_NOT_IMPLEMENTED};st_n=S_RESULT;
                 end else if ((a_q[31] || a_q[30]) && ecc_job_active_q) begin
                     res_n={62'b0,STATUS_ERROR};st_n=S_RESULT;
@@ -1739,7 +1749,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             end
 
             HDEC_ECC_ADD: begin
-                if (!ECC_DEBUG_FIELD_OPS) begin
+                if (!ENABLE_ECC_OPS || !ECC_DEBUG_FIELD_OPS) begin
                     res_n={62'b0,STATUS_NOT_IMPLEMENTED};st_n=S_RESULT;
                 end else begin
                     uop_p0_n.valid        = 1'b1;
@@ -1753,7 +1763,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             end
 
             HDEC_ECC_ALIGN: begin
-                if (!ECC_DEBUG_FIELD_OPS) begin
+                if (!ENABLE_ECC_OPS || !ECC_DEBUG_FIELD_OPS) begin
                     res_n={62'b0,STATUS_NOT_IMPLEMENTED};st_n=S_RESULT;
                 end else begin
                     hperm_bit_low_n        = a_q[19:18];
@@ -1771,7 +1781,7 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             end
 
             HDEC_ECC_REDUCE: begin
-                if (!ECC_DEBUG_FIELD_OPS) begin
+                if (!ENABLE_ECC_OPS || !ECC_DEBUG_FIELD_OPS) begin
                     res_n={62'b0,STATUS_NOT_IMPLEMENTED};st_n=S_RESULT;
                 end else begin
                     ecc_autoreduce_n=1'b0; ecc_raw_product_n=1'b0;
@@ -1788,18 +1798,28 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             end
 
             HDEC_HCLR: begin
-                clr_base_n={a_q[3:0],2'b00};clr_cnt_n=4'd0;st_n=S_CLR;
+                if (!ENABLE_HDC_OPS) begin
+                    res_n={62'b0,STATUS_NOT_IMPLEMENTED};st_n=S_RESULT;
+                end else begin
+                    clr_base_n={a_q[3:0],2'b00};clr_cnt_n=4'd0;st_n=S_CLR;
+                end
             end
 
             HDEC_HCNTCLR: begin
-                hcntclip_dst_base_n[5]=ecc_job_bg_q;
-                clr_base_n=a_q[0] ? (ecc_job_bg_q ? 6'd24 : 6'd48)
-                                  : (ecc_job_bg_q ? 6'd16 : 6'd32);
-                clr_cnt_n=4'd0;st_n=S_CLR;
+                if (!ENABLE_HDC_OPS) begin
+                    res_n={62'b0,STATUS_NOT_IMPLEMENTED};st_n=S_RESULT;
+                end else begin
+                    hcntclip_dst_base_n[5]=ecc_job_bg_q;
+                    clr_base_n=a_q[0] ? (ecc_job_bg_q ? 6'd24 : 6'd48)
+                                      : (ecc_job_bg_q ? 6'd16 : 6'd32);
+                    clr_cnt_n=4'd0;st_n=S_CLR;
+                end
             end
 
             HDEC_HCNTADD: begin
-                if(a_q[3])begin res_n={62'b0,STATUS_ERROR};st_n=S_RESULT;end
+                if (!ENABLE_HDC_OPS) begin
+                    res_n={62'b0,STATUS_NOT_IMPLEMENTED};st_n=S_RESULT;
+                end else if(a_q[3])begin res_n={62'b0,STATUS_ERROR};st_n=S_RESULT;end
                 else begin
                     uop_p0_n.valid       = 1'b1;
                     uop_p0_n.op_type     = UOP_HCNTADD_SUBGROUP;
@@ -1813,50 +1833,66 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
             end
 
             HDEC_HBIND: begin
-                uop_p0_n.valid        = 1'b1;
-                uop_p0_n.op_type      = UOP_HBIND_CHUNK;
-                uop_p0_n.src0_addr    = {a_q[7:4], 2'b00};
-                uop_p0_n.src1_addr    = {a_q[11:8],2'b00};
-                uop_p0_n.dst_addr     = {a_q[3:0], 2'b00};
-                uop_p0_n.chunk_idx    = 2'd0;
-                st_n=S_UOP_P1_RD0;
+                if (!ENABLE_HDC_OPS) begin
+                    res_n={62'b0,STATUS_NOT_IMPLEMENTED};st_n=S_RESULT;
+                end else begin
+                    uop_p0_n.valid        = 1'b1;
+                    uop_p0_n.op_type      = UOP_HBIND_CHUNK;
+                    uop_p0_n.src0_addr    = {a_q[7:4], 2'b00};
+                    uop_p0_n.src1_addr    = {a_q[11:8],2'b00};
+                    uop_p0_n.dst_addr     = {a_q[3:0], 2'b00};
+                    uop_p0_n.chunk_idx    = 2'd0;
+                    st_n=S_UOP_P1_RD0;
+                end
             end
 
             HDEC_HSIM: begin
-                hsim_src0_base_n={a_q[3:0],2'b00};
-                hsim_src1_base_n={a_q[7:4],2'b00};
-                st_n=S_HSIM_INIT;
+                if (!ENABLE_HDC_OPS) begin
+                    res_n={62'b0,STATUS_NOT_IMPLEMENTED};st_n=S_RESULT;
+                end else begin
+                    hsim_src0_base_n={a_q[3:0],2'b00};
+                    hsim_src1_base_n={a_q[7:4],2'b00};
+                    st_n=S_HSIM_INIT;
+                end
             end
 
             HDEC_HMATCH: begin
-                hsim_src0_base_n={a_q[3:0],2'b00};
-                hsim_src1_base_n={a_q[7:4],2'b00};
-                hmatch_class_slot_n=a_q[7:4];
-                hmatch_last_idx_n=a_q[10:8] - 3'd1;
-                if(hmatch_req_invalid)begin
-                    res_n={62'b0,STATUS_ERROR};st_n=S_RESULT;
+                if (!ENABLE_HDC_OPS) begin
+                    res_n={62'b0,STATUS_NOT_IMPLEMENTED};st_n=S_RESULT;
                 end else begin
-                    st_n=S_HMATCH_INIT;
+                    hsim_src0_base_n={a_q[3:0],2'b00};
+                    hsim_src1_base_n={a_q[7:4],2'b00};
+                    hmatch_class_slot_n=a_q[7:4];
+                    hmatch_last_idx_n=a_q[10:8] - 3'd1;
+                    if(hmatch_req_invalid)begin
+                        res_n={62'b0,STATUS_ERROR};st_n=S_RESULT;
+                    end else begin
+                        st_n=S_HMATCH_INIT;
+                    end
                 end
             end
 
             HDEC_HCNTCLIP: begin
-                hcntclip_dst_base_n={hcntclip_dst_base_q[5],a_q[2:0],2'b00};
-                hcntclip_acc_sel_n=a_q[3];
-                // Low-area bit-plane mode fixes clip to the non-zero predicate.
-                hcntclip_chunk_n=2'd0;
-                uop_p0_n.valid       = 1'b1;
-                uop_p0_n.op_type     = UOP_HCNTCLIP_READ;
-                uop_p0_n.chunk_idx   = 2'd0;
-                uop_p0_n.subgroup_idx= 2'd0;
-                uop_p0_n.src0_addr   = (a_q[3] ? hdc_cnt_base1 : hdc_cnt_base0);
-                uop_p0_n.src1_addr   = (a_q[3] ? hdc_cnt_base1 : hdc_cnt_base0);
-                st_n=S_UOP_P1_RD0;
+                if (!ENABLE_HDC_OPS) begin
+                    res_n={62'b0,STATUS_NOT_IMPLEMENTED};st_n=S_RESULT;
+                end else begin
+                    hcntclip_dst_base_n={hcntclip_dst_base_q[5],a_q[2:0],2'b00};
+                    hcntclip_acc_sel_n=a_q[3];
+                    // Low-area bit-plane mode fixes clip to the non-zero predicate.
+                    hcntclip_chunk_n=2'd0;
+                    uop_p0_n.valid       = 1'b1;
+                    uop_p0_n.op_type     = UOP_HCNTCLIP_READ;
+                    uop_p0_n.chunk_idx   = 2'd0;
+                    uop_p0_n.subgroup_idx= 2'd0;
+                    uop_p0_n.src0_addr   = (a_q[3] ? hdc_cnt_base1 : hdc_cnt_base0);
+                    uop_p0_n.src1_addr   = (a_q[3] ? hdc_cnt_base1 : hdc_cnt_base0);
+                    st_n=S_UOP_P1_RD0;
+                end
             end
 
             HDEC_HPERM: begin
                 if (a_q[18]) begin
-                    if (!ECC_DEBUG_FIELD_OPS) begin
+                    if (!ENABLE_ECC_OPS || !ECC_DEBUG_FIELD_OPS) begin
                         res_n={62'b0,STATUS_NOT_IMPLEMENTED};st_n=S_RESULT;
                     end else if ((a_q[5:0] == 6'd63)
                      || (a_q[20] && ((a_q[17:12] == a_q[5:0])
@@ -1874,6 +1910,8 @@ module hdec_top import hdec_pkg::*; import hdec_resource_pkg::*; #(
                         vrf_req.ra=a_q[11:6];
                         st_n=S_RD_WAIT;
                     end
+                end else if (!ENABLE_HDC_OPS) begin
+                    res_n={62'b0,STATUS_NOT_IMPLEMENTED};st_n=S_RESULT;
                 end else if ((|a_q[9:8])
                           || (a_q[3:0] == a_q[7:4])) begin
                     res_n={62'b0,STATUS_ERROR};st_n=S_RESULT;

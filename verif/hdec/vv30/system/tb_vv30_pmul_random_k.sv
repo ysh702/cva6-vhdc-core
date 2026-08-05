@@ -31,6 +31,19 @@ module tb_vv30_pmul_random_k #(
 
     int unsigned error_count;
 
+`ifdef VV35_DUAL_DUT
+    vv35_dual_accel_core_top dut (
+        .clk_i,
+        .rst_ni,
+        .valid_i,
+        .ready_o,
+        .operator_i,
+        .operand_a_i,
+        .operand_b_i,
+        .valid_o,
+        .result_o
+    );
+`else
     hdec_top #(
         .ECC_PMUL_RESIDUE_SEEDING(DUT_RESIDUE_SEEDING),
         .ECC_PMUL_AFFINE_FACTORING(DUT_AFFINE_FACTORING),
@@ -48,6 +61,7 @@ module tb_vv30_pmul_random_k #(
         .valid_o,
         .result_o
     );
+`endif
 
     initial clk_i = 1'b0;
     always #2.5 clk_i = ~clk_i;

@@ -1,0 +1,32 @@
+Vivado Simulator v2024.2.0
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+Copyright 2022-2024 Advanced Micro Devices, Inc. All Rights Reserved.
+Running: E:/Vivado/Vivado/2024.2/bin/unwrapped/win64.o/xelab.exe tb_vv35_schedule_gate --timescale 1ns/1ps -s tb_vv35_schedule_gate 
+Multi-threading is on. Using 14 slave threads.
+Starting static elaboration
+Pass Through NonSizing Optimizer
+Completed static elaboration
+Starting simulation data flow analysis
+Completed simulation data flow analysis
+Time Resolution for simulation is 1ps
+Compiling package work.hdec_pkg
+Compiling package work.hdec_vv31_ref_pkg
+Compiling package work.hdec_vv31_driver_pkg
+Compiling package work.hdec_vv31_check_pkg
+Compiling package work.hdec_vv31_vectors_pkg
+Compiling package work.hdec_resource_pkg
+Compiling package work.hdec_vv25_equation_pkg
+Compiling module work.hdec_vrf_64x256
+Compiling module work.hdec_cnt_array
+Compiling module work.hdec_lane_clip
+Compiling module work.hdec_xor1_shared_8x32
+Compiling module work.hdec_gf2_contribution_row_tile_8...
+Compiling module work.hdec_vector_payload_4x64(ENABLE_...
+Compiling module work.hdec_top(VV31_SCHED_ENABLE=1'b0,...
+Compiling module work.vv35_hdc_ip_top
+Compiling module work.hdec_vector_payload_4x64_default
+Compiling module work.hdec_top_default
+Compiling module work.vv35_ecc_ip_top
+Compiling module work.vv35_dual_accel_core_top
+Compiling module work.tb_vv35_schedule_gate
+Built simulation snapshot tb_vv35_schedule_gate

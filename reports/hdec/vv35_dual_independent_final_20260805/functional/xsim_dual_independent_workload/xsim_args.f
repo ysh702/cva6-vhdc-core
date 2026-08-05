@@ -1,0 +1,10 @@
+-testplusarg
+SCENARIO=INDEPENDENT
+-testplusarg
+TASK_COUNT=1632
+-testplusarg
+WINDOW_CYCLES=190944
+-testplusarg
+PMUL_WAIT_CYCLES=146908
+-testplusarg
+VV31_VECTOR_DIR=E:/HDEC/cva6-vhdc-core/tmp/hdec_vv35_global_ppa_worktree/tmp/hdec_logs/vv35_eval/schedule_same_net_smoke

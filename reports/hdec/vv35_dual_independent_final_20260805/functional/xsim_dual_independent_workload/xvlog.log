@@ -1,0 +1,36 @@
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "E:/HDEC/cva6-vhdc-core/tmp/hdec_vv35_ecc_area_worktree/core/hdec/rtl/hdec_pkg.sv" into library work
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "E:/HDEC/cva6-vhdc-core/tmp/hdec_vv35_ecc_area_worktree/core/hdec/rtl/hdec_resource_pkg.sv" into library work
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "E:/HDEC/cva6-vhdc-core/tmp/hdec_vv35_ecc_area_worktree/core/hdec/rtl/hdec_vrf_64x256.sv" into library work
+INFO: [VRFC 10-311] analyzing module hdec_vrf_64x256
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "E:/HDEC/cva6-vhdc-core/tmp/hdec_vv35_ecc_area_worktree/core/hdec/rtl/hdec_lane_boolean_mask.sv" into library work
+INFO: [VRFC 10-311] analyzing module hdec_lane_boolean_mask
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "E:/HDEC/cva6-vhdc-core/tmp/hdec_vv35_ecc_area_worktree/core/hdec/rtl/hdec_lane_popcount_compressor.sv" into library work
+INFO: [VRFC 10-311] analyzing module hdec_lane_popcount_compressor
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "E:/HDEC/cva6-vhdc-core/tmp/hdec_vv35_ecc_area_worktree/core/hdec/rtl/hdec_p2_pop_slice.sv" into library work
+INFO: [VRFC 10-311] analyzing module hdec_p2_pop_slice
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "E:/HDEC/cva6-vhdc-core/tmp/hdec_vv35_ecc_area_worktree/core/hdec/rtl/hdec_cnt_array.sv" into library work
+INFO: [VRFC 10-311] analyzing module hdec_cnt_array
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "E:/HDEC/cva6-vhdc-core/tmp/hdec_vv35_ecc_area_worktree/core/hdec/rtl/hdec_lane_shift_align.sv" into library work
+INFO: [VRFC 10-311] analyzing module hdec_lane_shift_align
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "E:/HDEC/cva6-vhdc-core/tmp/hdec_vv35_ecc_area_worktree/core/hdec/rtl/hdec_lane_clip.sv" into library work
+INFO: [VRFC 10-311] analyzing module hdec_lane_clip
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "E:/HDEC/cva6-vhdc-core/tmp/hdec_vv35_ecc_area_worktree/core/hdec/rtl/hdec_lane_4x64.sv" into library work
+INFO: [VRFC 10-311] analyzing module hdec_lane_4x64
+INFO: [VRFC 10-311] analyzing module hdec_xor1_native_224
+INFO: [VRFC 10-311] analyzing module hdec_xor1_shared_8x32
+INFO: [VRFC 10-311] analyzing module hdec_gf2_contribution_row_tile_8x32
+INFO: [VRFC 10-311] analyzing module hdec_vector_payload_4x64
+INFO: [VRFC 10-311] analyzing module hdec_vector_4x64
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "E:/HDEC/cva6-vhdc-core/tmp/hdec_vv35_ecc_area_worktree/core/hdec/rtl/hdec_top.sv" into library work
+INFO: [VRFC 10-311] analyzing module hdec_top
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "E:/HDEC/cva6-vhdc-core/tmp/hdec_vv35_ecc_area_worktree/verif/hdec/vv35_eval/dual/vv35_dual_ooc_ip_wrappers.sv" into library work
+INFO: [VRFC 10-311] analyzing module vv35_hdc_ip_top
+INFO: [VRFC 10-311] analyzing module vv35_ecc_ip_top
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "E:/HDEC/cva6-vhdc-core/tmp/hdec_vv35_ecc_area_worktree/verif/hdec/vv35_eval/dual/vv35_dual_accel_core_top.sv" into library work
+INFO: [VRFC 10-311] analyzing module vv35_dual_accel_core_top
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "E:/HDEC/cva6-vhdc-core/tmp/hdec_vv35_ecc_area_worktree/verif/hdec/vv31/common/hdec_vv31_vectors_pkg.sv" into library work
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "E:/HDEC/cva6-vhdc-core/tmp/hdec_vv35_ecc_area_worktree/verif/hdec/vv31/common/hdec_vv31_ref_pkg.sv" into library work
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "E:/HDEC/cva6-vhdc-core/tmp/hdec_vv35_ecc_area_worktree/verif/hdec/vv31/common/hdec_vv31_driver_pkg.sv" into library work
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "E:/HDEC/cva6-vhdc-core/tmp/hdec_vv35_ecc_area_worktree/verif/hdec/vv31/common/hdec_vv31_check_pkg.sv" into library work
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "E:/HDEC/cva6-vhdc-core/tmp/hdec_vv35_ecc_area_worktree/verif/hdec/vv35_eval/gate/tb_vv35_schedule_gate.sv" into library work
+INFO: [VRFC 10-311] analyzing module tb_vv35_schedule_gate

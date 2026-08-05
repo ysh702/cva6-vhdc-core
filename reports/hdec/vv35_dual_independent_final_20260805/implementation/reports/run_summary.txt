@@ -1,0 +1,11 @@
+vivado_version=2024.2
+top=vv35_dual_accel_core_top
+part=xc7z020clg400-2
+period_ns=5.0
+implementation_strategy=place_Explore+physopt_Explore+route_AggressiveExplore
+route_status=fully_routed_no_routing_errors
+wns_ns=0.035
+fmax_est_mhz=201.410
+cross_ip_optimization=disabled
+integrated_blackbox_count=0
+checkpoint=E:/HDEC/cva6-vhdc-core/tmp/hdec_vv35_ecc_area_worktree/reports/hdec/vv35_dual_independent_final_20260805/implementation/dcp/04_route.dcp

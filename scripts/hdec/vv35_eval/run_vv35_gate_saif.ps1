@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [ValidateSet("SERIAL", "INTERLEAVED", "BOTH")]
+    [ValidateSet("SERIAL", "INTERLEAVED", "INDEPENDENT", "BOTH")]
     [string]$Scenario = "BOTH",
     [ValidateRange(1, 100000)]
     [int]$TaskCount = 1632,
@@ -15,6 +15,7 @@ param(
     [string]$ReportRoot,
     [switch]$ReuseExport,
     [switch]$SkipPower,
+    [switch]$DualIndependent,
     [string]$VivadoBin = "E:\Vivado\Vivado\2024.2\bin",
     [string]$PythonExe = "C:\Users\Administrator\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe"
 )
@@ -22,6 +23,10 @@ param(
 $ErrorActionPreference = "Stop"
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $repoRoot = (Resolve-Path (Join-Path $scriptDir "..\..\..")).Path
+
+if ($DualIndependent -and ($Scenario -ne "INDEPENDENT")) {
+    throw "-DualIndependent requires -Scenario INDEPENDENT"
+}
 
 function Resolve-FullPath {
     param([Parameter(Mandatory = $true)][string]$Path)
@@ -188,14 +193,15 @@ foreach ($source in @($exportTcl, $stripSdf, $powerTcl, $saifTcl, $tb)) {
     }
 }
 
-$netlist = Join-Path $exportDir "hdec_top_postroute_timesim.v"
-$sdfRaw = Join-Path $exportDir "hdec_top_postroute_max.sdf"
-$sdfDelayOnly = Join-Path $exportDir "hdec_top_postroute_delay_only.sdf"
+$outputStem = if ($DualIndependent) { "vv35_dual_independent" } else { "hdec_top" }
+$netlist = Join-Path $exportDir "${outputStem}_postroute_timesim.v"
+$sdfRaw = Join-Path $exportDir "${outputStem}_postroute_max.sdf"
+$sdfDelayOnly = Join-Path $exportDir "${outputStem}_postroute_delay_only.sdf"
 if (-not $ReuseExport) {
     Invoke-LoggedNative $vivado @(
         "-mode", "batch", "-nolog", "-nojournal", "-notrace",
         "-source", $exportTcl,
-        "-tclargs", $Checkpoint, $exportDir
+        "-tclargs", $Checkpoint, $exportDir, $outputStem
     ) (Join-Path $OutRoot "export.log") "Post-route netlist export"
 }
 foreach ($exported in @($netlist, $sdfRaw)) {
@@ -232,17 +238,31 @@ foreach ($source in @(
 }
 
 $snapshot = if ($UseSdf) {
-    "tb_vv35_schedule_gate_postroute_sdf"
+    if ($DualIndependent) {
+        "tb_vv35_dual_independent_gate_postroute_sdf"
+    } else {
+        "tb_vv35_schedule_gate_postroute_sdf"
+    }
 } else {
-    "tb_vv35_schedule_gate_postroute_nosdf"
+    if ($DualIndependent) {
+        "tb_vv35_dual_independent_gate_postroute_nosdf"
+    } else {
+        "tb_vv35_schedule_gate_postroute_nosdf"
+    }
 }
 
 Push-Location $simDir
 try {
-    Invoke-LoggedNative $xvlog @(
-        "-sv", $hdecPkg, $vectorsPkg, $refPkg, $driverPkg, $checkPkg,
+    $xvlogArguments = @("-sv")
+    if ($DualIndependent) {
+        $xvlogArguments += "--define=VV35_DUAL_INDEPENDENT_DUT"
+    }
+    $xvlogArguments += @(
+        $hdecPkg, $vectorsPkg, $refPkg, $driverPkg, $checkPkg,
         $netlist, $tb, $glbl
-    ) (Join-Path $simDir "xvlog_console.log") "xvlog"
+    )
+    Invoke-LoggedNative $xvlog $xvlogArguments `
+        (Join-Path $simDir "xvlog_console.log") "xvlog"
 
     $xelabArgs = Join-Path $simDir "xelab_args.f"
     $elabTokens = @(
@@ -285,6 +305,8 @@ foreach ($currentScenario in $scenarioList) {
     if ($currentWindow -eq 0) {
         if ($currentScenario -eq "SERIAL") {
             $currentWindow = 337853
+        } elseif ($currentScenario -eq "INDEPENDENT") {
+            $currentWindow = 190944
         } else {
             $currentWindow = 200144
         }
@@ -437,7 +459,11 @@ $gitCommit = (& git -C $repoRoot rev-parse HEAD).Trim()
 $gitBranch = (& git -C $repoRoot branch --show-current).Trim()
 $rtlDiff = (& git -C $repoRoot diff -- core/hdec/rtl | Out-String)
 $manifest = [ordered]@{
-    schema = "hdec-vv35-postroute-gate-saif-v1"
+    schema = if ($DualIndependent) {
+        "hdec-vv35-dual-independent-postroute-gate-saif-v1"
+    } else {
+        "hdec-vv35-postroute-gate-saif-v1"
+    }
     status = "PASS"
     completed_at = (Get-Date).ToString("o")
     branch = $gitBranch
@@ -451,7 +477,11 @@ $manifest = [ordered]@{
     } else {
         "post-route timesim netlist without SDF; mapping pilot only"
     }
-    measurement_boundary = "same routed checkpoint and same gate netlist; serial/interleaved differ only by runtime request timing"
+    measurement_boundary = if ($DualIndependent) {
+        "one PMUL and 1632 four-class HMATCH searches execute concurrently on separate ECC and HDC IPs"
+    } else {
+        "same routed checkpoint and same gate netlist; serial/interleaved differ only by runtime request timing"
+    }
     checkpoint = $Checkpoint
     checkpoint_sha256 = Get-Sha256OrNull $Checkpoint
     netlist = $netlist

@@ -1,0 +1,12 @@
+claim_scope,ownership_bucket,detail_bucket,logic_lut_cells,ff_cells,lutram_cells,srl_cells,bram_cells,dsp_cells,carry_cells,mux_cells,other_primitives,total_primitives
+"strict_name_based_ecc_private_lower_bound","ecc_private_strict","ecc_field_state_control","129","19","0","0","0","0","0","3","0","151"
+"strict_name_based_ecc_private_lower_bound","ecc_private_strict","ecc_mul_fold_mapping","319","169","0","0","0","0","0","0","0","488"
+"strict_name_based_ecc_private_lower_bound","ecc_private_strict","ecc_pmul_inv_square","173","60","0","0","0","0","0","47","0","280"
+"strict_name_based_ecc_private_lower_bound","hdc_private","hdc_named_operation","541","143","0","0","0","0","5","0","0","689"
+"strict_name_based_ecc_private_lower_bound","hdc_private","hdc_pipeline_control","151","67","0","0","0","0","0","0","0","218"
+"strict_name_based_ecc_private_lower_bound","shared","shared_cross_task_state_control","240","284","0","0","0","0","0","0","0","524"
+"strict_name_based_ecc_private_lower_bound","shared","shared_host_control","185","132","0","0","0","0","0","0","0","317"
+"strict_name_based_ecc_private_lower_bound","shared","shared_matrix_reduction_payload","3120","304","0","0","0","0","7","192","2","3625"
+"strict_name_based_ecc_private_lower_bound","shared","shared_vrf","0","256","0","0","4","0","0","0","2","262"
+"strict_name_based_ecc_private_lower_bound","shared","shared_vrf_top_control","116","14","0","0","0","0","0","0","0","130"
+"strict_name_based_ecc_private_lower_bound","unattributed","unattributed_synthesized","184","65","0","0","0","0","0","0","2","251"

@@ -1,0 +1,34 @@
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2024 Advanced Micro Devices, Inc. All Rights Reserved.
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2024.2 (win64) Build 5239630 Fri Nov 08 22:35:27 MST 2024
+| Date         : Tue Aug  4 22:54:25 2026
+| Host         : WIN-20240824NZS running 64-bit major release  (build 9200)
+| Command      : report_utilization -hierarchical -file E:/HDEC/cva6-vhdc-core/tmp/hdec_vv35_ecc_area_worktree/reports/hdec/vv35_ecc_private_full_20260804/postroute_repair/reports/utilization_hier.rpt
+| Design       : hdec_top
+| Device       : xc7z020clg400-2
+| Speed File   : -2
+| Design State : Routed
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Utilization Design Information
+
+Table of Contents
+-----------------
+1. Utilization by Hierarchy
+
+1. Utilization by Hierarchy
+---------------------------
+
++---------------------------------+-------------------------------------+------------+------------+---------+------+------+--------+--------+------------+
+|             Instance            |                Module               | Total LUTs | Logic LUTs | LUTRAMs | SRLs |  FFs | RAMB36 | RAMB18 | DSP Blocks |
++---------------------------------+-------------------------------------+------------+------------+---------+------+------+--------+--------+------------+
+| hdec_top                        |                               (top) |       4690 |       4690 |       0 |    0 | 1513 |      4 |      0 |          0 |
+|   (hdec_top)                    |                               (top) |       1798 |       1798 |       0 |    0 |  953 |      0 |      0 |          0 |
+|   i_vec                         |            hdec_vector_payload_4x64 |       2894 |       2894 |       0 |    0 |  304 |      0 |      0 |          0 |
+|     (i_vec)                     |            hdec_vector_payload_4x64 |       2318 |       2318 |       0 |    0 |  304 |      0 |      0 |          0 |
+|     i_gf2_contribution_row_tile | hdec_gf2_contribution_row_tile_8x32 |        576 |        576 |       0 |    0 |    0 |      0 |      0 |          0 |
+|   i_vrf                         |                     hdec_vrf_64x256 |          0 |          0 |       0 |    0 |  256 |      4 |      0 |          0 |
++---------------------------------+-------------------------------------+------------+------------+---------+------+------+--------+--------+------------+
+* Note: The sum of lower-level cells may be larger than their parent cells total, due to cross-hierarchy LUT combining
+
+

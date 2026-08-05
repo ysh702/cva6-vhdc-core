@@ -1,0 +1,14 @@
+CLAIM_SCOPE=strict_name_based_ecc_private_lower_bound
+ECC_PRIVATE_RESULT_IS_A_LOWER_BOUND=1
+METRIC=LUT/FF/LUTRAM/BRAM/DSP/CARRY/MUX primitive-cell census
+DENOMINATOR_RULE=Use full_utilization.rpt for physical Logic-LUT area; do not call primitive counts placed Logic LUTs.
+ROUTE_PHYSICAL_RULE=Group A5LUT/A6LUT, B5LUT/B6LUT, and equivalent BEL pairs by LOC plus BEL letter. Count one ECC-private physical LUT only when every logic-LUT cell in that group is strict ECC-private.
+ROUTE_MIXED_EXCLUSION=A physical LUT co-located with shared, HDC-private, or unattributed logic is excluded from the ECC-private physical count.
+PRECEDENCE_1=Named HDC-only i_vec counter/clip children -> hdc_private.
+PRECEDENCE_2=Shared VRF, bit-matrix/reduction/payload hierarchy, hdc_src0, common payload/state, VV33 cross-task control, VRF control, and host control -> shared, even if an absorbed cell retains an ecc-like signal name.
+ECC_WHITE_1=ecc_pmul|ecc_job|ecc_inv|ecc_sqr|ecc_square -> ECC PMUL/inversion/square private logic.
+ECC_WHITE_2=ecc_leaf|ecc_diag|ecc_kpd|ecc_fold|ecc_reduce|ecc_direct_reduce|ecc_product|ecc_bitmatrix|lane_ecc -> ECC multiply/fold/mapping private logic.
+ECC_WHITE_3=ecc_src|ecc_dst|ecc_acc|ecc_autoreduce|ecc_raw_product|ecc_mac|ecc_kernel|ecc_partial|ecc_pipe -> ECC field state/control.
+ECC_WHITE_4=xor0_contribution_packet outside shared hierarchy -> ECC modular-contribution mapper.
+ECC_EXCLUSION=Any other ecc-like name is unattributed; unnamed or synthesis-merged equations are never inferred as ECC-private.
+UNATTRIBUTED=All primitives not proved shared, HDC-private, or ECC-private by the ordered rules.

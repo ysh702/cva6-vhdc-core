@@ -1,0 +1,9 @@
+run_label=vv35_full_after_gates
+period_ns=5.0
+part=xc7z020clg400-2
+top=hdec_top
+wns=0.293
+worst_data_delay_ns=4.496
+fmax_est_mhz=212.450
+top_endpoint=ecc_leaf_b_q_reg[0]/CE
+vivado_version=2024.2

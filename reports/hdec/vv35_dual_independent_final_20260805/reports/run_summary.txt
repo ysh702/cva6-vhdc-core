@@ -1,0 +1,12 @@
+vivado_version=2024.2
+part=xc7z020clg400-2
+period_ns=5
+ip_flatten_hierarchy=none
+ip_synth_directive=RuntimeOptimized
+cross_ip_optimization=disabled_by_frozen_ooc_checkpoints_and_dont_touch_cells
+integrated_blackbox_count=0
+hdc_checkpoint=E:/HDEC/cva6-vhdc-core/tmp/hdec_vv35_ecc_area_worktree/reports/hdec/vv35_dual_independent_final_20260805/dcp/hdc_ip.dcp
+ecc_checkpoint=E:/HDEC/cva6-vhdc-core/tmp/hdec_vv35_ecc_area_worktree/reports/hdec/vv35_dual_independent_final_20260805/dcp/ecc_ip.dcp
+hdc_structural_netlist=E:/HDEC/cva6-vhdc-core/tmp/hdec_vv35_ecc_area_worktree/reports/hdec/vv35_dual_independent_final_20260805/netlist/vv35_hdc_ip_top.edf
+ecc_structural_netlist=E:/HDEC/cva6-vhdc-core/tmp/hdec_vv35_ecc_area_worktree/reports/hdec/vv35_dual_independent_final_20260805/netlist/vv35_ecc_ip_top.edf
+integrated_checkpoint=E:/HDEC/cva6-vhdc-core/tmp/hdec_vv35_ecc_area_worktree/reports/hdec/vv35_dual_independent_final_20260805/dcp/vv35_dual_independent_synth.dcp
